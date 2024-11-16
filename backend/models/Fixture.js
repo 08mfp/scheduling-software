@@ -3,7 +3,6 @@
  * @module backend/models/Fixture
  * @description This module is used for defining the schema for fixtures in the database. It also includes custom validation for scores based on the date of the fixture.
  * @api Fixture
- * @see module:backend/routes/fixtures
  * @version 1.0.0
  * @authors github.com/08mfp
  */
