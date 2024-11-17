@@ -6,6 +6,7 @@
  * @version 1.0.0
  * @authors github.com/08mfp
  */
+
 const Fixture = require('../models/Fixture');
 const Team = require('../models/Team');
 const Stadium = require('../models/Stadium');

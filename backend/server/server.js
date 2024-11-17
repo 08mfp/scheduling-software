@@ -1,6 +1,6 @@
-// backend/server.js
+// backend/server/server.js
 /**
- * @module backend/server
+ * @module backend/server/server
  * @description This module is the entry point for the server.
  * @api NONE
  * @version 1.0.0
@@ -13,16 +13,16 @@ const bodyParser = require('body-parser'); // used to parse incoming request bod
 const cors = require('cors'); // used to enable Cross-Origin Resource Sharing (and authentication)
 
 // Import Middleware for logging to console
-const logger = require('./middleware/logger');
+const logger = require('../middleware/logger');
 
 // Routes
-const teamRoutes = require('./routes/teamRoutes');
-const stadiumRoutes = require('./routes/stadiumRoutes');
-const playerRoutes = require('./routes/playerRoutes');
-const fixtureRoutes = require('./routes/fixtureRoutes'); 
-const schedulerRoutes = require('./routes/schedulerRoutes');
-const provisionalFixtureRoutes = require('./routes/provisionalFixtureRoutes');
-const manualFixtureRoutes = require('./routes/manualFixtureRoutes');
+const teamRoutes = require('../routes/teamRoutes');
+const stadiumRoutes = require('../routes/stadiumRoutes');
+const playerRoutes = require('../routes/playerRoutes');
+const fixtureRoutes = require('../routes/fixtureRoutes'); 
+const schedulerRoutes = require('../routes/schedulerRoutes');
+const provisionalFixtureRoutes = require('../routes/provisionalFixtureRoutes');
+const manualFixtureRoutes = require('../routes/manualFixtureRoutes');
 
 
 const app = express(); // Initialize express server and store in app
