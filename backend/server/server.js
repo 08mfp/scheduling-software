@@ -11,6 +11,7 @@ const express = require('express'); // Import express server
 const mongoose = require('mongoose'); // used for MongoDB
 const bodyParser = require('body-parser'); // used to parse incoming request bodies
 const cors = require('cors'); // used to enable Cross-Origin Resource Sharing (and authentication)
+require('dotenv').config();
 
 // Import Middleware for logging to console
 const logger = require('../middleware/logger');
