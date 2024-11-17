@@ -7,7 +7,7 @@
  * @authors github.com/08mfp
  */
 const Team = require('../models/Team');
-const upload = require('../middleware/logger');
+const upload = require('../middleware/upload');
 const fs = require('fs');
 
 /**
