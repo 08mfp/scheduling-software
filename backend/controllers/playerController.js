@@ -9,7 +9,7 @@
 
 
 const Player = require('../models/Player');
-const upload = require('../middleware/logger');
+const upload = require('../middleware/upload');
 const fs = require('fs');
 
 /**
