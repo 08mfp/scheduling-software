@@ -89,7 +89,7 @@ backend/
 Contains various algorithms for fixture scheduling.
 
 - **balancedTravelScheduler.js**
-  - *[Description pending based on future file submissions.]*
+  - NOT YET IMPLEMENTED / MIGHT BE REMOVED ENTIRELY
   
 - **randomAlgorithm.js**
   - **Description:** Implements a random fixture generation algorithm ensuring each of the 6 teams plays every other team exactly once. It assigns home and away teams by alternating venues based on the previous season's data or randomly if no prior data exists. Additionally, it schedules fixture dates within specified timeframes and ensures that no two rounds overlap on the same weekend.
