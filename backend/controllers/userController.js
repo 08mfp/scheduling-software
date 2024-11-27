@@ -96,4 +96,32 @@ exports.loginUser = async (req, res) => {
       res.status(500).json({ message: 'Server error' });
     }
   };
+
+
+/**
+ * @desc    Get User details
+ * @route   GET /api/users/me 
+ * @access  Private
+ */
+exports.getCurrentUser = async (req, res) => {
+    try {
+      const user = req.user; // The authenticated user from the middleware
+  
+      if (!user) {
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+  
+      // Respond with user details (excluding sensitive information)
+      res.status(200).json({
+        firstName: user.name.firstName,
+        lastName: user.name.lastName,
+        email: user.email,
+        role: user.role,
+      });
+    } catch (error) {
+      logger.error(`Error fetching current user: ${error.message}`);
+      res.status(500).json({ message: 'Server error' });
+    }
+  };
+  
   
