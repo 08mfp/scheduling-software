@@ -1,0 +1,33 @@
+{"level":"warn","message":"Attempt to register with existing email: alice.admin@example.com","timestamp":"2024-11-27T11:38:39.043Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:38:39 +0000] \"POST /api/users/register HTTP/1.1\" 400 33 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:38:39.046Z"}
+{"level":"warn","message":"Attempt to register with existing email: alice.admin@example.com","timestamp":"2024-11-27T11:38:43.558Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:38:43 +0000] \"POST /api/users/register HTTP/1.1\" 400 33 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:38:43.558Z"}
+{"level":"info","message":"User registered: mike.manager@example.com","timestamp":"2024-11-27T11:39:29.495Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:39:29 +0000] \"POST /api/users/register HTTP/1.1\" 201 118 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:39:29.496Z"}
+{"level":"info","message":"User logged in: alice.admin@example.com","timestamp":"2024-11-27T11:41:15.869Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:41:15 +0000] \"POST /api/users/login HTTP/1.1\" 200 106 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:41:15.869Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:43:44 +0000] \"POST /api/users HTTP/1.1\" 404 149 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:43:44.092Z"}
+{"level":"warn","message":"Unauthorized access attempt: No API key provided","timestamp":"2024-11-27T11:44:22.029Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:44:22 +0000] \"POST /api/teams HTTP/1.1\" 401 33 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:44:22.035Z"}
+{"level":"warn","message":"Unauthorized access attempt: Invalid API key","timestamp":"2024-11-27T11:47:29.251Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:47:29 +0000] \"POST /api/teams HTTP/1.1\" 401 29 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:47:29.252Z"}
+{"level":"warn","message":"Unauthorized access attempt: Invalid API key","timestamp":"2024-11-27T11:49:13.270Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:49:13 +0000] \"POST /api/stadiums HTTP/1.1\" 401 29 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:49:13.272Z"}
+{"level":"warn","message":"Unauthorized access attempt: Invalid API key","timestamp":"2024-11-27T11:49:24.279Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:49:24 +0000] \"GET /api/stadiums HTTP/1.1\" 401 29 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:49:24.280Z"}
+{"level":"warn","message":"Unauthorized access attempt: Invalid API key","timestamp":"2024-11-27T11:50:20.077Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:50:20 +0000] \"GET /api/teams HTTP/1.1\" 401 29 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:50:20.078Z"}
+{"level":"warn","message":"Unauthorized access attempt: No API key provided","timestamp":"2024-11-27T11:50:31.838Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:50:31 +0000] \"GET /api/stadiums/672bcfbd087818a9721609ab HTTP/1.1\" 401 33 \"-\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36\"","timestamp":"2024-11-27T11:50:31.840Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:50:32 +0000] \"GET /favicon.ico HTTP/1.1\" 404 150 \"http://localhost:5003/api/stadiums/672bcfbd087818a9721609ab\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36\"","timestamp":"2024-11-27T11:50:32.007Z"}
+{"level":"warn","message":"Unauthorized access attempt: No API key provided","timestamp":"2024-11-27T11:50:36.482Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:50:36 +0000] \"GET /api/stadiums HTTP/1.1\" 401 33 \"-\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36\"","timestamp":"2024-11-27T11:50:36.485Z"}
+{"level":"info","message":"User registered: mohamed.admin@example.com","timestamp":"2024-11-27T11:51:45.327Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:51:45 +0000] \"POST /api/users/register HTTP/1.1\" 201 118 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:51:45.327Z"}
+{"level":"warn","message":"Unauthorized access attempt: Invalid API key","timestamp":"2024-11-27T11:53:14.402Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:53:14 +0000] \"GET /api/teams HTTP/1.1\" 401 29 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:53:14.403Z"}
+{"level":"warn","message":"Unauthorized access attempt: Invalid API key","timestamp":"2024-11-27T11:53:20.812Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:53:20 +0000] \"GET /api/teams HTTP/1.1\" 401 29 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:53:20.813Z"}
+{"level":"warn","message":"Unauthorized access attempt: Invalid API key","timestamp":"2024-11-27T11:53:46.787Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:53:46 +0000] \"GET /api/teams HTTP/1.1\" 401 29 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:53:46.788Z"}
+{"level":"info","message":"::1 - - [27/Nov/2024:11:54:15 +0000] \"GET /api/teams HTTP/1.1\" 200 1023 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-11-27T11:54:15.067Z"}

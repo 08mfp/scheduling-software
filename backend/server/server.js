@@ -15,6 +15,8 @@ require('dotenv').config();
 
 // Import Middleware for logging to console
 const logger = require('../middleware/logger');
+const { morganMiddleware } = require('../middleware/logger');
+
 
 // Routes
 const teamRoutes = require('../routes/teamRoutes');
@@ -30,7 +32,8 @@ const userRoutes = require('../routes/userRoutes');
 const app = express(); // Initialize express server and store in app
 app.use(bodyParser.json()); // Parse incoming request bodies
 app.use(cors()); // Enable Cross-Origin Resource Sharing //! ADD AUTHENTICATION HERE
-app.use(logger); // Server logging middleware go comsole
+// app.use(logger); // Server logging middleware go comsole
+app.use(morganMiddleware);
 
 // Routes
 app.use('/api/teams', teamRoutes);
