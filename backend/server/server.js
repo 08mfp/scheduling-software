@@ -15,6 +15,8 @@ require('dotenv').config();
 
 // Import Middleware for logging to console
 const logger = require('../middleware/logger');
+const { morganMiddleware } = require('../middleware/logger');
+
 
 // Routes
 const teamRoutes = require('../routes/teamRoutes');
@@ -24,12 +26,14 @@ const fixtureRoutes = require('../routes/fixtureRoutes');
 const schedulerRoutes = require('../routes/schedulerRoutes');
 const provisionalFixtureRoutes = require('../routes/provisionalFixtureRoutes');
 const manualFixtureRoutes = require('../routes/manualFixtureRoutes');
+const userRoutes = require('../routes/userRoutes');
 
 
 const app = express(); // Initialize express server and store in app
 app.use(bodyParser.json()); // Parse incoming request bodies
 app.use(cors()); // Enable Cross-Origin Resource Sharing //! ADD AUTHENTICATION HERE
-app.use(logger); // Server logging middleware go comsole
+// app.use(logger); // Server logging middleware go comsole
+app.use(morganMiddleware);
 
 // Routes
 app.use('/api/teams', teamRoutes);
@@ -41,6 +45,7 @@ app.use('/uploads', express.static('uploads'))
 app.use('/api/provisional-fixtures', provisionalFixtureRoutes);
 app.use('api/fixtures/seasons', fixtureRoutes); //maybe remove if not being used later. This is just for front end
 app.use('/api/manual-fixtures', manualFixtureRoutes);
+app.use('/api/users', userRoutes);
 
 // Connect to MongoDB
 mongoose

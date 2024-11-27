@@ -12,7 +12,7 @@ const Stadium = require('../models/Stadium');
 /**
  * @desc    Get all stadiums
  * @route   GET /api/stadiums
- * @access  Public
+ * @access  Private (Viewer and above)
  */
 exports.getAllStadiums = async (req, res) => {
   try {
@@ -26,7 +26,7 @@ exports.getAllStadiums = async (req, res) => {
 /**
  * @desc    Get a stadium by ID
  * @route   GET /api/stadiums/:id
- * @access  Public
+ * @access  Private (Viewer and above)
  */
 exports.getStadiumById = async (req, res) => {
   try {
@@ -43,7 +43,7 @@ exports.getStadiumById = async (req, res) => {
 /**
  * @desc    Create a new stadium
  * @route   POST /api/stadiums
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.createStadium = async (req, res) => {
   const stadium = new Stadium({
@@ -67,7 +67,7 @@ exports.createStadium = async (req, res) => {
 /**
  * @desc    Update a stadium
  * @route   PUT /api/stadiums/:id
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.updateStadium = async (req, res) => {
   try {
@@ -94,7 +94,7 @@ exports.updateStadium = async (req, res) => {
 /**
  * @desc    Delete a stadium
  * @route   DELETE /api/stadiums/:id
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.deleteStadium = async (req, res) => {
   try {

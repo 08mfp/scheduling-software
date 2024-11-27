@@ -24,7 +24,7 @@ const { generateBalancedTravelFixtures } = require('../algorithms/balancedTravel
 /**
  * @desc    Generate provisional fixtures
  * @route   POST /api/provisional-fixtures/generate
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.generateProvisionalFixtures = async (req, res) => {
     try {
@@ -132,7 +132,7 @@ exports.generateProvisionalFixtures = async (req, res) => {
 /**
  * @desc    Get all provisional fixtures
  * @route   GET /api/provisional-fixtures
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.getProvisionalFixtures = async (req, res) => {
   try {
@@ -150,7 +150,7 @@ exports.getProvisionalFixtures = async (req, res) => {
 /**
  * @desc    Save provisional fixtures to main fixtures collection/database
  * @route   POST /api/provisional-fixtures/save
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.saveProvisionalFixtures = async (req, res) => {
   try {
@@ -188,7 +188,7 @@ exports.saveProvisionalFixtures = async (req, res) => {
 /**
  * @desc    Clear all provisional fixtures. So that we can start fresh next time
  * @route   DELETE /api/provisional-fixtures
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.clearProvisionalFixtures = async (req, res) => {
   try {
