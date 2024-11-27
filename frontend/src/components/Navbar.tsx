@@ -26,10 +26,21 @@ const Navbar: React.FC = () => {
                 </li>
               </>
             )}
-            {['admin', 'manager', 'viewer'].includes(user.role) && (
+            {['admin', 'manager'].includes(user.role) && (
               <li>
                 <Link to="/players">Players</Link>
               </li>
+            )}
+            {/* Generate Fixtures Link for Admins */}
+            {user.role === 'admin' && (
+              <>
+                <li>
+                  <Link to="/generate-fixtures">Generate Fixtures</Link>
+                </li>
+                <li>
+                  <Link to="/manual-fixture-scheduler">Manual Fixture Scheduler</Link>
+                </li>
+              </>
             )}
           </>
         )}

@@ -14,7 +14,7 @@ const Stadium = require('../models/Stadium');
 /**
  * @desc    Get previous season's fixture between two teams to determine home/away
  * @route   GET /api/manual-fixtures/previous-fixture
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.getPreviousFixture = async (req, res) => {
     try {
@@ -94,7 +94,7 @@ exports.getPreviousFixture = async (req, res) => {
 /**
  * @desc    Validate manually scheduled fixtures
  * @route   POST /api/manual-fixtures/validate
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.validateFixtures = async (req, res) => {
     try {
@@ -121,7 +121,7 @@ exports.validateFixtures = async (req, res) => {
 /**
  * @desc    Save manually scheduled fixtures
  * @route   POST /api/manual-fixtures/save
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.saveFixtures = async (req, res) => {
     try {

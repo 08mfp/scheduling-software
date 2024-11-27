@@ -15,6 +15,8 @@ import StadiumForm from './components/StadiumForm';
 import PlayersList from './components/PlayersList';
 import PlayerDetail from './components/PlayerDetail';
 import PlayerForm from './components/PlayerForm';
+import GenerateFixtures from './components/GenerateFixtures';
+import ManualFixtureScheduler from './components/ManualFixtureScheduler';
 import SignUp from './components/SignUp';
 import SignIn from './components/SignIn';
 import PrivateRoute from './components/PrivateRoute';
@@ -42,12 +44,12 @@ const App: React.FC = () => {
               <Route path="/teams/:id" element={<TeamDetail />} />
               <Route path="/stadiums" element={<StadiumList />} />
               <Route path="/stadiums/:id" element={<StadiumDetail />} />
-              <Route path="/players" element={<PlayersList />} />
-              <Route path="/players/:id" element={<PlayerDetail />} />
             </Route>
 
             {/* Manager and Admin Routes */}
             <Route element={<PrivateRoute requiredRoles={['admin', 'manager']} />}>
+              <Route path="/players" element={<PlayersList />} />
+              <Route path="/players/:id" element={<PlayerDetail />} />
               <Route path="/players/add" element={<PlayerForm />} />
               <Route path="/players/edit/:id" element={<PlayerForm />} />
             </Route>
@@ -60,6 +62,8 @@ const App: React.FC = () => {
               <Route path="/stadiums/edit/:id" element={<StadiumForm />} />
               <Route path="/fixtures/add" element={<FixtureForm />} />
               <Route path="/fixtures/edit/:id" element={<FixtureForm />} />
+              <Route path="/generate-fixtures" element={<GenerateFixtures />} />
+              <Route path="/manual-fixture-scheduler" element={<ManualFixtureScheduler />} />
             </Route>
 
             {/* Catch-All Route */}
