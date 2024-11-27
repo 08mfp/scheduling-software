@@ -15,37 +15,37 @@ const fs = require('fs');
 /**
  * @desc    Get all players
  * @route   GET /api/players
- * @access  Public
+ * @access  Private (Manager and above)
  */
 exports.getAllPlayers = async (req, res) => {
-    try {
-      const query = {};
-      if (req.query.team) {
-        query.team = req.query.team;
-      }
-      const players = await Player.find(query).populate('team', 'teamName');
-      res.status(200).json(players);
-    } catch (err) {
-      res.status(500).json({ message: err.message });
+  try {
+    const query = {};
+    if (req.query.team) {
+      query.team = req.query.team;
     }
-  };
+    const players = await Player.find(query).populate('team', 'teamName');
+    res.status(200).json(players);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 /**
  * @desc    Get a player by ID
  * @route   GET /api/players/:id
- * @access  Public
+ * @access  Private (Manager and above)
  */
 exports.getPlayerById = async (req, res) => {
-    try {
-      const player = await Player.findById(req.params.id).populate('team', 'teamName');
-      if (!player) {
-        return res.status(404).json({ message: 'Player not found' });
-      }
-      res.status(200).json(player);
-    } catch (err) {
-      res.status(500).json({ message: err.message });
+  try {
+    const player = await Player.findById(req.params.id).populate('team', 'teamName');
+    if (!player) {
+      return res.status(404).json({ message: 'Player not found' });
     }
-  };
+    res.status(200).json(player);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 // /**
 //  * @desc    Create a new player
@@ -71,37 +71,37 @@ exports.getPlayerById = async (req, res) => {
 /**
  * @desc    Create a new player
  * @route   POST /api/players
- * @access  Public
+ * @access  Private (Manager and above)
  */
 exports.createPlayer = (req, res) => {
-    upload(req, res, async (err) => {
-      if (err) {
-        return res.status(400).json({ message: err });
-      } else {
-        try {
-          const { firstName, lastName, dateOfBirth, team } = req.body;
-          const player = new Player({
-            firstName,
-            lastName,
-            dateOfBirth,
-            team,
-            image: req.file ? `/uploads/${req.file.filename}` : undefined,
-          });
-  
-          // Handle image removal
-          if (req.body.removeImage === 'true') {
-            player.image = undefined;
-          }
-  
-          await player.save();
-          res.status(201).json(player);
-        } catch (error) {
-          console.error('Error creating player:', error);
-          res.status(500).json({ message: error.message });
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ message: err });
+    } else {
+      try {
+        const { firstName, lastName, dateOfBirth, team } = req.body;
+        const player = new Player({
+          firstName,
+          lastName,
+          dateOfBirth,
+          team,
+          image: req.file ? `/uploads/${req.file.filename}` : undefined,
+        });
+
+        // Handle image removal
+        if (req.body.removeImage === 'true') {
+          player.image = undefined;
         }
+
+        await player.save();
+        res.status(201).json(player);
+      } catch (error) {
+        console.error('Error creating player:', error);
+        res.status(500).json({ message: error.message });
       }
-    });
-  };
+    }
+  });
+};
   
   
 
@@ -132,77 +132,90 @@ exports.createPlayer = (req, res) => {
 /**
  * @desc    Update a player
  * @route   PUT /api/players/:id
- * @access  Public
+ * @access  Private (Manager and above)
  */
 exports.updatePlayer = (req, res) => {
-    upload(req, res, async (err) => {
-      if (err) {
-        return res.status(400).json({ message: err });
-      } else {
-        try {
-          const player = await Player.findById(req.params.id);
-          if (!player) {
-            return res.status(404).json({ message: 'Player not found' });
-          }
-  
-          // Update fields
-          player.firstName = req.body.firstName || player.firstName;
-          player.lastName = req.body.lastName || player.lastName;
-          player.dateOfBirth = req.body.dateOfBirth || player.dateOfBirth;
-          player.team = req.body.team || player.team;
-  
-          // Handle image removal or upload
-          if (req.body.removeImage === 'true') {
-            // Delete old image if exists
-            if (player.image) {
-              const oldImagePath = '.' + player.image;
-              try {
-                await fs.promises.unlink(oldImagePath);
-              } catch (err) {
-                if (err.code !== 'ENOENT') {
-                  console.error('Error deleting old image file:', err);
-                  return res.status(500).json({ message: 'Server error' });
-                }
-              }
-            }
-            player.image = undefined;
-          } else if (req.file) {
-            // Delete old image if exists
-            if (player.image) {
-              const oldImagePath = '.' + player.image;
-              try {
-                await fs.promises.unlink(oldImagePath);
-              } catch (err) {
-                if (err.code !== 'ENOENT') {
-                  console.error('Error deleting old image file:', err);
-                  return res.status(500).json({ message: 'Server error' });
-                }
-              }
-            }
-            player.image = `/uploads/${req.file.filename}`;
-          }
-  
-          await player.save();
-          res.status(200).json(player);
-        } catch (error) {
-          console.error('Error updating player:', error);
-          res.status(500).json({ message: error.message });
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ message: err });
+    } else {
+      try {
+        const player = await Player.findById(req.params.id);
+        if (!player) {
+          return res.status(404).json({ message: 'Player not found' });
         }
+
+        // Update fields
+        player.firstName = req.body.firstName || player.firstName;
+        player.lastName = req.body.lastName || player.lastName;
+        player.dateOfBirth = req.body.dateOfBirth || player.dateOfBirth;
+        player.team = req.body.team || player.team;
+
+        // Handle image removal or upload
+        if (req.body.removeImage === 'true') {
+          // Delete old image if exists
+          if (player.image) {
+            const oldImagePath = '.' + player.image;
+            try {
+              await fs.promises.unlink(oldImagePath);
+            } catch (err) {
+              if (err.code !== 'ENOENT') {
+                console.error('Error deleting old image file:', err);
+                return res.status(500).json({ message: 'Server error' });
+              }
+            }
+          }
+          player.image = undefined;
+        } else if (req.file) {
+          // Delete old image if exists
+          if (player.image) {
+            const oldImagePath = '.' + player.image;
+            try {
+              await fs.promises.unlink(oldImagePath);
+            } catch (err) {
+              if (err.code !== 'ENOENT') {
+                console.error('Error deleting old image file:', err);
+                return res.status(500).json({ message: 'Server error' });
+              }
+            }
+          }
+          player.image = `/uploads/${req.file.filename}`;
+        }
+
+        await player.save();
+        res.status(200).json(player);
+      } catch (error) {
+        console.error('Error updating player:', error);
+        res.status(500).json({ message: error.message });
       }
-    });
-  };
+    }
+  });
+};
 
 
 /**
  * @desc    Delete a player
  * @route   DELETE /api/players/:id
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.deletePlayer = async (req, res) => {
   try {
     const player = await Player.findById(req.params.id);
     if (!player) {
       return res.status(404).json({ message: 'Player not found' });
+    }
+
+    // Delete image file if exists
+    if (player.image) {
+      const oldImagePath = '.' + player.image;
+      try {
+        await fs.promises.unlink(oldImagePath);
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          console.error('Error deleting image file:', err);
+          return res.status(500).json({ message: 'Server error' });
+        }
+      }
     }
 
     await Player.deleteOne({ _id: req.params.id });

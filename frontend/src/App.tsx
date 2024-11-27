@@ -11,6 +11,9 @@ import TeamForm from './components/TeamForm';
 import StadiumList from './components/StadiumList';
 import StadiumDetail from './components/StadiumDetail';
 import StadiumForm from './components/StadiumForm';
+import PlayersList from './components/PlayersList';
+import PlayerDetail from './components/PlayerDetail';
+import PlayerForm from './components/PlayerForm';
 import SignUp from './components/SignUp';
 import SignIn from './components/SignIn';
 import PrivateRoute from './components/PrivateRoute';
@@ -37,6 +40,14 @@ const App: React.FC = () => {
               <Route path="/teams/:id" element={<TeamDetail />} />
               <Route path="/stadiums" element={<StadiumList />} />
               <Route path="/stadiums/:id" element={<StadiumDetail />} />
+              <Route path="/players" element={<PlayersList />} />
+              <Route path="/players/:id" element={<PlayerDetail />} />
+            </Route>
+
+            {/* Manager and Admin Routes */}
+            <Route element={<PrivateRoute requiredRoles={['admin', 'manager',]} />}>
+              <Route path="/players/add" element={<PlayerForm />} />
+              <Route path="/players/edit/:id" element={<PlayerForm />} />
             </Route>
 
             {/* Admin-Only Routes */}

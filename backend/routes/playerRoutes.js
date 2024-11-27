@@ -28,8 +28,8 @@ const { authenticate, authorize } = require('../middleware/auth');
 // router.delete('/:id', playerController.deletePlayer);
 
 // Manager and above can create and edit players
-router.get('/', authenticate, authorize('admin', 'manager'), playerController.getAllPlayers); // maybe allow regsitered users too
-router.get('/:id', authenticate, authorize('admin', 'manager'), playerController.getPlayerById);
+router.get('/', authenticate, authorize('admin', 'manager', 'viewer'), playerController.getAllPlayers); // maybe allow regsitered users too
+router.get('/:id', authenticate, authorize('admin', 'manager', 'viewer'), playerController.getPlayerById);
 router.post('/', authenticate, authorize('admin', 'manager'), playerController.createPlayer);
 router.put('/:id', authenticate, authorize('admin', 'manager'), playerController.updatePlayer);
 

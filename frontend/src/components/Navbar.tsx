@@ -14,14 +14,21 @@ const Navbar: React.FC = () => {
         <li>
           <Link to="/">Home</Link>
         </li>
-        {user && ['admin', 'manager', 'viewer'].includes(user.role) && (
+        {user && (
           <>
-            <li>
-              <Link to="/teams">Teams</Link>
-            </li>
-            <li>
-              <Link to="/stadiums">Stadiums</Link>
-            </li>
+            {['admin', 'manager', 'viewer'].includes(user.role) && (
+              <>
+                <li>
+                  <Link to="/teams">Teams</Link>
+                </li>
+                <li>
+                  <Link to="/stadiums">Stadiums</Link>
+                </li>
+                <li>
+                <Link to="/players">Players</Link>
+              </li>
+              </>
+            )}
           </>
         )}
         {user ? (
