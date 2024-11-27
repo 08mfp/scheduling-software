@@ -12,6 +12,7 @@ interface User {
 interface AuthContextProps {
   user: User | null;
   apiKey: string | null;
+  loading: boolean; 
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => void;
   signUp: (
@@ -27,6 +28,7 @@ interface AuthContextProps {
 export const AuthContext = createContext<AuthContextProps>({
   user: null,
   apiKey: null,
+  loading: true, 
   signIn: async () => {},
   signOut: () => {},
   signUp: async () => {},
@@ -39,6 +41,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Load user and apiKey from localStorage on mount
   useEffect(() => {
@@ -49,6 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setApiKey(storedApiKey);
       axios.defaults.headers.common['x-api-key'] = storedApiKey;
     }
+    setLoading(false); 
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -112,7 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, apiKey, signIn, signOut, signUp }}>
+    <AuthContext.Provider value={{ user, apiKey, loading, signIn, signOut, signUp }}>
       {children}
     </AuthContext.Provider>
   );

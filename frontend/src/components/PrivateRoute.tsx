@@ -9,7 +9,12 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ requiredRoles }) => {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
+
+  if (loading) {
+    // Optionally show a loading indicator
+    return <div>Loading...</div>;
+  }
 
   // If user is not authenticated, redirect to sign-in page
   if (!user) {

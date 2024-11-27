@@ -50,7 +50,7 @@ const TeamsList: React.FC = () => {
             <strong>Ranking:</strong> {team.teamRanking}
           </p>
           <p>
-            <strong>Stadium:</strong> {team.stadium?.stadiumName || 'N/A'}
+            <strong>Stadium:</strong> {team.stadium?.stadiumName || 'N/A'} 
           </p>
           <hr />
         </div>

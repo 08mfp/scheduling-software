@@ -8,6 +8,8 @@
  */
 const Team = require('../models/Team');
 const upload = require('../middleware/upload');
+const Player = require('../models/Player'); 
+const Fixture = require('../models/Fixture');
 const fs = require('fs');
 
 /**
@@ -17,7 +19,7 @@ const fs = require('fs');
  */
 exports.getAllTeams = async (req, res) => {
   try {
-    const teams = await Team.find();
+    const teams = await Team.find().populate('stadium');
     res.status(200).json(teams);
   } catch (err) {
     res.status(500).json({ message: err.message });
