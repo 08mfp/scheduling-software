@@ -2,10 +2,8 @@
 
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
-
-
 
 // Define the Fixture interface
 interface Fixture {
@@ -31,43 +29,27 @@ interface Fixture {
 }
 
 const FixturesList: React.FC = () => {
+  const [fixtures, setFixtures] = useState<Fixture[]>([]);
+  const [season, setSeason] = useState<number>(new Date().getFullYear());
+  const [seasons, setSeasons] = useState<number[]>([]);
+  const [loadingSeasons, setLoadingSeasons] = useState<boolean>(true);
+  const [loadingFixtures, setLoadingFixtures] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   const { user } = useContext(AuthContext);
 
-  // State to hold the list of fixtures
-  const [fixtures, setFixtures] = useState<Fixture[]>([]);
-  
-  // State to hold the currently selected season
-  const [season, setSeason] = useState<number>(new Date().getFullYear());
-  
-  // State to hold the list of available seasons
-  const [seasons, setSeasons] = useState<number[]>([]);
-  
-  // Loading states for seasons and fixtures
-  const [loadingSeasons, setLoadingSeasons] = useState<boolean>(true);
-  const [loadingFixtures, setLoadingFixtures] = useState<boolean>(true);
-  
-  // State to hold any error messages
-  const [error, setError] = useState<string | null>(null);
-
-  /**
-   * Fetch the list of distinct seasons from the backend when the component mounts.
-   */
   useEffect(() => {
     const fetchSeasons = async () => {
       try {
         const response = await axios.get<number[]>('http://localhost:5003/api/fixtures/seasons');
         const fetchedSeasons = response.data;
-        
+
         if (fetchedSeasons.length > 0) {
-          // Sort seasons in descending order (latest first)
           const sortedSeasons = fetchedSeasons.sort((a, b) => b - a);
           setSeasons(sortedSeasons);
-          
-          // Set the default selected season to the latest available
           setSeason(sortedSeasons[0]);
         }
-        
+
         setLoadingSeasons(false);
       } catch (err) {
         console.error('Error fetching seasons:', err);
@@ -79,9 +61,6 @@ const FixturesList: React.FC = () => {
     fetchSeasons();
   }, []);
 
-  /**
-   * Fetch the fixtures whenever the selected season changes.
-   */
   useEffect(() => {
     if (season) {
       fetchFixtures();
@@ -89,9 +68,6 @@ const FixturesList: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [season]);
 
-  /**
-   * Function to fetch fixtures based on the selected season.
-   */
   const fetchFixtures = async () => {
     setLoadingFixtures(true);
     try {
@@ -105,15 +81,12 @@ const FixturesList: React.FC = () => {
     }
   };
 
-  /**
-   * Function to delete a fixture by its ID.
-   * @param id - The ID of the fixture to delete.
-   */
   const deleteFixture = async (id: string) => {
     if (!user || user.role !== 'admin') {
-        alert('You do not have permission to delete fixtures.');
-        return;
-      }
+      alert('You do not have permission to delete this fixture.');
+      return;
+    }
+
     if (window.confirm('Are you sure you want to delete this fixture?')) {
       try {
         await axios.delete(`http://localhost:5003/api/fixtures/${id}`);
@@ -125,16 +98,10 @@ const FixturesList: React.FC = () => {
     }
   };
 
-  /**
-   * Render loading state for seasons.
-   */
   if (loadingSeasons) {
     return <div>Loading seasons...</div>;
   }
 
-  /**
-   * Render error message if any error occurs.
-   */
   if (error) {
     return <div style={{ color: 'red' }}>{error}</div>;
   }
@@ -142,7 +109,7 @@ const FixturesList: React.FC = () => {
   return (
     <div>
       <h2>Fixtures for Season {season}</h2>
-      
+
       {/* Season Selection Dropdown */}
       <label htmlFor="season-select">Select Season:</label>
       <select
@@ -156,12 +123,14 @@ const FixturesList: React.FC = () => {
           </option>
         ))}
       </select>
-      
-      {/* Link to Add New Fixture */}
-      <Link to="/fixtures/add">
-        <button>Add New Fixture</button>
-      </Link>
-      
+
+      {/* Show Add New Fixture button to admins */}
+      {user && user.role === 'admin' && (
+        <Link to="/fixtures/add">
+          <button>Add New Fixture</button>
+        </Link>
+      )}
+
       {/* Render Loading State for Fixtures */}
       {loadingFixtures ? (
         <div>Loading fixtures...</div>
@@ -188,10 +157,14 @@ const FixturesList: React.FC = () => {
               <p>Score not available</p>
             )}
             {/* Links to Edit and Delete Buttons */}
-            <Link to={`/fixtures/edit/${fixture._id}`}>
-              <button>Edit</button>
-            </Link>
-            <button onClick={() => deleteFixture(fixture._id)}>Delete</button>
+            {user && user.role === 'admin' && (
+              <>
+                <Link to={`/fixtures/edit/${fixture._id}`}>
+                  <button>Edit</button>
+                </Link>
+                <button onClick={() => deleteFixture(fixture._id)}>Delete</button>
+              </>
+            )}
             <hr />
           </div>
         ))

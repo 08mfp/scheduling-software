@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import FixturesList from './components/FixturesList';
+import FixtureForm from './components/FixtureForm';
 import TeamsList from './components/TeamsList';
 import TeamDetail from './components/TeamDetail';
 import TeamForm from './components/TeamForm';
@@ -28,6 +29,7 @@ const App: React.FC = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<FixturesList />} />
+            <Route path="/fixtures" element={<FixturesList />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/signin" element={<SignIn />} />
 
@@ -45,7 +47,7 @@ const App: React.FC = () => {
             </Route>
 
             {/* Manager and Admin Routes */}
-            <Route element={<PrivateRoute requiredRoles={['admin', 'manager',]} />}>
+            <Route element={<PrivateRoute requiredRoles={['admin', 'manager']} />}>
               <Route path="/players/add" element={<PlayerForm />} />
               <Route path="/players/edit/:id" element={<PlayerForm />} />
             </Route>
@@ -56,6 +58,8 @@ const App: React.FC = () => {
               <Route path="/teams/edit/:id" element={<TeamForm />} />
               <Route path="/stadiums/add" element={<StadiumForm />} />
               <Route path="/stadiums/edit/:id" element={<StadiumForm />} />
+              <Route path="/fixtures/add" element={<FixtureForm />} />
+              <Route path="/fixtures/edit/:id" element={<FixtureForm />} />
             </Route>
 
             {/* Catch-All Route */}

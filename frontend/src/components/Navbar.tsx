@@ -24,13 +24,19 @@ const Navbar: React.FC = () => {
                 <li>
                   <Link to="/stadiums">Stadiums</Link>
                 </li>
-                <li>
+              </>
+            )}
+            {['admin', 'manager', 'viewer'].includes(user.role) && (
+              <li>
                 <Link to="/players">Players</Link>
               </li>
-              </>
             )}
           </>
         )}
+        {/* Fixtures link is available to all users */}
+        <li>
+          <Link to="/fixtures">Fixtures</Link>
+        </li>
         {user ? (
           <>
             <li>

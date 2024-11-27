@@ -15,20 +15,20 @@ const Fixture = require('../models/Fixture');
  * @access  Public
  */
 exports.getAllFixtures = async (req, res) => {
-    try {
-      const query = {};
-      if (req.query.season) {
-        query.season = req.query.season;
-      }
-      const fixtures = await Fixture.find(query)
-        .populate('homeTeam', 'teamName')
-        .populate('awayTeam', 'teamName')
-        .populate('stadium', 'stadiumName');
-      res.status(200).json(fixtures);
-    } catch (err) {
-      res.status(500).json({ message: err.message });
+  try {
+    const query = {};
+    if (req.query.season) {
+      query.season = req.query.season;
     }
-  };
+    const fixtures = await Fixture.find(query)
+      .populate('homeTeam', 'teamName')
+      .populate('awayTeam', 'teamName')
+      .populate('stadium', 'stadiumName');
+    res.status(200).json(fixtures);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 /**
  * @desc    Get all distinct seasons, used by front end to filter fixtures by seaosn
@@ -44,30 +44,24 @@ exports.getAllFixtures = async (req, res) => {
 //     }
 //   };
 //Below is with caching to reduce the number of database queries (i think)
+/**
+ * @desc    Get all distinct seasons
+ * @route   GET /api/fixtures/seasons
+ * @access  Public
+ */
 exports.getAllSeasons = async (req, res) => {
-    try {
-    //   console.log('Received request to fetch all seasons.');
-  
-      // Fetch distinct seasons from the Fixture collection
-      const seasons = await Fixture.distinct('season');
-  
-    //   console.log('Seasons fetched:', seasons);
-  
-      if (!seasons || seasons.length === 0) {
-        // console.warn('No seasons found in the database.');
-        return res.status(404).json({ message: 'No seasons found.' });
-      }
-  
-      // Sort seasons in descending order (latest first)
-      const sortedSeasons = seasons.sort((a, b) => b - a);
-    //   console.log('Sorted seasons:', sortedSeasons);
-  
-      res.status(200).json(sortedSeasons);
-    } catch (err) {
-    //   console.error('Error in getAllSeasons controller:', err);
-      res.status(500).json({ message: 'Internal Server Error' });
+  try {
+    const seasons = await Fixture.distinct('season');
+    if (!seasons || seasons.length === 0) {
+      return res.status(404).json({ message: 'No seasons found.' });
     }
-  };
+    // Sort seasons in descending order (latest first)
+    const sortedSeasons = seasons.sort((a, b) => b - a);
+    res.status(200).json(sortedSeasons);
+  } catch (err) {
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
   
 
 /**
@@ -93,18 +87,19 @@ exports.getFixtureById = async (req, res) => {
 /**
  * @desc    Create a new fixture
  * @route   POST /api/fixtures
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.createFixture = async (req, res) => {
   const fixture = new Fixture({
     round: req.body.round,
-    date: req.body.date, // need to later ensure that date includes time. 
+    date: req.body.date,
     homeTeam: req.body.homeTeam,
     awayTeam: req.body.awayTeam,
     stadium: req.body.stadium,
     location: req.body.location,
     homeTeamScore: req.body.homeTeamScore,
     awayTeamScore: req.body.awayTeamScore,
+    season: req.body.season,
   });
 
   try {
@@ -118,7 +113,7 @@ exports.createFixture = async (req, res) => {
 /**
  * @desc    Update a fixture
  * @route   PUT /api/fixtures/:id
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.updateFixture = async (req, res) => {
   try {
@@ -133,10 +128,14 @@ exports.updateFixture = async (req, res) => {
     fixture.awayTeam = req.body.awayTeam || fixture.awayTeam;
     fixture.stadium = req.body.stadium || fixture.stadium;
     fixture.location = req.body.location || fixture.location;
-    fixture.homeTeamScore =
-      req.body.homeTeamScore !== undefined ? req.body.homeTeamScore : fixture.homeTeamScore;
-    fixture.awayTeamScore =
-      req.body.awayTeamScore !== undefined ? req.body.awayTeamScore : fixture.awayTeamScore;
+    fixture.season = req.body.season || fixture.season;
+
+    if (req.body.homeTeamScore !== undefined) {
+      fixture.homeTeamScore = req.body.homeTeamScore;
+    }
+    if (req.body.awayTeamScore !== undefined) {
+      fixture.awayTeamScore = req.body.awayTeamScore;
+    }
 
     const updatedFixture = await fixture.save();
     res.status(200).json(updatedFixture);
@@ -148,7 +147,7 @@ exports.updateFixture = async (req, res) => {
 /**
  * @desc    Delete a fixture
  * @route   DELETE /api/fixtures/:id
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.deleteFixture = async (req, res) => {
   try {
@@ -165,13 +164,13 @@ exports.deleteFixture = async (req, res) => {
 };
 
 /**
- * @desc    Bulk create fixtures. Used when sending provisional chosen fixtures for a season
+ * @desc    Bulk create fixtures
  * @route   POST /api/fixtures/bulk
- * @access  Public
+ * @access  Private (Admin only)
  */
 exports.bulkCreateFixtures = async (req, res) => {
   try {
-    const fixtures = req.body.fixtures; // Expecting an array of fixtures from provisional
+    const fixtures = req.body.fixtures; // Expecting an array of fixtures
     const newFixtures = await Fixture.insertMany(fixtures);
     res.status(201).json(newFixtures);
   } catch (err) {
