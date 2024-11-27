@@ -8,6 +8,9 @@ import FixturesList from './components/FixturesList';
 import TeamsList from './components/TeamsList';
 import TeamDetail from './components/TeamDetail';
 import TeamForm from './components/TeamForm';
+import StadiumList from './components/StadiumList';
+import StadiumDetail from './components/StadiumDetail';
+import StadiumForm from './components/StadiumForm';
 import SignUp from './components/SignUp';
 import SignIn from './components/SignIn';
 import PrivateRoute from './components/PrivateRoute';
@@ -32,12 +35,16 @@ const App: React.FC = () => {
             <Route element={<PrivateRoute requiredRoles={['admin', 'manager', 'viewer']} />}>
               <Route path="/teams" element={<TeamsList />} />
               <Route path="/teams/:id" element={<TeamDetail />} />
+              <Route path="/stadiums" element={<StadiumList />} />
+              <Route path="/stadiums/:id" element={<StadiumDetail />} />
             </Route>
 
             {/* Admin-Only Routes */}
             <Route element={<PrivateRoute requiredRoles={['admin']} />}>
               <Route path="/teams/add" element={<TeamForm />} />
               <Route path="/teams/edit/:id" element={<TeamForm />} />
+              <Route path="/stadiums/add" element={<StadiumForm />} />
+              <Route path="/stadiums/edit/:id" element={<StadiumForm />} />
             </Route>
 
             {/* Catch-All Route */}
