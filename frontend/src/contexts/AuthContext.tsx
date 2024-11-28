@@ -1,4 +1,11 @@
 // frontend/src/contexts/AuthContext.tsx
+/**
+ * @module frontend/src/contexts/AuthContext
+ * @description This file defines the AuthContext, which provides user authentication and authorization functionality to the application.
+ * @api frontend/src/contexts/AuthContext (private)
+ * @version 1.0.0
+ * @authors github.com/08mfp
+ */
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
