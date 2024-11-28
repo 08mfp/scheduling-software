@@ -23,5 +23,9 @@ router.post('/login', userController.loginUser);
 // Get current user
 router.get('/me', authenticate, userController.getCurrentUser);
 
+// Update user profile
+router.put('/me', authenticate, userController.updateUserProfile);
+
+router.delete('/me', authenticate, userController.deleteUserProfile);
 
 module.exports = router;

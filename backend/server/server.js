@@ -27,6 +27,7 @@ const schedulerRoutes = require('../routes/schedulerRoutes');
 const provisionalFixtureRoutes = require('../routes/provisionalFixtureRoutes');
 const manualFixtureRoutes = require('../routes/manualFixtureRoutes');
 const userRoutes = require('../routes/userRoutes');
+const adminRoutes = require('../routes/adminRoutes');
 
 
 const app = express(); // Initialize express server and store in app
@@ -46,6 +47,7 @@ app.use('/api/provisional-fixtures', provisionalFixtureRoutes);
 app.use('api/fixtures/seasons', fixtureRoutes); //maybe remove if not being used later. This is just for front end
 app.use('/api/manual-fixtures', manualFixtureRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Connect to MongoDB
 mongoose
