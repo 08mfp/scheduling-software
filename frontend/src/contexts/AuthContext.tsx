@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   ) => {
     try {
       // Verify secret code for Manager/Admin roles
-      if ((role === 'manager' || role === 'admin') && secretCode !== 'SECRET_CODE') {
+      if ((role === 'manager' || role === 'admin') && secretCode !== 'SECRET_CODE') { //? THIS IS THE SECRET CODE BEING UISED IN ADMIN PANEL AND IN SIGN UP. CHANGE THIS MAYBE TO ENV VARIABLE and add to .env file
         throw new Error('Invalid secret code for the selected role');
       }
 
