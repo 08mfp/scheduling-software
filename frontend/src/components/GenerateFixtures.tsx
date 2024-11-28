@@ -27,7 +27,7 @@ interface Team {
 interface Fixture {
   _id?: string;
   round: number;
-  date: Date;
+  date: string; // Changed to string for easier handling with datetime-local
   homeTeam: Team;
   awayTeam: Team;
   stadium: Stadium | null;
@@ -119,7 +119,12 @@ const GenerateFixtures: React.FC = () => {
           'x-api-key': apiKey,
         },
       });
-      setFixtures(response.data.fixtures || []);
+      // Convert dates to ISO strings if necessary
+      const generatedFixtures: Fixture[] = (response.data.fixtures || []).map((fixture: any) => ({
+        ...fixture,
+        date: new Date(fixture.date).toISOString().slice(0, 16), // Format for datetime-local
+      }));
+      setFixtures(generatedFixtures);
       setSummary(response.data.summary || []);
     } catch (error: any) {
       console.error('Error generating fixtures:', error);
@@ -136,9 +141,14 @@ const GenerateFixtures: React.FC = () => {
     setLoading(true);
     setErrorMessage('');
     try {
+      // Convert date strings back to Date objects or appropriate format for backend
+      const fixturesToSave = fixtures.map((fixture) => ({
+        ...fixture,
+        date: new Date(fixture.date),
+      }));
       await axios.post(
         'http://localhost:5003/api/provisional-fixtures/save',
-        { season },
+        { season, fixtures: fixturesToSave },
         {
           headers: {
             'x-api-key': apiKey,
@@ -164,6 +174,15 @@ const GenerateFixtures: React.FC = () => {
     setFixtures([]);
     setSummary([]);
     setSelectedTeamIds(new Set());
+  };
+
+  // Handle date change for a specific fixture
+  const handleDateChange = (index: number, newDate: string) => {
+    setFixtures((prevFixtures) => {
+      const updatedFixtures = [...prevFixtures];
+      updatedFixtures[index].date = newDate;
+      return updatedFixtures;
+    });
   };
 
   // If the user is not authenticated or doesn't have admin role, redirect to unauthorized
@@ -291,7 +310,7 @@ const GenerateFixtures: React.FC = () => {
                 <thead>
                   <tr>
                     <th style={tableHeaderStyle}>Round</th>
-                    <th style={tableHeaderStyle}>Date</th>
+                    <th style={tableHeaderStyle}>Date & Time</th>
                     <th style={tableHeaderStyle}>Home Team</th>
                     <th style={tableHeaderStyle}>Away Team</th>
                     <th style={tableHeaderStyle}>Stadium</th>
@@ -299,10 +318,17 @@ const GenerateFixtures: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {(fixtures || []).map((fixture) => (
+                  {(fixtures || []).map((fixture, index) => (
                     <tr key={`${fixture.homeTeam._id}-${fixture.awayTeam._id}-${fixture.round}`}>
                       <td style={tableCellStyle}>{fixture.round}</td>
-                      <td style={tableCellStyle}>{new Date(fixture.date).toLocaleString()}</td>
+                      <td style={tableCellStyle}>
+                        <input
+                          type="datetime-local"
+                          value={fixture.date}
+                          onChange={(e) => handleDateChange(index, e.target.value)}
+                          style={{ width: '100%' }}
+                        />
+                      </td>
                       <td style={tableCellStyle}>{fixture.homeTeam.teamName}</td>
                       <td style={tableCellStyle}>{fixture.awayTeam.teamName}</td>
                       <td style={tableCellStyle}>{fixture.stadium ? fixture.stadium.stadiumName : 'Unknown'}</td>

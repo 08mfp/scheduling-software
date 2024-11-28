@@ -1,6 +1,6 @@
 // frontend/src/components/FixtureForm.tsx
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
@@ -46,34 +46,46 @@ const FixtureForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
+  // Ref to prevent multiple API calls in Strict Mode
+  const hasFetched = useRef(false);
+
   useEffect(() => {
+    if (hasFetched.current) return; // Prevent duplicate fetches
+
     if (user && user.role === 'admin') {
       fetchTeams();
       fetchStadiums();
+
       if (id) {
         // Fetch the fixture data for editing
-        axios
-          .get(`http://localhost:5003/api/fixtures/${id}`)
-          .then((response) => {
-            const data = response.data;
-            setFixture({
-              round: data.round,
-              date: data.date.substring(0, 16), // Get date and time
-              homeTeam: data.homeTeam._id,
-              awayTeam: data.awayTeam._id,
-              stadium: data.stadium._id,
-              location: data.location,
-              homeTeamScore: data.homeTeamScore,
-              awayTeamScore: data.awayTeamScore,
-              season: data.season,
-            });
-          })
-          .catch((error) => {
-            console.error('There was an error fetching the fixture!', error);
-          });
+        fetchFixture(id);
       }
+
+      hasFetched.current = true;
     }
   }, [id, user]);
+
+  const fetchFixture = (fixtureId: string) => {
+    axios
+      .get(`http://localhost:5003/api/fixtures/${fixtureId}`)
+      .then((response) => {
+        const data = response.data;
+        setFixture({
+          round: data.round,
+          date: data.date.substring(0, 16), // Format for datetime-local input
+          homeTeam: data.homeTeam._id,
+          awayTeam: data.awayTeam._id,
+          stadium: data.stadium._id,
+          location: data.location,
+          homeTeamScore: data.homeTeamScore,
+          awayTeamScore: data.awayTeamScore,
+          season: data.season,
+        });
+      })
+      .catch((error) => {
+        console.error('There was an error fetching the fixture!', error);
+      });
+  };
 
   const fetchTeams = () => {
     axios
@@ -138,6 +150,17 @@ const FixtureForm: React.FC = () => {
     return fixtureDate < now;
   };
 
+  // Helper functions to get team and stadium names by ID
+  const getTeamName = (teamId: string) => {
+    const team = teams.find((t) => t._id === teamId);
+    return team ? team.teamName : 'Unknown Team';
+  };
+
+  const getStadiumName = (stadiumId: string) => {
+    const stadium = stadiums.find((s) => s._id === stadiumId);
+    return stadium ? stadium.stadiumName : 'Unknown Stadium';
+  };
+
   // If the user is not authenticated or doesn't have admin role, redirect to unauthorized
   if (!user || user.role !== 'admin') {
     return <Navigate to="/unauthorized" replace />;
@@ -147,20 +170,15 @@ const FixtureForm: React.FC = () => {
     <div>
       <h2>{id ? 'Edit Fixture' : 'Add New Fixture'}</h2>
       <form onSubmit={handleSubmit}>
+        {/* Round Label */}
         <div>
-          <label>Round:</label>
-          <input
-            type="number"
-            name="round"
-            min="1"
-            max="5"
-            value={fixture.round}
-            onChange={handleChange}
-            required
-          />
+          <label><strong>Round:</strong></label>
+          <span style={{ marginLeft: '10px' }}>{fixture.round}</span>
         </div>
+
+        {/* Date and Time Input */}
         <div>
-          <label>Date and Time:</label>
+          <label><strong>Date and Time:</strong></label>
           <input
             type="datetime-local"
             name="date"
@@ -169,40 +187,28 @@ const FixtureForm: React.FC = () => {
             required
           />
         </div>
+
+        {/* Season Input */}
         <div>
-          <label>Season:</label>
-          <input
-            type="number"
-            name="season"
-            value={fixture.season}
-            onChange={handleChange}
-            required
-          />
+          <label><strong>Season:</strong></label>
+          <span style={{ marginLeft: '10px' }}>{fixture.season}</span>
         </div>
+
+        {/* Home Team Label */}
         <div>
-          <label>Home Team:</label>
-          <select name="homeTeam" value={fixture.homeTeam} onChange={handleChange} required>
-            <option value="">Select a team</option>
-            {teams.map((team) => (
-              <option key={team._id} value={team._id}>
-                {team.teamName}
-              </option>
-            ))}
-          </select>
+          <label><strong>Home Team:</strong></label>
+          <span style={{ marginLeft: '10px' }}>{getTeamName(fixture.homeTeam)}</span>
         </div>
+
+        {/* Away Team Label */}
         <div>
-          <label>Away Team:</label>
-          <select name="awayTeam" value={fixture.awayTeam} onChange={handleChange} required>
-            <option value="">Select a team</option>
-            {teams.map((team) => (
-              <option key={team._id} value={team._id}>
-                {team.teamName}
-              </option>
-            ))}
-          </select>
+          <label><strong>Away Team:</strong></label>
+          <span style={{ marginLeft: '10px' }}>{getTeamName(fixture.awayTeam)}</span>
         </div>
+
+        {/* Stadium Select */}
         <div>
-          <label>Stadium:</label>
+          <label><strong>Stadium:</strong></label>
           <select name="stadium" value={fixture.stadium} onChange={handleChange} required>
             <option value="">Select a stadium</option>
             {stadiums.map((stadium) => (
@@ -212,8 +218,10 @@ const FixtureForm: React.FC = () => {
             ))}
           </select>
         </div>
+
+        {/* Location Input */}
         <div>
-          <label>Location:</label>
+          <label><strong>Location:</strong></label>
           <input
             type="text"
             name="location"
@@ -222,10 +230,12 @@ const FixtureForm: React.FC = () => {
             required
           />
         </div>
-        {isPastDate() && (
+
+        {/* Score Fields Based on Date */}
+        {isPastDate() ? (
           <>
             <div>
-              <label>Home Team Score:</label>
+              <label><strong>Home Team Score:</strong></label>
               <input
                 type="number"
                 name="homeTeamScore"
@@ -236,7 +246,7 @@ const FixtureForm: React.FC = () => {
               />
             </div>
             <div>
-              <label>Away Team Score:</label>
+              <label><strong>Away Team Score:</strong></label>
               <input
                 type="number"
                 name="awayTeamScore"
@@ -247,8 +257,10 @@ const FixtureForm: React.FC = () => {
               />
             </div>
           </>
+        ) : (
+          <p>Scores are not required for future fixtures.</p>
         )}
-        {!isPastDate() && <p>Scores are not required for future fixtures.</p>}
+
         <button type="submit">{id ? 'Update Fixture' : 'Add Fixture'}</button>
       </form>
     </div>

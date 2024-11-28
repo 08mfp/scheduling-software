@@ -13,10 +13,10 @@ const manualFixtureController = require('../controllers/manualFixtureController'
 const { authenticate, authorize } = require('../middleware/auth');
 
 // Get previous fixture to determine home/away
-router.get('/previous-fixture', manualFixtureController.getPreviousFixture); //! maybe restrict to admin
+router.get('/previous-fixture', authenticate, authorize('admin'), manualFixtureController.getPreviousFixture);
 
 // Validate manually scheduled fixtures
-router.post('/validate', manualFixtureController.validateFixtures); //! maybe restrict to admin
+router.post('/validate', authenticate, authorize('admin'), manualFixtureController.validateFixtures);
 
 // Save manually scheduled fixtures
 // router.post('/save', manualFixtureController.saveFixtures);

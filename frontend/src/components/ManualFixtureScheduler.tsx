@@ -23,7 +23,12 @@ interface UnfeasibleMatchupReason {
   reason: string;
 }
 
-const ManualFixtureScheduler: React.FC = () => {
+interface ManualFixtureSchedulerProps {
+    initialFixtures?: Fixture[][];
+  }
+  
+
+  const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = ({ initialFixtures }) => {
   const [season, setSeason] = useState<number>(new Date().getFullYear() + 1);
   const [teams, setTeams] = useState<Team[]>([]);
   const [fixtures, setFixtures] = useState<Fixture[][]>([]);
@@ -31,6 +36,7 @@ const ManualFixtureScheduler: React.FC = () => {
   const [constraintChecks, setConstraintChecks] = useState<{ [key: string]: boolean }>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [step, setStep] = useState<'input' | 'summary'>('input');
+  
 
   // Authentication Context
   const { user, apiKey } = useContext(AuthContext);
