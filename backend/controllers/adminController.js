@@ -1,4 +1,11 @@
 // backend/controllers/adminController.js
+/**
+ * @module backend/controllers/adminController
+ * @description This file contains the controller functions for managing Users in the database.
+ * @api User
+ * @version 1.0.0
+ * @authors github.com/08mfp
+ */
 
 const User = require('../models/User');
 const mongoose = require('mongoose');

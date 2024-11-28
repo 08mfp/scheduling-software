@@ -1,4 +1,11 @@
 // backend/routes/adminRoutes.js
+/**
+ * @module backend/routes/adminRoutes
+ * @description This file contains the routes for managing users with 'admin' role.
+ * @api Admin Routes
+ * @version 1.0.0
+ * @authors github.com/08mfp
+ */
 
 const express = require('express');
 const router = express.Router();
