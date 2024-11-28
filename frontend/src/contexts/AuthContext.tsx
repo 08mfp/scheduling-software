@@ -7,6 +7,9 @@ interface User {
   lastName: string;
   email: string;
   role: string;
+  homeCity?: string;
+  age?: number;
+  image?: string;
 }
 
 interface AuthContextProps {
@@ -23,6 +26,7 @@ interface AuthContextProps {
     role: string,
     secretCode?: string
   ) => Promise<void>;
+  updateUser: (userData: User) => void; // New method
 }
 
 export const AuthContext = createContext<AuthContextProps>({
@@ -32,6 +36,7 @@ export const AuthContext = createContext<AuthContextProps>({
   signIn: async () => {},
   signOut: () => {},
   signUp: async () => {},
+  updateUser: () => {}, // Initialize as empty function
 });
 
 interface AuthProviderProps {
@@ -115,8 +120,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // New method to update user
+  const updateUser = (userData: User) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, apiKey, loading, signIn, signOut, signUp }}>
+    <AuthContext.Provider value={{ user, apiKey, loading, signIn, signOut, signUp, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

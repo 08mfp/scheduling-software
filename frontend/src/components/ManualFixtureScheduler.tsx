@@ -6,7 +6,6 @@ import { Team, Fixture } from '../interfaces/ManualFixture';
 import { AuthContext } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 
-
 interface ValidationError {
   message: string;
   fixtureIndices?: { roundIndex: number; fixtureIndex: number };
@@ -24,24 +23,24 @@ interface UnfeasibleMatchupReason {
 }
 
 interface ManualFixtureSchedulerProps {
-    initialFixtures?: Fixture[][];
-  }
-  
+  initialFixtures?: Fixture[][];
+}
 
-  const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = ({ initialFixtures }) => {
+const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = ({ initialFixtures }) => {
   const [season, setSeason] = useState<number>(new Date().getFullYear() + 1);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
+  const [selectedTeams, setSelectedTeams] = useState<Team[]>([]);
   const [fixtures, setFixtures] = useState<Fixture[][]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [constraintChecks, setConstraintChecks] = useState<{ [key: string]: boolean }>({});
   const [loading, setLoading] = useState<boolean>(false);
-  const [step, setStep] = useState<'input' | 'summary'>('input');
-  
+  const [step, setStep] = useState<'selectTeams' | 'input' | 'summary'>('selectTeams');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   // Authentication Context
   const { user, apiKey } = useContext(AuthContext);
 
-  
   // State for overall matchup tracker
   const [matchupTracker, setMatchupTracker] = useState<{ [key: string]: boolean }>({});
 
@@ -60,7 +59,7 @@ interface ManualFixtureSchedulerProps {
   // State for unfeasible matchup reasons
   const [unfeasibleMatchupReasons, setUnfeasibleMatchupReasons] = useState<{ [key: string]: UnfeasibleMatchupReason[] }>({});
 
-  // Fetch teams and initialize fixtures and trackers on component mount
+  // Fetch teams on component mount
   useEffect(() => {
     if (user && user.role === 'admin') {
       const fetchTeams = async () => {
@@ -72,24 +71,52 @@ interface ManualFixtureSchedulerProps {
           });
           const teamData: Team[] = response.data || [];
           setTeams(teamData);
-          initializeMatchupTracker(teamData);
-          initializePerRoundTeamTracker(teamData);
         } catch (error) {
           console.error('Error fetching teams:', error);
         }
       };
       fetchTeams();
-      initializeFixtures();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Initialize fixtures with 5 rounds and 3 fixtures per round
-  const initializeFixtures = () => {
+  // Handle team selection
+  const handleTeamSelection = (teamId: string) => {
+    setErrorMessage('');
+    setSelectedTeamIds((prevSelected) => {
+      const newSelected = new Set(prevSelected);
+      if (newSelected.has(teamId)) {
+        newSelected.delete(teamId);
+      } else {
+        if (newSelected.size >= 6) {
+          setErrorMessage('You can select up to 6 teams.');
+          return prevSelected;
+        }
+        newSelected.add(teamId);
+      }
+      return newSelected;
+    });
+  };
+
+  // Validate team selection before generating fixtures
+  const validateSelection = (): boolean => {
+    if (selectedTeamIds.size !== 6) {
+      setErrorMessage('Please select exactly 6 teams.');
+      return false;
+    }
+    return true;
+  };
+
+  // Initialize fixtures with rounds and fixtures based on selected teams
+  const initializeFixtures = (selectedTeamsList: Team[]) => {
     const initialFixtures: Fixture[][] = [];
-    for (let round = 1; round <= 5; round++) {
+    const numTeams = selectedTeamsList.length;
+    const rounds = numTeams - 1; // For round-robin
+    const numFixturesPerRound = numTeams / 2; // Assuming even number of teams
+
+    for (let round = 1; round <= rounds; round++) {
       const roundFixtures: Fixture[] = [];
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < numFixturesPerRound; i++) {
         roundFixtures.push({
           round,
           date: '',
@@ -97,7 +124,7 @@ interface ManualFixtureSchedulerProps {
           awayTeam: null,
           stadium: null,
           location: '',
-          touched: false, // Initialize as not touched
+          touched: false,
         });
       }
       initialFixtures.push(roundFixtures);
@@ -122,7 +149,8 @@ interface ManualFixtureSchedulerProps {
   // Initialize per-round team tracker
   const initializePerRoundTeamTracker = (teamList: Team[]) => {
     const perRoundTracker: { [round: number]: { [teamId: string]: boolean } } = {};
-    for (let round = 1; round <= 5; round++) {
+    const numRounds = teamList.length - 1;
+    for (let round = 1; round <= numRounds; round++) {
       perRoundTracker[round] = {};
       teamList.forEach(team => {
         perRoundTracker[round][team._id] = false; // Initially not scheduled
@@ -136,8 +164,8 @@ interface ManualFixtureSchedulerProps {
     // Update overall matchup tracker
     const overallTracker: { [key: string]: boolean } = {};
     // Initialize all matchups as not scheduled
-    teams.forEach((teamA, i) => {
-      teams.slice(i + 1).forEach(teamB => {
+    selectedTeams.forEach((teamA, i) => {
+      selectedTeams.slice(i + 1).forEach(teamB => {
         const matchupKey = `${teamA._id}-${teamB._id}`;
         overallTracker[matchupKey] = false;
       });
@@ -163,8 +191,8 @@ interface ManualFixtureSchedulerProps {
     fixturesToCheck.forEach((roundFixtures, roundIndex) => {
       const roundNumber = roundIndex + 1;
       newPerRoundTracker[roundNumber] = {};
-      teams.forEach(team => {
-        newPerRoundTracker[roundNumber][team._id] = false; // Initialize as not scheduled
+      selectedTeams.forEach(team => {
+        newPerRoundTracker[roundNumber][team._id] = false; // Initially not scheduled
       });
       roundFixtures.forEach(fixture => {
         if (fixture.homeTeam && fixture.awayTeam) {
@@ -176,8 +204,8 @@ interface ManualFixtureSchedulerProps {
     setPerRoundTeamTracker(newPerRoundTracker);
   };
 
-  // Handle team selection for home and away teams
-  const handleTeamSelection = async (
+  // Handle team selection for home and away teams in fixtures
+  const handleTeamSelectionForFixture = async (
     roundIndex: number,
     fixtureIndex: number,
     teamType: 'teamA' | 'teamB',
@@ -187,7 +215,7 @@ interface ManualFixtureSchedulerProps {
     const fixture = { ...newFixtures[roundIndex][fixtureIndex] };
 
     // Find the selected team
-    const selectedTeam = teams.find(team => team._id === teamId);
+    const selectedTeam = selectedTeams.find(team => team._id === teamId);
     if (teamType === 'teamA') {
       fixture.homeTeam = selectedTeam || { _id: teamId, teamName: 'Unknown Team' } as Team;
     } else {
@@ -278,7 +306,6 @@ interface ManualFixtureSchedulerProps {
   const isDateWithinAllowedRange = (dateString: string): boolean => {
     const date = new Date(dateString);
     const month = date.getUTCMonth(); // January = 0
-    const dayOfMonth = date.getUTCDate();
     const dayOfWeek = date.getUTCDay(); // Sunday = 0
     const hours = date.getUTCHours();
     const minutes = date.getUTCMinutes();
@@ -698,7 +725,7 @@ interface ManualFixtureSchedulerProps {
     const scheduledTeams = Object.keys(perRoundTeamTracker[roundNumber] || {}).filter(
       (teamId) => perRoundTeamTracker[roundNumber][teamId]
     );
-    const availableTeams = teams.filter(team => !scheduledTeams.includes(team._id));
+    const availableTeams = selectedTeams.filter(team => !scheduledTeams.includes(team._id));
 
     for (let i = 0; i < availableTeams.length; i++) {
       for (let j = i + 1; j < availableTeams.length; j++) {
@@ -744,7 +771,7 @@ interface ManualFixtureSchedulerProps {
           const scheduledTeams = Object.keys(perRoundTeamTracker[roundNumber] || {}).filter(
             (teamId) => perRoundTeamTracker[roundNumber][teamId]
           );
-          const availableTeams = teams.filter(team => !scheduledTeams.includes(team._id));
+          const availableTeams = selectedTeams.filter(team => !scheduledTeams.includes(team._id));
           const unfeasibleReasons: UnfeasibleMatchupReason[] = [];
 
           for (let i = 0; i < availableTeams.length; i++) {
@@ -774,7 +801,54 @@ interface ManualFixtureSchedulerProps {
       }
     }
     return reasons;
-  }, [fixtures, perRoundTeamTracker, teams, matchupTracker, showSuggestions]);
+  }, [fixtures, perRoundTeamTracker, selectedTeams, matchupTracker, showSuggestions]);
+
+  // Team Selection Interface
+  const TeamSelection: React.FC = () => {
+    return (
+      <div style={{ marginBottom: '30px' }}>
+        <h3>Select 6 Teams for the Season</h3>
+        {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+          {teams.map(team => (
+            <div key={team._id} style={{ marginRight: '10px', marginBottom: '10px' }}>
+              <input
+                type="checkbox"
+                id={team._id}
+                checked={selectedTeamIds.has(team._id)}
+                onChange={() => handleTeamSelection(team._id)}
+              />
+              <label htmlFor={team._id} style={{ marginLeft: '5px' }}>{team.teamName}</label>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => {
+            if (validateSelection()) {
+              // Initialize selectedTeams
+              const selectedTeamsList = teams.filter(team => selectedTeamIds.has(team._id));
+              setSelectedTeams(selectedTeamsList);
+              initializeFixtures(selectedTeamsList);
+              initializeMatchupTracker(selectedTeamsList);
+              initializePerRoundTeamTracker(selectedTeamsList);
+              setStep('input');
+            }
+          }}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#28a745',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            marginTop: '10px',
+          }}
+        >
+          Proceed to Schedule Fixtures
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div style={{ padding: '20px', maxWidth: '1600px', margin: '0 auto', display: 'flex' }}>
@@ -794,6 +868,10 @@ interface ManualFixtureSchedulerProps {
             style={{ marginLeft: '10px', padding: '5px' }}
           />
         </div>
+
+        {step === 'selectTeams' && (
+          <TeamSelection />
+        )}
 
         {step === 'input' && (
           <>
@@ -900,22 +978,22 @@ interface ManualFixtureSchedulerProps {
                         <div style={{ display: 'flex', alignItems: 'center' }}>
                           <select
                             value={fixture.homeTeam ? fixture.homeTeam._id : ''}
-                            onChange={(e) => handleTeamSelection(roundIndex, fixtureIndex, 'teamA', e.target.value)}
+                            onChange={(e) => handleTeamSelectionForFixture(roundIndex, fixtureIndex, 'teamA', e.target.value)}
                             style={{ marginRight: '10px', padding: '5px' }}
                           >
                             <option value="">Select Team A</option>
-                            {teams.map(team => (
+                            {selectedTeams.map(team => (
                               <option key={team._id} value={team._id}>{team.teamName}</option>
                             ))}
                           </select>
                           <span style={{ margin: '0 10px' }}>vs</span>
                           <select
                             value={fixture.awayTeam ? fixture.awayTeam._id : ''}
-                            onChange={(e) => handleTeamSelection(roundIndex, fixtureIndex, 'teamB', e.target.value)}
+                            onChange={(e) => handleTeamSelectionForFixture(roundIndex, fixtureIndex, 'teamB', e.target.value)}
                             style={{ marginLeft: '10px', padding: '5px' }}
                           >
                             <option value="">Select Team B</option>
-                            {teams.map(team => (
+                            {selectedTeams.map(team => (
                               <option key={team._id} value={team._id}>{team.teamName}</option>
                             ))}
                           </select>
@@ -1019,7 +1097,7 @@ interface ManualFixtureSchedulerProps {
                                     <ul>
                                       {generateConflictSolutions(roundIndex, fixtureIndex).map((suggestion, idx) => (
                                         <li key={idx}>
-                                          Reset <strong>Round {suggestion.conflictingFixture.roundIndex}, Fixture {suggestion.conflictingFixture.fixtureIndex + 1}</strong> to free up teams.
+                                          Reset <strong>Round {suggestion.conflictingFixture.roundIndex + 1}, Fixture {suggestion.conflictingFixture.fixtureIndex + 1}</strong> to free up teams.
                                         </li>
                                       ))}
                                     </ul>
@@ -1063,8 +1141,8 @@ interface ManualFixtureSchedulerProps {
                               <div style={{ marginTop: '10px' }}>
                                 <h5>Previous Season ({fixture.previousFixture.season}) Fixture:</h5>
                                 <p>
-                                  {teams.find(team => team._id === fixture.previousFixture?.homeTeam)?.teamName ?? 'Unknown Team'} vs{' '}
-                                  {teams.find(team => team._id === fixture.previousFixture?.awayTeam)?.teamName ?? 'Unknown Team'}
+                                  {selectedTeams.find(team => team._id === fixture.previousFixture?.homeTeam)?.teamName ?? 'Unknown Team'} vs{' '}
+                                  {selectedTeams.find(team => team._id === fixture.previousFixture?.awayTeam)?.teamName ?? 'Unknown Team'}
                                 </p>
                               </div>
                             )}
@@ -1180,8 +1258,8 @@ interface ManualFixtureSchedulerProps {
           <ul>
             {Object.entries(matchupTracker).map(([matchupKey, scheduled], index) => {
               const [teamAId, teamBId] = matchupKey.split('-');
-              const teamAName = teams.find(team => team._id === teamAId)?.teamName || 'Unknown Team';
-              const teamBName = teams.find(team => team._id === teamBId)?.teamName || 'Unknown Team';
+              const teamAName = selectedTeams.find(team => team._id === teamAId)?.teamName || 'Unknown Team';
+              const teamBName = selectedTeams.find(team => team._id === teamBId)?.teamName || 'Unknown Team';
               return (
                 <li key={index}>
                   {scheduled ? '✅' : '❌'} {teamAName} vs {teamBName}
@@ -1198,7 +1276,7 @@ interface ManualFixtureSchedulerProps {
             <div key={round} style={{ marginBottom: '20px' }}>
               <h4>Round {round}</h4>
               <ul>
-                {teams.map(team => (
+                {selectedTeams.map(team => (
                   <li key={team._id}>
                     {teamStatuses[team._id] ? '✅' : '❌'} {team.teamName}
                   </li>

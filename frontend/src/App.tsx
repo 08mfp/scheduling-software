@@ -19,7 +19,9 @@ import GenerateFixtures from './components/GenerateFixtures';
 import ManualFixtureScheduler from './components/ManualFixtureScheduler';
 import SignUp from './components/SignUp';
 import SignIn from './components/SignIn';
+import AdminPanel from './pages/AdminPanel';
 import PrivateRoute from './components/PrivateRoute';
+import Profile from './pages/Profile';
 import Unauthorized from './components/Unauthorized';
 
 const App: React.FC = () => {
@@ -44,6 +46,7 @@ const App: React.FC = () => {
               <Route path="/teams/:id" element={<TeamDetail />} />
               <Route path="/stadiums" element={<StadiumList />} />
               <Route path="/stadiums/:id" element={<StadiumDetail />} />
+              <Route path="/profile" element={<Profile />} />
             </Route>
 
             {/* Manager and Admin Routes */}
@@ -64,6 +67,7 @@ const App: React.FC = () => {
               <Route path="/fixtures/edit/:id" element={<FixtureForm />} />
               <Route path="/generate-fixtures" element={<GenerateFixtures />} />
               <Route path="/manual-fixture-scheduler" element={<ManualFixtureScheduler />} />
+              <Route path="/admin" element={<AdminPanel />} />
             </Route>
 
             {/* Catch-All Route */}

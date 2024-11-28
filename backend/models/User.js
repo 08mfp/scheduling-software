@@ -42,6 +42,16 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  // New fields
+  image: {
+    type: String,
+  },
+  homeCity: {
+    type: String,
+  },
+  age: {
+    type: Number,
+  },
 });
 
 // Hash password before saving
