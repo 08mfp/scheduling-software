@@ -23,6 +23,8 @@ import AdminPanel from './pages/AdminPanel';
 import PrivateRoute from './components/PrivateRoute';
 import Profile from './pages/Profile';
 import Unauthorized from './components/Unauthorized';
+import FixtureDetail from './components/FixtureDetail';
+import 'flowbite'; 
 
 const App: React.FC = () => {
   return (
@@ -36,6 +38,7 @@ const App: React.FC = () => {
             <Route path="/fixtures" element={<FixturesList />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/signin" element={<SignIn />} />
+            <Route path='/fixtures/:id' element={< FixtureDetail/>} />
 
             {/* Unauthorized Page */}
             <Route path="/unauthorized" element={<Unauthorized />} />

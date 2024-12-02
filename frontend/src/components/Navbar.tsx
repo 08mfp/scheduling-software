@@ -1,79 +1,289 @@
-// frontend/src/components/Navbar.tsx
-
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
+import 'flowbite';
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useContext(AuthContext);
 
+  // Base URL for images from environment variables
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5003';
+
+  // Construct the full image URL if user.image exists
+  const profileImage = user?.image
+    ? `${API_BASE_URL}${user.image}`
+    : 'https://flowbite.com/docs/images/people/profile-picture-3.jpg'; // Default image
+
+  // Apply dark mode automatically based on system preference
+  useEffect(() => {
+    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    console.log('Prefers dark mode:', prefersDarkMode);
+
+    if (prefersDarkMode) {
+      document.documentElement.classList.add('dark');
+      console.log('Added "dark" class to <html>');
+    } else {
+      document.documentElement.classList.remove('dark');
+      console.log('Removed "dark" class from <html>');
+    }
+
+    // Optional: Listen for changes in system preference
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (e.matches) {
+        document.documentElement.classList.add('dark');
+        console.log('System preference changed: Added "dark" class to <html>');
+      } else {
+        document.documentElement.classList.remove('dark');
+        console.log('System preference changed: Removed "dark" class from <html>');
+      }
+    };
+
+    darkModeMediaQuery.addEventListener('change', handleChange);
+
+    // Cleanup listener on unmount
+    return () => {
+      darkModeMediaQuery.removeEventListener('change', handleChange);
+    };
+  }, []);
+
   return (
-    <nav>
-      <h1>Six Nations Fixture Scheduling</h1>
-      <ul>
-        <li>
-          <Link to="/">Home</Link>
-        </li>
-        {user && (
-          <>
-            {['admin', 'manager', 'viewer'].includes(user.role) && (
+    <nav className="w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+      <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
+        {/* Logo and Brand */}
+        <Link to="/" className="flex items-center space-x-3">
+          <img src="https://flowbite.com/docs/images/logo.svg" className="h-8" alt="Logo" />
+          <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">
+            Six Nations Rugby
+          </span>
+        </Link>
+
+        {/* Mobile Menu Toggle Button */}
+        <button
+          data-collapse-toggle="navbar-menu"
+          type="button"
+          className="inline-flex items-center p-2 text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-600"
+          aria-controls="navbar-menu"
+          aria-expanded="false"
+          onClick={() => {
+            console.log('Mobile menu toggle button clicked');
+          }}
+        >
+          <span className="sr-only">Open main menu</span>
+          <svg
+            className="w-6 h-6"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 17 14"
+          >
+            <path
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M1 1h15M1 7h15M1 13h15"
+            />
+          </svg>
+        </button>
+
+        {/* Navigation Links */}
+        <div className="hidden w-full md:flex md:items-center md:w-auto" id="navbar-menu">
+          <ul className="flex flex-col font-medium md:flex-row md:space-x-6">
+            <li>
+              <Link
+                to="/"
+                className="block py-2 px-3 text-blue-700 dark:text-blue-500 rounded hover:bg-blue-700 hover:text-white dark:hover:bg-gray-700 md:hover:bg-transparent md:hover:text-blue-700"
+                aria-current="page"
+                onClick={() => console.log('Navigated to Home')}
+              >
+                Home
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/fixtures"
+                className="block py-2 px-3 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 md:hover:bg-transparent md:hover:text-blue-700"
+                onClick={() => console.log('Navigated to Fixtures')}
+              >
+                Fixtures
+              </Link>
+            </li>
+            {user && (
               <>
-                <li>
-                  <Link to="/teams">Teams</Link>
-                </li>
-                <li>
-                  <Link to="/stadiums">Stadiums</Link>
-                </li>
-                <li>
-                <Link to="/profile">Profile</Link>
-                </li>
+                {['admin', 'manager', 'viewer'].includes(user.role) && (
+                  <>
+                    <li>
+                      <Link
+                        to="/teams"
+                        className="block py-2 px-3 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 md:hover:bg-transparent md:hover:text-blue-700"
+                        onClick={() => console.log('Navigated to Teams')}
+                      >
+                        Teams
+                      </Link>
+                    </li>
+                    {['admin', 'manager'].includes(user.role) && (
+                      <li>
+                        <Link
+                          to="/players"
+                          className="block py-2 px-3 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 md:hover:bg-transparent md:hover:text-blue-700"
+                          onClick={() => console.log('Navigated to Players')}
+                        >
+                          Players
+                        </Link>
+                      </li>
+                    )}
+                    <li>
+                      <Link
+                        to="/stadiums"
+                        className="block py-2 px-3 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 md:hover:bg-transparent md:hover:text-blue-700"
+                        onClick={() => console.log('Navigated to Stadiums')}
+                      >
+                        Stadiums
+                      </Link>
+                    </li>
+                  </>
+                )}
+                {user.role === 'admin' && (
+                  <li className="relative">
+                    {/* Admin Menu Dropdown Toggle */}
+                    <button
+                      id="admin-menu-button"
+                      data-dropdown-toggle="admin-menu"
+                      className="flex items-center justify-between w-full py-2 px-3 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 md:hover:bg-transparent md:hover:text-blue-700 focus:outline-none"
+                      onClick={() => console.log('Admin menu toggle clicked')}
+                    >
+                      Admin Menu
+                      <svg
+                        className="w-4 h-4 ml-1"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Admin Menu Dropdown */}
+                    <div
+                      id="admin-menu"
+                      className="z-10 hidden bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700 rounded-lg shadow w-48"
+                    >
+                      <ul className="py-2 text-sm text-gray-700 dark:text-gray-300" aria-labelledby="admin-menu-button">
+                        <li>
+                          <Link
+                            to="/generate-fixtures"
+                            className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            onClick={() => console.log('Navigated to Generate Fixtures')}
+                          >
+                            Generate Fixtures
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            to="/manual-fixture-scheduler"
+                            className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            onClick={() => console.log('Navigated to Manual Fixture Scheduler')}
+                          >
+                            Manual Fixture Scheduler
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            to="/admin"
+                            className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            onClick={() => console.log('Navigated to Admin Panel')}
+                          >
+                            Admin Panel
+                          </Link>
+                        </li>
+                      </ul>
+                    </div>
+                  </li>
+                )}
               </>
             )}
-            {['admin', 'manager'].includes(user.role) && (
-              <li>
-                <Link to="/players">Players</Link>
-              </li>
-            )}
-            {/* Generate Fixtures Link for Admins */}
-            {user.role === 'admin' && (
-              <>
-                <li>
-                  <Link to="/generate-fixtures">Generate Fixtures</Link>
-                </li>
-                <li>
-                  <Link to="/manual-fixture-scheduler">Manual Fixture Scheduler</Link>
-                </li>
-                <li>
-                  <Link to="/admin">Admin Panel</Link>
-                </li>
-              </>
-            )}
-          </>
-        )}
-        {/* Fixtures link is available to all users */}
-        <li>
-          <Link to="/fixtures">Fixtures</Link>
-        </li>
-        {user ? (
-          <>
-            <li>
-              Welcome, {user.firstName} ({user.role})
-            </li>
-            <li>
-              <button onClick={signOut}>Sign Out</button>
-            </li>
-          </>
-        ) : (
-          <>
-            <li>
-              <Link to="/signup">Sign Up</Link>
-            </li>
-            <li>
-              <Link to="/signin">Sign In</Link>
-            </li>
-          </>
-        )}
-      </ul>
+          </ul>
+        </div>
+
+        {/* User Menu */}
+        <div className="flex items-center space-x-4">
+          {user ? (
+            <div className="flex items-center space-x-2">
+              {/* First Name (hidden on small screens) */}
+              <span className="text-gray-700 dark:text-gray-300 hidden md:block">
+                {user.firstName}
+              </span>
+              {/* User Dropdown */}
+              <div className="relative">
+                <button
+                  id="user-menu-button"
+                  data-dropdown-toggle="user-menu"
+                  className="flex text-sm bg-gray-800 dark:bg-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
+                  type="button"
+                  onClick={() => console.log('User menu button clicked')}
+                >
+                  <span className="sr-only">Open user menu</span>
+                  <img
+                    className="w-8 h-8 rounded-full"
+                    src={profileImage}
+                    alt={`${user.firstName} ${user.lastName}`}
+                  />
+                </button>
+
+                {/* User Menu Dropdown */}
+                <div
+                  id="user-menu"
+                  className="z-10 hidden bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700 rounded-lg shadow w-48"
+                >
+                  <ul className="py-2 text-sm text-gray-700 dark:text-gray-300" aria-labelledby="user-menu-button">
+                    <li>
+                      <Link
+                        to="/profile"
+                        className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => console.log('Navigated to Profile')}
+                      >
+                        Profile
+                      </Link>
+                    </li>
+                    {/* Add more user-specific links here if needed */}
+                    <li>
+                      <button
+                        onClick={() => {
+                          console.log('Sign out button clicked');
+                          signOut();
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        Sign Out
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Sign In / Sign Up Links */}
+              <Link
+                to="/signin"
+                className="text-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg px-3 py-2"
+                onClick={() => console.log('Navigated to Sign In')}
+              >
+                Sign In
+              </Link>
+              <Link
+                to="/signup"
+                className="text-white bg-blue-700 hover:bg-blue-800 rounded-lg px-3 py-2"
+                onClick={() => console.log('Navigated to Sign Up')}
+              >
+                Sign Up
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
     </nav>
   );
 };
