@@ -129,7 +129,9 @@ const FixturesList: React.FC = () => {
             const homeTeam = teamMap[fixture.homeTeam._id];
             const awayTeam = teamMap[fixture.awayTeam._id];
             const stadiumName = fixture.stadium.stadiumName;
-            const matchDate = new Date(fixture.date).toLocaleDateString();
+            const matchDate = new Date(fixture.date);
+            const matchDateStr = matchDate.toLocaleDateString();
+            const matchTimeStr = matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             if (!homeTeam || !awayTeam) {
               return (
@@ -146,6 +148,29 @@ const FixturesList: React.FC = () => {
               ? `${BACKEND_URL}${awayTeam.image}`
               : '/images/default-away-team-logo.png';
 
+            // Custom colors for teams
+            const getTeamColor = (teamName: string): string => {
+              switch (teamName) {
+                case 'England':
+                  return 'white';
+                case 'France':
+                  return '#5683cc';
+                case 'Ireland':
+                  return '#4dab59';
+                case 'Scotland':
+                  return '#4679c2';
+                case 'Italy':
+                  return 'orange';
+                case 'Wales':
+                  return 'red';
+                default:
+                  return 'gray';
+              }
+            };
+
+            const homeTeamColor = getTeamColor(homeTeam.teamName);
+            const awayTeamColor = getTeamColor(awayTeam.teamName);
+
             return (
               <div
                 key={fixture._id}
@@ -154,7 +179,10 @@ const FixturesList: React.FC = () => {
                 {/* Home and Away Team Blocks */}
                 <div className="flex justify-between items-center">
                   {/* Home Team */}
-                  <div className="flex items-center space-x-4">
+                  <div
+                    className="flex items-center space-x-4 p-4 rounded"
+                    style={{ backgroundColor: homeTeamColor }}
+                  >
                     <img
                       src={homeTeamImage}
                       alt={`${homeTeam.teamName} logo`}
@@ -168,17 +196,21 @@ const FixturesList: React.FC = () => {
                       }}
                       loading="lazy"
                     />
-                    <Link to={`/teams/${homeTeam._id}`} className="text-lg font-semibold text-blue-600 hover:underline">
+                    <Link to={`/teams/${homeTeam._id}`} className="text-lg font-semibold text-black hover:underline">
                       {homeTeam.teamName}
                     </Link>
                   </div>
-                  {/* Match Date */}
+                  {/* Match Date and Time */}
                   <div className="text-center text-gray-600 font-medium">
-                    <div>{matchDate}</div>
+                    <div>{matchDateStr}</div>
+                    <div>{matchTimeStr}</div>
                   </div>
                   {/* Away Team */}
-                  <div className="flex items-center space-x-4">
-                    <Link to={`/teams/${awayTeam._id}`} className="text-lg font-semibold text-blue-600 hover:underline">
+                  <div
+                    className="flex items-center space-x-4 p-4 rounded"
+                    style={{ backgroundColor: awayTeamColor }}
+                  >
+                    <Link to={`/teams/${awayTeam._id}`} className="text-lg font-semibold text-black hover:underline">
                       {awayTeam.teamName}
                     </Link>
                     <img
@@ -218,6 +250,7 @@ const FixturesList: React.FC = () => {
     </div>
   </div>
 );
+
 };
 
 export default FixturesList;
