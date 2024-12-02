@@ -112,7 +112,7 @@ const FixturesList: React.FC = () => {
       setLoadingFixtures(true);
       try {
         const response = await axios.get<Fixture[]>(`${BACKEND_URL}/api/fixtures?season=${season}`);
-        // console.log('Fetched Fixtures:', response.data); // Debug the fixture data
+        console.log('Fetched Fixtures:', response.data); // Debug the fixture data
         setFixtures(response.data);
         setLoadingFixtures(false);
 
@@ -131,7 +131,7 @@ const FixturesList: React.FC = () => {
             const teamsResponse = await axios.get<Team[]>(`${BACKEND_URL}/api/teams`, {
               params: { ids: uniqueTeamIds.join(',') }, // Example: ?ids=1,2,3
             });
-            // console.log('Fetched Teams:', teamsResponse.data); // Debug the team data
+            console.log('Fetched Teams:', teamsResponse.data); // Debug the team data
 
             // Create a mapping from team ID to Team
             const fetchedTeamMap: { [key: string]: Team } = {};
@@ -173,6 +173,42 @@ const FixturesList: React.FC = () => {
       clearTimeout(handler);
     };
   }, [searchQuery]);
+
+  // **Extract Search Tokens**
+  const searchTokens = useMemo(() => {
+    return debouncedSearchQuery
+      .toLowerCase()
+      .split(' ')
+      .filter(token => !['v', 'vs'].includes(token));
+  }, [debouncedSearchQuery]);
+
+  // **Highlight Utility Function**
+  const highlightText = (text: string, tokens: string[]): React.ReactNode => {
+    if (!tokens || tokens.length === 0) return text;
+
+    // Escape regex special characters in tokens
+    const escapedTokens = tokens.map(token => token.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+
+    // Create a regex that matches any of the tokens
+    const regex = new RegExp(`(${escapedTokens.join('|')})`, 'gi');
+
+    // Split the text based on the regex
+    const parts = text.split(regex);
+
+    return (
+      <>
+        {parts.map((part, index) =>
+          tokens.some(token => token.toLowerCase() === part.toLowerCase()) ? (
+            <span key={index} className="bg-yellow-300 animate-highlight">
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </>
+    );
+  };
 
   // **Filter Fixtures Based on Selected Filters and Search Query**
   useEffect(() => {
@@ -219,10 +255,7 @@ const FixturesList: React.FC = () => {
     // **Search Filter**
     if (debouncedSearchQuery.trim() !== '') {
       // Split query into tokens and remove 'v' and 'vs'
-      const tokens = debouncedSearchQuery
-        .toLowerCase()
-        .split(' ')
-        .filter(token => !['v', 'vs'].includes(token));
+      const tokens = searchTokens;
 
       if (tokens.length > 0) {
         filtered = filtered.filter((fixture: Fixture) => {
@@ -249,6 +282,7 @@ const FixturesList: React.FC = () => {
     endDate,
     teamRole,
     debouncedSearchQuery,
+    searchTokens,
     fixtures,
     teamMap,
   ]);
@@ -357,16 +391,46 @@ const FixturesList: React.FC = () => {
           </select>
         </div>
 
-        {/* **Search Bar** */}
-        <div className="flex items-center">
-          <label className="mr-2 font-semibold">Search:</label>
+        {/* **Search Bar with Search Icon and Clear Button** */}
+        <div className="flex items-center relative">
+          <label className="mr-2 font-semibold flex items-center space-x-2">
+            {/* Search Icon */}
+            <svg
+              className="w-5 h-5 text-gray-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span>Search:</span>
+          </label>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search fixtures..."
-            className="border border-gray-300 p-2 rounded w-48 sm:w-64"
+            className="border border-gray-300 p-2 rounded w-48 sm:w-64 pr-8" // Added padding-right for 'X' button
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+              aria-label="Clear search"
+            >
+              {/* 'X' Icon */}
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* **Sort Button** */}
@@ -446,7 +510,7 @@ const FixturesList: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Section */}
+      {/* **Filter Section** */}
       {isFilterVisible && (
         <div className="border border-gray-300 p-4 rounded mb-4">
           {/* **Team Filter** */}
@@ -685,7 +749,7 @@ const FixturesList: React.FC = () => {
         {sortedRoundNumbers.map((round) => (
           <div key={round} className="mb-8">
             <h3 className="text-xl font-bold mb-4">Round {round}</h3>
-            {groupedFixtures[round].map((fixture: Fixture) => { // Explicitly type 'fixture' as 'Fixture'
+            {groupedFixtures[round].map((fixture: Fixture) => {
               const homeTeam = teamMap[fixture.homeTeam._id];
               const awayTeam = teamMap[fixture.awayTeam._id];
               const stadiumName = fixture.stadium.stadiumName;
@@ -717,7 +781,9 @@ const FixturesList: React.FC = () => {
                         alt={`${homeTeam?.teamName} logo`}
                         className="w-8 h-8"
                       />
-                      <span className="text-black font-semibold text-center text-sm">{homeTeam?.teamName}</span>
+                      <span className="text-black font-semibold text-center text-sm">
+                        {highlightText(homeTeam?.teamName || '', searchTokens)}
+                      </span>
                     </Link>
 
                     {/* vs Text */}
@@ -737,7 +803,9 @@ const FixturesList: React.FC = () => {
                         alt={`${awayTeam?.teamName} logo`}
                         className="w-8 h-8"
                       />
-                      <span className="text-black font-semibold text-center text-sm">{awayTeam?.teamName}</span>
+                      <span className="text-black font-semibold text-center text-sm">
+                        {highlightText(awayTeam?.teamName || '', searchTokens)}
+                      </span>
                     </Link>
                   </div>
 
@@ -748,7 +816,7 @@ const FixturesList: React.FC = () => {
                       to={`/stadiums/${fixture.stadium._id}`}
                       className="text-black font-bold hover:underline text-sm"
                     >
-                      {stadiumName}
+                      {highlightText(stadiumName, searchTokens)}
                     </Link>
 
                     {/* Date and Time */}
