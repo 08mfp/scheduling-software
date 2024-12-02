@@ -24,8 +24,6 @@ export interface Stadium {
 const FixturesList: React.FC = () => {
   // **State Variables**
 
-  
-
   // Basic Data
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [season, setSeason] = useState<number>(new Date().getFullYear());
@@ -57,6 +55,13 @@ const FixturesList: React.FC = () => {
 
   // Filter Visibility
   const [isFilterVisible, setIsFilterVisible] = useState(false);
+
+  // **Search State**
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('');
+
+  // **Sort Order State**
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // 'asc' for ascending, 'desc' for descending
 
   // **Filtered Fixtures State**
   const [filteredFixtures, setFilteredFixtures] = useState<Fixture[]>([]);
@@ -107,7 +112,7 @@ const FixturesList: React.FC = () => {
       setLoadingFixtures(true);
       try {
         const response = await axios.get<Fixture[]>(`${BACKEND_URL}/api/fixtures?season=${season}`);
-        console.log('Fetched Fixtures:', response.data); // Debug the fixture data
+        // console.log('Fetched Fixtures:', response.data); // Debug the fixture data
         setFixtures(response.data);
         setLoadingFixtures(false);
 
@@ -126,7 +131,7 @@ const FixturesList: React.FC = () => {
             const teamsResponse = await axios.get<Team[]>(`${BACKEND_URL}/api/teams`, {
               params: { ids: uniqueTeamIds.join(',') }, // Example: ?ids=1,2,3
             });
-            console.log('Fetched Teams:', teamsResponse.data); // Debug the team data
+            // console.log('Fetched Teams:', teamsResponse.data); // Debug the team data
 
             // Create a mapping from team ID to Team
             const fetchedTeamMap: { [key: string]: Team } = {};
@@ -158,7 +163,18 @@ const FixturesList: React.FC = () => {
     fetchFixtures();
   }, [season]);
 
-  // **Filter Fixtures Based on Selected Filters**
+  // **Debounce Search Query**
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms debounce delay
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
+
+  // **Filter Fixtures Based on Selected Filters and Search Query**
   useEffect(() => {
     let filtered = fixtures;
 
@@ -200,6 +216,30 @@ const FixturesList: React.FC = () => {
       );
     }
 
+    // **Search Filter**
+    if (debouncedSearchQuery.trim() !== '') {
+      // Split query into tokens and remove 'v' and 'vs'
+      const tokens = debouncedSearchQuery
+        .toLowerCase()
+        .split(' ')
+        .filter(token => !['v', 'vs'].includes(token));
+
+      if (tokens.length > 0) {
+        filtered = filtered.filter((fixture: Fixture) => {
+          const homeTeamName = teamMap[fixture.homeTeam._id]?.teamName.toLowerCase() || '';
+          const awayTeamName = teamMap[fixture.awayTeam._id]?.teamName.toLowerCase() || '';
+          const stadiumName = fixture.stadium.stadiumName.toLowerCase() || '';
+
+          // Check if all tokens are present in home/away team names or stadium name
+          return tokens.every(token =>
+            homeTeamName.includes(token) ||
+            awayTeamName.includes(token) ||
+            stadiumName.includes(token)
+          );
+        });
+      }
+    }
+
     setFilteredFixtures(filtered);
   }, [
     selectedTeams,
@@ -208,7 +248,9 @@ const FixturesList: React.FC = () => {
     startDate,
     endDate,
     teamRole,
+    debouncedSearchQuery,
     fixtures,
+    teamMap,
   ]);
 
   // **Handler Functions**
@@ -248,15 +290,16 @@ const FixturesList: React.FC = () => {
     setEndDate('');
     setSelectedStadiums([]);
     setTeamRole('both');
+    setSearchQuery(''); // Reset search query
   };
 
   // **Grouping Fixtures by Round using useMemo**
-  const groupedFixtures = useMemo(() => {
-    return filteredFixtures.reduce((acc: { [key: number]: Fixture[] }, fixture) => {
+  const groupedFixtures = useMemo<{ [key: number]: Fixture[] }>(() => {
+    return filteredFixtures.reduce((acc: { [key: number]: Fixture[] }, fixture: Fixture) => {
       acc[fixture.round] = acc[fixture.round] || [];
       acc[fixture.round].push(fixture);
       return acc;
-    }, {});
+    }, {} as { [key: number]: Fixture[] });
   }, [filteredFixtures]);
 
   // **Filter Section Collapsible States**
@@ -265,6 +308,21 @@ const FixturesList: React.FC = () => {
   const [isDateFilterOpen, setIsDateFilterOpen] = useState<boolean>(false);
   const [isStadiumFilterOpen, setIsStadiumFilterOpen] = useState<boolean>(false);
   const [isRoleFilterOpen, setIsRoleFilterOpen] = useState<boolean>(false);
+
+  // **Sort Toggle Handler**
+  const toggleSortOrder = () => {
+    setSortOrder((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
+  };
+
+  // **Sort the Round Numbers Based on Sort Order**
+  const sortedRoundNumbers = useMemo<number[]>(() => {
+    const rounds = Object.keys(groupedFixtures)
+      .map((round) => parseInt(round))
+      .filter((round) => !isNaN(round));
+    return sortOrder === 'asc'
+      ? rounds.sort((a, b) => a - b)
+      : rounds.sort((a, b) => b - a);
+  }, [groupedFixtures, sortOrder]);
 
   // **Early Returns for Loading and Error States**
   // **Important:** All Hooks are called before these returns
@@ -281,30 +339,111 @@ const FixturesList: React.FC = () => {
     <div className="p-4 max-w-screen-lg mx-auto">
       <h2 className="text-2xl font-bold text-center mb-6">Fixtures for Season {season}</h2>
       
-      {/* Season Dropdown */}
-      <div className="text-center mb-4">
-        <label className="mr-2 font-semibold">Season:</label>
-        <select
-          value={season}
-          onChange={(e) => setSeason(parseInt(e.target.value))}
-          className="border border-gray-300 p-2 rounded"
-        >
-          {seasons.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* **Season Dropdown, Search Bar, Sort Button, and Filter Toggle Container** */}
+      <div className="flex flex-col sm:flex-row justify-center items-center mb-4 space-y-2 sm:space-y-0 sm:space-x-4">
+        {/* Season Dropdown */}
+        <div className="flex items-center">
+          <label className="mr-2 font-semibold">Season:</label>
+          <select
+            value={season}
+            onChange={(e) => setSeason(parseInt(e.target.value))}
+            className="border border-gray-300 p-2 rounded"
+          >
+            {seasons.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {/* Filter Toggle */}
-      <div className="text-center mb-4">
-        <button
-          onClick={() => setIsFilterVisible(!isFilterVisible)}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          {isFilterVisible ? "Hide Filters" : "Show Filters"}
-        </button>
+        {/* **Search Bar** */}
+        <div className="flex items-center">
+          <label className="mr-2 font-semibold">Search:</label>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search fixtures..."
+            className="border border-gray-300 p-2 rounded w-48 sm:w-64"
+          />
+        </div>
+
+        {/* **Sort Button** */}
+        <div className="flex items-center">
+          <button
+            onClick={toggleSortOrder}
+            className="flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            {sortOrder === 'asc' ? (
+              <>
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  {/* Up Arrow Icon */}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+                Sort Descending
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  {/* Down Arrow Icon */}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+                Sort Ascending
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* **Filter Toggle Button** */}
+        <div className="flex items-center">
+          <button
+            onClick={() => setIsFilterVisible(!isFilterVisible)}
+            className="flex items-center px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          >
+            {isFilterVisible ? (
+              <>
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  {/* Up Arrow Icon */}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+                Hide Filters
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  {/* Down Arrow Icon */}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+                Show Filters
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Filter Section */}
@@ -543,10 +682,10 @@ const FixturesList: React.FC = () => {
 
       {/* **Fixtures List** */}
       <div className="w-full">
-        {Object.entries(groupedFixtures).map(([round, fixtures]) => (
+        {sortedRoundNumbers.map((round) => (
           <div key={round} className="mb-8">
             <h3 className="text-xl font-bold mb-4">Round {round}</h3>
-            {fixtures.map((fixture: Fixture) => { // Explicitly type 'fixture' as 'Fixture'
+            {groupedFixtures[round].map((fixture: Fixture) => { // Explicitly type 'fixture' as 'Fixture'
               const homeTeam = teamMap[fixture.homeTeam._id];
               const awayTeam = teamMap[fixture.awayTeam._id];
               const stadiumName = fixture.stadium.stadiumName;
