@@ -43,7 +43,7 @@ const TeamsList: React.FC = () => {
       case 'Wales':
         return { backgroundColor: '#cc0000', textColor: '#ffffff' }; // Red background, white text
       default:
-        return { backgroundColor: '#cccccc', textColor: '#000000' }; // Gray background, black text for default/unknown
+        return { backgroundColor: '#ffa500', textColor: '#000000' }; // Orange background, black text for default/unknown
     }
   };
 

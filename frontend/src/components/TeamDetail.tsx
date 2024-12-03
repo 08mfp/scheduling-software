@@ -1,5 +1,3 @@
-// frontend/src/components/TeamDetail.tsx
-
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
@@ -7,106 +5,234 @@ import { Team } from '../interfaces/Team';
 import { Player } from '../interfaces/Player';
 import { AuthContext } from '../contexts/AuthContext';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
+
 const TeamDetail: React.FC = () => {
   const [team, setTeam] = useState<Team | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [visiblePlayers, setVisiblePlayers] = useState(3); // Number of players to show initially
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
     if (user && ['admin', 'manager', 'viewer'].includes(user.role)) {
-      axios
-        .get(`http://localhost:5003/api/teams/${id}`)
-        .then((response) => {
-          setTeam(response.data);
-        })
-        .catch((error) => {
-          console.error('There was an error fetching the team!', error);
-        });
-
-      axios
-        .get(`http://localhost:5003/api/teams/${id}/players`)
-        .then((response) => {
-          setPlayers(response.data.players);
-        })
-        .catch((error) => {
-          console.error('There was an error fetching the players!', error);
-        });
+      fetchTeamAndPlayers();
     }
   }, [id, user]);
 
-  const deleteTeam = () => {
+  const fetchTeamAndPlayers = async () => {
+    try {
+      const teamResponse = await axios.get<Team>(`${BACKEND_URL}/api/teams/${id}`);
+      setTeam(teamResponse.data);
+
+      const playersResponse = await axios.get<{ players: Player[] }>(
+        `${BACKEND_URL}/api/teams/${id}/players`
+      );
+      setPlayers(playersResponse.data.players);
+
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to load team details. Please try again later.');
+      console.error('Error fetching team or players:', err);
+      setLoading(false);
+    }
+  };
+
+  const deleteTeam = async () => {
     if (!user || user.role !== 'admin') {
       alert('You do not have permission to delete this team.');
       return;
     }
 
     if (window.confirm('Are you sure you want to delete this team?')) {
-      axios
-        .delete(`http://localhost:5003/api/teams/${id}`)
-        .then(() => {
-          navigate('/teams');
-        })
-        .catch((error) => {
-          console.error('There was an error deleting the team!', error);
-        });
+      try {
+        await axios.delete(`${BACKEND_URL}/api/teams/${id}`);
+        navigate('/teams');
+      } catch (err) {
+        setError('Failed to delete the team.');
+        console.error('Error deleting team:', err);
+      }
     }
   };
 
-  // If the user is not authenticated or doesn't have the required role, show unauthorized message
+  const getTeamColor = (teamName: string): { borderColor: string } => {
+    switch (teamName) {
+      case 'England':
+        return { borderColor: '#000000' }; // Black
+      case 'France':
+        return { borderColor: '#0033cc' }; // French Blue
+      case 'Ireland':
+        return { borderColor: '#009933' }; // Green
+      case 'Scotland':
+        return { borderColor: '#003366' }; // Dark Blue
+      case 'Italy':
+        return { borderColor: '#0066cc' }; // Azure Blue
+      case 'Wales':
+        return { borderColor: '#cc0000' }; // Red
+      default:
+        return { borderColor: '#ffa500' }; // Gray
+    }
+  };
+
   if (!user || !['admin', 'manager', 'viewer'].includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  if (!team) {
-    return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin h-12 w-12 border-4 border-purple-400 border-t-transparent rounded-full"></div>
+      </div>
+    );
   }
 
+  if (error) {
+    return (
+      <div className="text-center text-red-500">
+        <p>{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!team) {
+    return <div className="text-center text-gray-500">No team found.</div>;
+  }
+
+  const teamColor = getTeamColor(team.teamName);
+
+  const handleSeeMore = () => {
+    setVisiblePlayers((prev) => Math.min(prev + 3, players.length));
+  };
+  const handleSeeLess = () => {
+    setVisiblePlayers(3);
+  };
+
   return (
-    <div>
-      <h2>{team.teamName}</h2>
-      {team.image && (
-        <div>
-          <img src={`http://localhost:5003${team.image}`} alt="Team" width="200" />
+    <div className="min-h-screen bg-gray-100 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div
+        className="max-w-5xl w-full bg-white shadow-lg rounded-lg p-10"
+        style={{ border: `8px solid ${teamColor.borderColor}` }}
+      >
+        <div className="flex flex-col items-center mb-8"> {/* Changed items-start to items-center */}
+          {team.image && (
+            <img
+              src={`${BACKEND_URL}${team.image}`}
+              alt={`${team.teamName} Logo`}
+              className="w-48 h-48 object-contain rounded-full mb-6"
+            />
+          )}
+          <h2 className="text-4xl font-extrabold text-gray-900 mb-4 text-center"> {/* Added text-center */}
+            {team.teamName}
+          </h2>
+          <div className="flex items-center text-lg text-gray-600">
+            <svg
+              className="w-6 h-6 text-gray-800 mr-2"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5 9a7 7 0 1 1 8 6.93V21a1 1 0 1 1-2 0v-5.07A7.001 7.001 0 0 1 5 9Zm5.94-1.06A1.5 1.5 0 0 1 12 7.5a1 1 0 1 0 0-2A3.5 3.5 0 0 0 8.5 9a1 1 0 0 0 2 0c0-.398.158-.78.44-1.06Z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <strong>Location:</strong> {team.teamLocation}
+          </div>
         </div>
-      )}
-      <p>
-        <strong>Ranking:</strong> {team.teamRanking}
-      </p>
-      <p>
-        <strong>Location:</strong> {team.teamLocation}
-      </p>
-      <p>
-        <strong>Coach:</strong> {team.teamCoach}
-      </p>
-      <p>
-        <strong>Home Stadium:</strong>{' '}
-        <Link to={`/stadiums/${team.stadium._id}`}>{team.stadium.stadiumName}</Link>
-      </p>
-      <h3>Players:</h3>
-      {players.length > 0 ? (
-        <ul>
-          {players.map((player) => (
-            <li key={player._id}>
-              <Link to={`/players/${player._id}`}>
-                {player.firstName} {player.lastName}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>No players found for this team.</p>
-      )}
-      {/* Show Edit and Delete buttons only to admins */}
-      {user.role === 'admin' && (
-        <>
-          <Link to={`/teams/edit/${team._id}`}>
-            <button>Edit Team</button>
-          </Link>
-          <button onClick={deleteTeam}>Delete Team</button>
-        </>
-      )}
+
+        <div className="space-y-6 text-center"> {/* Added text-center */}
+          <p className="text-lg">
+            <strong>Ranking:</strong> {team.teamRanking}
+          </p>
+          <p className="text-lg">
+            <strong>Coach:</strong> {team.teamCoach}
+          </p>
+          <p className="text-lg">
+            <strong>Home Stadium:</strong>{' '}
+            <Link to={`/stadiums/${team.stadium._id}`} className="text-purple-600 hover:underline">
+              {team.stadium.stadiumName}
+            </Link>
+          </p>
+        </div>
+
+        <div className="mt-8">
+          <h3 className="text-2xl font-bold mb-6 text-center">Players</h3> {/* Added text-center */}
+          {players.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {players.slice(0, visiblePlayers).map((player) => (
+                <Link
+                  key={player._id}
+                  to={`/players/${player._id}`}
+                  className="bg-gray-50 hover:bg-gray-100 shadow-md rounded-lg p-4 flex flex-col items-center text-center"
+                >
+                  {player.image && (
+                    <img
+                      src={`${BACKEND_URL}${player.image}`}
+                      alt={player.firstName}
+                      className="w-24 h-24 rounded-full object-cover mb-4"
+                    />
+                  )}
+                  <p className="text-lg font-semibold text-gray-800">
+                    {player.firstName} {player.lastName}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center">No players found for this team.</p> 
+          )}
+
+          {/* See More / See Less Buttons */}
+          <div className="mt-6 flex justify-center gap-4"> {/* Changed justify-center */}
+            {visiblePlayers < players.length && (
+              <button
+                onClick={handleSeeMore}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                See More
+              </button>
+            )}
+            {visiblePlayers > 3 && (
+              <button
+                onClick={handleSeeLess}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                See Less
+              </button>
+            )}
+          </div>
+        </div>
+
+        {user.role === 'admin' && (
+          <div className="mt-10 flex justify-center gap-4"> {/* Changed justify-end to justify-center */}
+            <Link to={`/teams/edit/${team._id}`}>
+              <button className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                Edit Team
+              </button>
+            </Link>
+            <button
+              onClick={deleteTeam}
+              className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Delete Team
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
