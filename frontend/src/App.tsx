@@ -24,17 +24,19 @@ import PrivateRoute from './components/PrivateRoute';
 import Profile from './pages/Profile';
 import Unauthorized from './components/Unauthorized';
 import FixtureDetail from './components/FixtureDetail';
+import HomePage from './components/HomePage';
 import 'flowbite'; 
+import './App.css';
 
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <Router>
         <Navbar />
-        <div className="container">
+        <div>
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<FixturesList />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/fixtures" element={<FixturesList />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/signin" element={<SignIn />} />
