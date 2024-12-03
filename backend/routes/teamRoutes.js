@@ -34,7 +34,8 @@ const { authenticate, authorize } = require('../middleware/auth');
 // router.get('/:id/fixtures', teamController.getTeamFixtures);
 
 // Public access routes
-router.get('/', authenticate, authorize('admin', 'manager', 'viewer'), teamController.getAllTeams);
+// router.get('/', authenticate, authorize('admin', 'manager', 'viewer'), teamController.getAllTeams);
+router.get('/', teamController.getAllTeams);
 router.get('/:id', authenticate, authorize('admin', 'manager', 'viewer'), teamController.getTeamById);
 router.get('/:id/players', authenticate, authorize('admin', 'manager', 'viewer'), teamController.getTeamWithPlayers);
 router.get('/:id/fixtures', authenticate, authorize('admin', 'manager', 'viewer'), teamController.getTeamFixtures);
