@@ -11,9 +11,16 @@ import {
 interface ConfirmModalProps {
   isOpen: boolean;
   type: 'confirm' | 'loading' | 'success' | 'error';
-  title: string;
+  title?: string;
   message: string;
   countdown?: number; // Optional countdown for 'success' type
+  
+  // Optional custom button labels
+  confirmText?: string;
+  cancelText?: string;
+  retryText?: string;
+  okText?: string;
+
   onConfirm?: () => void;
   onCancel?: () => void;
   onRetry?: () => void;
@@ -25,69 +32,51 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   title,
   message,
   countdown,
+  confirmText,
+  cancelText,
+  retryText,
+  okText,
   onConfirm,
   onCancel,
   onRetry,
 }) => {
-  // Function to render the appropriate icon based on modal type
-  const renderIcon = () => {
+  const getIcon = () => {
     switch (type) {
       case 'confirm':
-        return (
-          <FaExclamationTriangle
-            className="h-6 w-6 text-red-600"
-            aria-hidden="true"
-          />
-        );
+        return <FaExclamationTriangle className="w-12 h-12 text-yellow-500" />;
       case 'loading':
-        return (
-          <FaSpinner
-            className="h-6 w-6 text-blue-600 animate-spin"
-            aria-hidden="true"
-          />
-        );
+        return <FaSpinner className="w-12 h-12 text-blue-500 animate-spin" />;
       case 'success':
-        return (
-          <FaCheckCircle
-            className="h-6 w-6 text-green-600"
-            aria-hidden="true"
-          />
-        );
+        return <FaCheckCircle className="w-12 h-12 text-green-500" />;
       case 'error':
-        return (
-          <FaTimesCircle
-            className="h-6 w-6 text-red-600"
-            aria-hidden="true"
-          />
-        );
+        return <FaTimesCircle className="w-12 h-12 text-red-500" />;
       default:
         return null;
     }
   };
 
-  // Function to render buttons based on modal type
+  // Provide default labels if not supplied
+  const defaultConfirmText = confirmText || 'Confirm';
+  const defaultCancelText = cancelText || 'Cancel';
+  const defaultRetryText = retryText || 'Retry';
+  const defaultOkText = okText || 'OK';
+
   const renderButtons = () => {
     switch (type) {
       case 'confirm':
         return (
           <>
             <button
-              type="button"
               onClick={onConfirm}
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2
-                bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2
-                focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+              className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
             >
-              Delete
+              {defaultConfirmText}
             </button>
             <button
-              type="button"
               onClick={onCancel}
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2
-                bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2
-                focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+              className="mt-3 inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
             >
-              Cancel
+              {defaultCancelText}
             </button>
           </>
         );
@@ -96,35 +85,26 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
       case 'success':
         return (
           <button
-            type="button"
             onClick={onCancel}
-            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2
-              bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2
-              focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm"
+            className="mt-5 w-full inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm"
           >
-            OK
+            {defaultOkText}
           </button>
         );
       case 'error':
         return (
           <>
             <button
-              type="button"
               onClick={onRetry}
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2
-                bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2
-                focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+              className="inline-flex justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
             >
-              Retry
+              {defaultRetryText}
             </button>
             <button
-              type="button"
               onClick={onCancel}
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2
-                bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2
-                focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+              className="mt-3 inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
             >
-              Cancel
+              {defaultCancelText}
             </button>
           </>
         );
@@ -133,19 +113,18 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     }
   };
 
-  // Function to get the title based on modal type
-  const getTitle = () => {
+  const getDefaultTitle = () => {
     switch (type) {
       case 'confirm':
-        return title || 'Confirm Deletion';
+        return 'Confirm Action';
       case 'loading':
-        return title || 'Processing...';
+        return 'Processing...';
       case 'success':
-        return title || 'Success';
+        return 'Success';
       case 'error':
-        return title || 'Error';
+        return 'Error';
       default:
-        return title;
+        return '';
     }
   };
 
@@ -153,37 +132,35 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     <Transition.Root show={isOpen} as={Fragment}>
       <Dialog
         as="div"
-        className="fixed inset-0 z-10 overflow-y-auto"
+        className="fixed z-10 inset-0 overflow-y-auto"
         onClose={type === 'loading' ? () => {} : onCancel || (() => {})} // Disable closing during loading
       >
-        <div className="flex items-center justify-center min-h-screen px-4 text-center sm:block sm:p-0">
+        <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
           {/* Background overlay */}
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
             enterFrom="opacity-0"
-            enterTo="opacity-100"
+            enterTo="opacity-50"
             leave="ease-in duration-200"
-            leaveFrom="opacity-100"
+            leaveFrom="opacity-50"
             leaveTo="opacity-0"
           >
             <Transition.Child
-              as="div"
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              as={Fragment}
               enter="ease-out duration-300"
               enterFrom="opacity-0"
-              enterTo="opacity-100"
+              enterTo="opacity-50"
               leave="ease-in duration-200"
-              leaveFrom="opacity-100"
+              leaveFrom="opacity-50"
               leaveTo="opacity-0"
-            />
+            >
+              <div className="fixed inset-0 bg-gray-500 transition-opacity" />
+            </Transition.Child>
           </Transition.Child>
 
-          {/* Trick to center the modal contents */}
-          <span
-            className="hidden sm:inline-block sm:align-middle sm:h-screen"
-            aria-hidden="true"
-          >
+          {/* Trick to center the modal */}
+          <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
             &#8203;
           </span>
 
@@ -199,28 +176,25 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           >
             <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left
               overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              
               <div className="sm:flex sm:items-start">
                 {/* Icon */}
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full
-                  bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                  {renderIcon()}
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full">
+                  {getIcon()}
                 </div>
-                
                 {/* Title and Message */}
                 <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                   <Dialog.Title
                     as="h3"
                     className="text-lg leading-6 font-medium text-gray-900"
                   >
-                    {getTitle()}
+                    {title || getDefaultTitle()}
                   </Dialog.Title>
                   <div className="mt-2">
                     <p className="text-sm text-gray-500">
                       {message}
                     </p>
-                    {/* Display countdown if provided */}
-                    {type === 'success' && countdown !== undefined && (
+                    {/* Display countdown if provided and type is 'success' */}
+                    {type === 'success' && countdown !== undefined && countdown > 0 && (
                       <p className="mt-2 text-sm text-gray-500">
                         This modal will close in {countdown} second{countdown !== 1 ? 's' : ''}.
                       </p>
@@ -228,11 +202,12 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                   </div>
                 </div>
               </div>
-              
               {/* Action Buttons */}
-              <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-                {renderButtons()}
-              </div>
+              {type !== 'loading' && (
+                <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                  {renderButtons()}
+                </div>
+              )}
             </div>
           </Transition.Child>
         </div>

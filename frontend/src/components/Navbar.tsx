@@ -260,6 +260,19 @@ const Navbar: React.FC = () => {
                               Admin Panel
                             </Link>
                           </li>
+                          <li>
+                            <Link
+                              to="/teams-ranking"
+                              className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                              onClick={() => {
+                                console.log('Navigated to Teams Rankings');
+                                setIsMobileMenuOpen(false);
+                                setIsAdminMenuOpen(false);
+                              }}
+                            >
+                              Team Rankings
+                            </Link>
+                          </li>
                         </ul>
                       </div>
                     )}

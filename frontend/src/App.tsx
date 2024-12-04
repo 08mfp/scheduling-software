@@ -25,6 +25,7 @@ import Profile from './pages/Profile';
 import Unauthorized from './components/Unauthorized';
 import FixtureDetail from './components/FixtureDetail';
 import HomePage from './components/HomePage';
+import TeamsRanking from './components/TeamsRanking';
 import 'flowbite'; 
 import './App.css';
 
@@ -72,6 +73,7 @@ const App: React.FC = () => {
               <Route path="/fixtures/edit/:id" element={<FixtureForm />} />
               <Route path="/generate-fixtures" element={<GenerateFixtures />} />
               <Route path="/manual-fixture-scheduler" element={<ManualFixtureScheduler />} />
+              <Route path="/teams-ranking" element={<TeamsRanking />} />
               <Route path="/admin" element={<AdminPanel />} />
             </Route>
 

@@ -1,5 +1,3 @@
-// frontend/src/components/TeamForm.tsx
-
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams, Navigate, Link } from 'react-router-dom';
@@ -7,8 +5,8 @@ import { Team } from '../interfaces/Team';
 import { Stadium } from '../interfaces/Stadium';
 import { Player } from '../interfaces/Player';
 import { AuthContext } from '../contexts/AuthContext';
-import ConfirmModal from './ConfirmModal'; // Import ConfirmModal
-import { FaArrowLeft, FaTrash, FaHome, FaTimes } from 'react-icons/fa'; // Added FaTimes
+import ConfirmModal from './ConfirmModal';
+import { FaArrowLeft, FaTrash, FaHome, FaTimes } from 'react-icons/fa';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
 
@@ -34,59 +32,93 @@ const TeamForm: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [usedRankings, setUsedRankings] = useState<{ ranking: number; teamName: string }[]>([]);
+  const [rankError, setRankError] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user } = useContext(AuthContext);
 
-  // Modal state: 'confirm' | 'loading' | 'success' | 'error' | null
-  const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success' | 'error' | null>(null);
+  // New state to track the current action: 'create', 'update', or 'delete'
+  const [currentAction, setCurrentAction] = useState<'create' | 'update' | 'delete' | null>(null);
 
-  // Countdown state for success modal
+  // Modal state
+  const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success' | 'error' | null>(null);
   const [countdown, setCountdown] = useState<number>(10);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (user && user.role === 'admin') {
-      fetchStadiums();
+      const fetchData = async () => {
+        if (id) {
+          // Edit mode, so the intended action is likely 'update' unless we trigger delete later
+          setCurrentAction('update');
+          try {
+            const teamResponse = await axios.get<Team>(`${BACKEND_URL}/api/teams/${id}`);
+            setTeam(teamResponse.data);
 
-      if (id) {
-        // Fetch the team data for editing
-        fetchTeam();
-      }
+            const playersResponse = await axios.get<Player[]>(`${BACKEND_URL}/api/teams/${id}/players`);
+            setPlayers(playersResponse.data);
+
+            const teamsResponse = await axios.get<Team[]>(`${BACKEND_URL}/api/teams`);
+            let rankingsWithNames = teamsResponse.data.map(t => ({
+              ranking: t.teamRanking,
+              teamName: t.teamName,
+            }));
+            rankingsWithNames = rankingsWithNames.filter(rankObj => rankObj.ranking !== teamResponse.data.teamRanking);
+            setUsedRankings(rankingsWithNames);
+          } catch (err) {
+            console.error('There was an error fetching the team!', err);
+            setError('Failed to load team details. Please try again later.');
+          }
+        } else {
+          // Add mode: current action is 'create'
+          setCurrentAction('create');
+          try {
+            const teamsResponse = await axios.get<Team[]>(`${BACKEND_URL}/api/teams`);
+            const rankingsWithNames = teamsResponse.data.map(t => ({
+              ranking: t.teamRanking,
+              teamName: t.teamName,
+            }));
+            setUsedRankings(rankingsWithNames);
+          } catch (err) {
+            console.error('There was an error fetching the team rankings!', err);
+            setError('Failed to load team rankings. Please try again later.');
+          }
+        }
+
+        try {
+          const stadiumsResponse = await axios.get<Stadium[]>(`${BACKEND_URL}/api/stadiums`);
+          setStadiums(stadiumsResponse.data);
+        } catch (err) {
+          console.error('There was an error fetching the stadiums!', err);
+          setError('Failed to load stadiums. Please try again later.');
+        }
+      };
+      fetchData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user]);
 
-  const fetchStadiums = async () => {
-    try {
-      const response = await axios.get<Stadium[]>(`${BACKEND_URL}/api/stadiums`);
-      setStadiums(response.data);
-    } catch (err) {
-      console.error('There was an error fetching the stadiums!', err);
-      setError('Failed to load stadiums. Please try again later.');
-    }
-  };
-
-  const fetchTeam = async () => {
-    try {
-      const teamResponse = await axios.get<Team>(`${BACKEND_URL}/api/teams/${id}`);
-      setTeam(teamResponse.data);
-
-      // Fetch players for the team
-      const playersResponse = await axios.get<Player[]>(`${BACKEND_URL}/api/teams/${id}/players`);
-      setPlayers(playersResponse.data);
-    } catch (err) {
-      console.error('There was an error fetching the team!', err);
-      setError('Failed to load team details. Please try again later.');
-    }
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    let newValue: string | number = value;
+
+    if (name === 'teamRanking') {
+      const parsed = parseInt(value);
+      newValue = isNaN(parsed) ? '' : parsed;
+
+      const conflictingTeam = usedRankings.find(rankObj => rankObj.ranking === parsed);
+      if (conflictingTeam) {
+        setRankError(`Rank ${parsed} is in use by ${conflictingTeam.teamName}. Please choose a different number or use the ranking interface.`);
+      } else {
+        setRankError(null);
+      }
+    }
+
     setTeam((prevTeam) => ({
       ...prevTeam,
-      [name]: name === 'teamRanking' ? parseInt(value) : value,
+      [name]: name === 'teamRanking' ? (newValue as number) : value,
     }));
   };
 
@@ -108,6 +140,11 @@ const TeamForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (rankError) {
+      setError('Please resolve the ranking error before submitting.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -125,6 +162,7 @@ const TeamForm: React.FC = () => {
     try {
       if (id) {
         // Update existing team
+        setCurrentAction('update');
         await axios.put(`${BACKEND_URL}/api/teams/${id}`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -133,6 +171,7 @@ const TeamForm: React.FC = () => {
         setModalState('success');
       } else {
         // Create new team
+        setCurrentAction('create');
         await axios.post(`${BACKEND_URL}/api/teams`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -149,18 +188,16 @@ const TeamForm: React.FC = () => {
     }
   };
 
-  // Handle countdown for success modal
   useEffect(() => {
     if (modalState === 'success') {
-      // Start countdown
       countdownRef.current = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
             if (countdownRef.current) {
               clearInterval(countdownRef.current);
             }
-            setModalState(null); // Close the modal
-            navigate('/teams'); // Navigate back after countdown
+            setModalState(null);
+            navigate('/teams');
             return 0;
           }
           return prev - 1;
@@ -168,7 +205,6 @@ const TeamForm: React.FC = () => {
       }, 1000);
     }
 
-    // Cleanup on unmount or when modalState changes
     return () => {
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
@@ -176,22 +212,22 @@ const TeamForm: React.FC = () => {
     };
   }, [modalState, navigate]);
 
-  // Handlers for modal actions
-  const openConfirmModal = () => setModalState('confirm');
+  const openConfirmModal = () => {
+    setModalState('confirm');
+    setCurrentAction('delete'); // User clicked delete, so action is delete
+  };
   const closeModal = () => {
     setModalState(null);
     setCountdown(10); // Reset countdown
   };
   const handleConfirmDelete = () => {
     setModalState('loading');
-    // Ensure loading lasts at least 3 seconds
     setTimeout(() => {
       deleteTeam();
     }, 3000);
   };
   const handleRetry = () => {
     setModalState('loading');
-    // Ensure loading lasts at least 3 seconds
     setTimeout(() => {
       deleteTeam();
     }, 3000);
@@ -205,6 +241,7 @@ const TeamForm: React.FC = () => {
 
     try {
       await axios.delete(`${BACKEND_URL}/api/teams/${id}`);
+      setCurrentAction('delete');
       setModalState('success');
     } catch (err) {
       console.error('There was an error deleting the team!', err);
@@ -213,10 +250,70 @@ const TeamForm: React.FC = () => {
     }
   };
 
-  // If the user is not authenticated or doesn't have admin role, show unauthorized message
   if (!user || user.role !== 'admin') {
     return <Navigate to="/unauthorized" replace />;
   }
+
+  // Determine the success message based on currentAction
+  let successTitle = 'Success';
+  let successMessage = 'Action completed successfully.';
+  if (currentAction === 'create') {
+    successTitle = 'Team Created Successfully';
+    successMessage = 'The team has been created successfully.';
+  } else if (currentAction === 'update') {
+    successTitle = 'Team Updated Successfully';
+    successMessage = 'The team has been updated successfully.';
+  } else if (currentAction === 'delete') {
+    successTitle = 'Team Deleted Successfully';
+    successMessage = 'The team has been deleted successfully.';
+  }
+
+  // Determine the title and message based on modalState and currentAction
+  const modalTitle =
+    modalState === 'confirm'
+      ? 'Confirm Action'
+      : modalState === 'loading'
+      ? 'Processing...'
+      : modalState === 'success'
+      ? successTitle
+      : 'Action Failed';
+
+  const modalMessage =
+    modalState === 'confirm'
+      ? currentAction === 'delete'
+        ? 'Are you sure you want to delete this team? This action cannot be undone.'
+        : currentAction === 'create'
+        ? 'Are you sure you want to create this team?'
+        : 'Are you sure you want to update this team?'
+      : modalState === 'loading'
+      ? currentAction === 'delete'
+        ? 'Deleting the team... Please wait.'
+        : currentAction === 'create'
+        ? 'Creating the team... Please wait.'
+        : 'Updating the team... Please wait.'
+      : modalState === 'success'
+      ? successMessage
+      : currentAction === 'delete'
+      ? 'Failed to delete the team. Please try again.'
+      : currentAction === 'create'
+      ? 'Failed to create the team. Please try again.'
+      : 'Failed to update the team. Please try again.';
+
+  // Determine button texts based on the action and state
+  const confirmText =
+    modalState === 'confirm'
+      ? currentAction === 'delete'
+        ? 'Delete'
+        : currentAction === 'create'
+        ? 'Create'
+        : 'Save'
+      : undefined;
+
+  const cancelText =
+    modalState === 'confirm' || modalState === 'error' ? 'Cancel' : undefined;
+
+  const retryText = modalState === 'error' ? 'Retry' : undefined;
+  const okText = modalState === 'success' ? 'OK' : undefined;
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -289,7 +386,6 @@ const TeamForm: React.FC = () => {
         {/* Form */}
         <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Team Name */}
             <div>
               <label htmlFor="teamName" className="block text-sm font-medium text-gray-700">
                 Team Name<span className="text-red-500">*</span>
@@ -304,8 +400,6 @@ const TeamForm: React.FC = () => {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-
-            {/* Team Ranking */}
             <div>
               <label htmlFor="teamRanking" className="block text-sm font-medium text-gray-700">
                 Team Ranking<span className="text-red-500">*</span>
@@ -314,15 +408,16 @@ const TeamForm: React.FC = () => {
                 type="number"
                 name="teamRanking"
                 id="teamRanking"
-                value={team.teamRanking || 0}
+                value={team.teamRanking || ''}
                 onChange={handleChange}
                 required
                 min="0"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`mt-1 block w-full border ${
+                  rankError ? 'border-red-500' : 'border-gray-300'
+                } rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500`}
               />
+              {rankError && <p className="mt-2 text-sm text-red-600">{rankError}</p>}
             </div>
-
-            {/* Team Location */}
             <div>
               <label htmlFor="teamLocation" className="block text-sm font-medium text-gray-700">
                 Team Location<span className="text-red-500">*</span>
@@ -337,8 +432,6 @@ const TeamForm: React.FC = () => {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-
-            {/* Team Coach */}
             <div>
               <label htmlFor="teamCoach" className="block text-sm font-medium text-gray-700">
                 Team Coach<span className="text-red-500">*</span>
@@ -353,8 +446,6 @@ const TeamForm: React.FC = () => {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-
-            {/* Home Stadium */}
             <div className="sm:col-span-2">
               <label htmlFor="stadium" className="block text-sm font-medium text-gray-700">
                 Home Stadium<span className="text-red-500">*</span>
@@ -368,16 +459,14 @@ const TeamForm: React.FC = () => {
                 className="mt-1 block w-full border border-gray-300 bg-white rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select a stadium</option>
-                {stadiums.map((stadium) => (
-                  <option key={stadium._id} value={stadium._id}>
-                    {stadium.stadiumName}
+                {stadiums.map((std) => (
+                  <option key={std._id} value={std._id}>
+                    {std.stadiumName}
                   </option>
                 ))}
               </select>
             </div>
           </div>
-
-          {/* Image Upload */}
           <div>
             <label htmlFor="image" className="block text-sm font-medium text-gray-700">
               Team Image
@@ -413,30 +502,26 @@ const TeamForm: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* Submit and Cancel Buttons */}
           <div className="flex items-center justify-between">
             <Link to="/teams" className="text-sm text-blue-600 hover:underline flex items-center">
               <FaArrowLeft className="mr-1" />
               Back to Teams
             </Link>
             <div className="flex space-x-4">
-              {/* Cancel Button */}
               <button
                 type="button"
                 onClick={() => navigate('/teams')}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 bg-red-500 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 aria-label="Cancel"
               >
                 <FaTimes className="mr-2" />
                 Cancel
               </button>
-              {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !!rankError}
                 className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
-                  loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+                  loading || rankError ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
                 } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
                 aria-label={id ? 'Update Team' : 'Add Team'}
               >
@@ -472,9 +557,7 @@ const TeamForm: React.FC = () => {
               </button>
             </div>
           </div>
-
-          {/* Delete Button (Visible Only in Edit Mode) */}
-          {id && (
+          {/* {id && (
             <div className="mt-6 flex justify-center">
               <button
                 onClick={openConfirmModal}
@@ -485,49 +568,24 @@ const TeamForm: React.FC = () => {
                 Delete Team
               </button>
             </div>
-          )}
+          )} */}
         </form>
 
-        {/* Confirm/Loading/Success/Error Modal */}
         <ConfirmModal
           isOpen={modalState !== null}
           type={modalState || 'confirm'}
-          title={
-            modalState === 'confirm'
-              ? 'Confirm Action'
-              : modalState === 'loading'
-              ? 'Processing...'
-              : modalState === 'success'
-              ? id
-                ? 'Team Deleted Successfully'
-                : 'Team Created Successfully'
-              : 'Action Failed'
-          }
-          message={
-            modalState === 'confirm'
-              ? id
-                ? 'Are you sure you want to delete this team? This action cannot be undone.'
-                : 'Are you sure you want to create this team?'
-              : modalState === 'loading'
-              ? id
-                ? 'Deleting the team... Please wait.'
-                : 'Creating the team... Please wait.'
-              : modalState === 'success'
-              ? id
-                ? 'The team has been deleted successfully.'
-                : 'The team has been created successfully.'
-              : id
-              ? 'Failed to delete the team. Please try again.'
-              : 'Failed to create the team. Please try again.'
-          }
+          title={modalTitle}
+          message={modalMessage}
           countdown={modalState === 'success' ? countdown : undefined}
+          confirmText={confirmText}
+          cancelText={cancelText}
+          retryText={retryText}
+          okText={okText}
           onConfirm={modalState === 'confirm' ? handleConfirmDelete : undefined}
           onCancel={
             modalState === 'success'
-              ? () => navigate('/teams') // Navigate after success
-              : modalState === 'confirm'
-              ? closeModal // Close modal without action
-              : closeModal // Close modal on error or loading
+              ? () => navigate('/teams') 
+              : closeModal
           }
           onRetry={modalState === 'error' ? handleRetry : undefined}
         />
