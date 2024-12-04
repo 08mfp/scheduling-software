@@ -1,9 +1,18 @@
-import React, { useEffect, useState, useContext } from 'react';
+// frontend/src/components/TeamDetail.tsx
+
+import React, { useEffect, useState, useContext, useRef } from 'react';
 import axios from 'axios';
 import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
 import { Team } from '../interfaces/Team';
 import { Player } from '../interfaces/Player';
 import { AuthContext } from '../contexts/AuthContext';
+import ConfirmModal from './ConfirmModal'; // Import ConfirmModal
+import {
+  FaArrowLeft,
+  FaEdit,
+  FaTrash,
+  FaHome,
+} from 'react-icons/fa'; // Removed FaRedo, FaCube, FaMap
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
 
@@ -18,10 +27,18 @@ const TeamDetail: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
+  // Modal state: 'confirm' | 'loading' | 'success' | 'error' | null
+  const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success' | 'error' | null>(null);
+
+  // Countdown state for success modal
+  const [countdown, setCountdown] = useState<number>(10);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (user && ['admin', 'manager', 'viewer'].includes(user.role)) {
       fetchTeamAndPlayers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user]);
 
   const fetchTeamAndPlayers = async () => {
@@ -48,14 +65,14 @@ const TeamDetail: React.FC = () => {
       return;
     }
 
-    if (window.confirm('Are you sure you want to delete this team?')) {
-      try {
-        await axios.delete(`${BACKEND_URL}/api/teams/${id}`);
-        navigate('/teams');
-      } catch (err) {
-        setError('Failed to delete the team.');
-        console.error('Error deleting team:', err);
-      }
+    try {
+      await axios.delete(`${BACKEND_URL}/api/teams/${id}`);
+      // After successful deletion, show success modal
+      setModalState('success');
+    } catch (err) {
+      setError('Failed to delete the team.');
+      console.error('Error deleting team:', err);
+      setModalState('error');
     }
   };
 
@@ -74,8 +91,56 @@ const TeamDetail: React.FC = () => {
       case 'Wales':
         return { borderColor: '#cc0000' }; // Red
       default:
-        return { borderColor: '#ffa500' }; // Gray
+        return { borderColor: '#ffa500' }; // Orange
     }
+  };
+
+  // Handle countdown for success modal
+  useEffect(() => {
+    if (modalState === 'success') {
+      // Start countdown
+      countdownRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            if (countdownRef.current) {
+              clearInterval(countdownRef.current);
+            }
+            setModalState(null); // Close the modal
+            navigate('/teams'); // Navigate back after countdown
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    // Cleanup on unmount or when modalState changes
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
+    };
+  }, [modalState, navigate]);
+
+  // Handlers for modal actions
+  const openConfirmModal = () => setModalState('confirm');
+  const closeModal = () => {
+    setModalState(null);
+    setCountdown(10); // Reset countdown
+  };
+  const handleConfirmDelete = () => {
+    setModalState('loading');
+    // Ensure loading lasts at least 3 seconds
+    setTimeout(() => {
+      deleteTeam();
+    }, 3000);
+  };
+  const handleRetry = () => {
+    setModalState('loading');
+    // Ensure loading lasts at least 3 seconds
+    setTimeout(() => {
+      deleteTeam();
+    }, 3000);
   };
 
   if (!user || !['admin', 'manager', 'viewer'].includes(user.role)) {
@@ -84,28 +149,41 @@ const TeamDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin h-12 w-12 border-4 border-purple-400 border-t-transparent rounded-full"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin h-16 w-16 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+          <p className="mt-4 text-lg text-gray-700">Loading Team Details...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center text-red-500">
-        <p>{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative max-w-md text-center"
+          role="alert"
         >
-          Retry
-        </button>
+          <strong className="font-bold">Error:</strong>
+          <span className="block sm:inline"> {error}</span>
+          <button
+            onClick={fetchTeamAndPlayers}
+            className="mt-4 inline-flex items-center px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
 
   if (!team) {
-    return <div className="text-center text-gray-500">No team found.</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <p className="text-center text-gray-500">No team found.</p>
+      </div>
+    );
   }
 
   const teamColor = getTeamColor(team.teamName);
@@ -120,10 +198,21 @@ const TeamDetail: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div
-        className="max-w-5xl w-full bg-white shadow-lg rounded-lg p-10"
+        className="max-w-5xl w-full bg-white shadow-lg rounded-lg p-10 space-y-8"
         style={{ border: `8px solid ${teamColor.borderColor}` }}
       >
-        <div className="flex flex-col items-center mb-8"> {/* Changed items-start to items-center */}
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center space-x-2">
+          <Link to={`/teams`} className="text-blue-600 hover:underline flex items-center">
+            <FaHome className="mr-1" />
+            Teams
+          </Link>
+          <span className="text-gray-500">/</span>
+          <span className="text-gray-700">{team.teamName}</span>
+        </div>
+
+        {/* Team Header */}
+        <div className="flex flex-col items-center mb-8">
           {team.image && (
             <img
               src={`${BACKEND_URL}${team.image}`}
@@ -131,7 +220,7 @@ const TeamDetail: React.FC = () => {
               className="w-48 h-48 object-contain rounded-full mb-6"
             />
           )}
-          <h2 className="text-4xl font-extrabold text-gray-900 mb-4 text-center"> {/* Added text-center */}
+          <h2 className="text-5xl font-extrabold text-gray-900 mb-4 text-center">
             {team.teamName}
           </h2>
           <div className="flex items-center text-lg text-gray-600">
@@ -154,7 +243,8 @@ const TeamDetail: React.FC = () => {
           </div>
         </div>
 
-        <div className="space-y-6 text-center"> {/* Added text-center */}
+        {/* Team Details */}
+        <div className="space-y-6 text-center">
           <p className="text-lg">
             <strong>Ranking:</strong> {team.teamRanking}
           </p>
@@ -169,8 +259,9 @@ const TeamDetail: React.FC = () => {
           </p>
         </div>
 
+        {/* Players Section */}
         <div className="mt-8">
-          <h3 className="text-2xl font-bold mb-6 text-center">Players</h3> {/* Added text-center */}
+          <h3 className="text-2xl font-bold mb-6 text-center">Players</h3>
           {players.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {players.slice(0, visiblePlayers).map((player) => (
@@ -193,11 +284,11 @@ const TeamDetail: React.FC = () => {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center">No players found for this team.</p> 
+            <p className="text-gray-500 text-center">No players found for this team.</p>
           )}
 
           {/* See More / See Less Buttons */}
-          <div className="mt-6 flex justify-center gap-4"> {/* Changed justify-center */}
+          <div className="mt-6 flex justify-center gap-4">
             {visiblePlayers < players.length && (
               <button
                 onClick={handleSeeMore}
@@ -217,21 +308,55 @@ const TeamDetail: React.FC = () => {
           </div>
         </div>
 
+        {/* Action Buttons */}
         {user.role === 'admin' && (
-          <div className="mt-10 flex justify-center gap-4"> {/* Changed justify-end to justify-center */}
+          <div className="mt-10 flex justify-center gap-4">
             <Link to={`/teams/edit/${team._id}`}>
               <button className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                 Edit Team
               </button>
             </Link>
             <button
-              onClick={deleteTeam}
+              onClick={openConfirmModal}
               className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700"
+              aria-label="Delete Team"
             >
               Delete Team
             </button>
           </div>
         )}
+
+        {/* Confirm/Loading/Success/Error Modal */}
+        <ConfirmModal
+          isOpen={modalState !== null}
+          type={modalState || 'confirm'}
+          title={
+            modalState === 'confirm'
+              ? 'Confirm Deletion'
+              : modalState === 'loading'
+              ? 'Processing...'
+              : modalState === 'success'
+              ? 'Deleted Successfully'
+              : 'Deletion Failed'
+          }
+          message={
+            modalState === 'confirm'
+              ? 'Are you sure you want to delete this team? This action cannot be undone.'
+              : modalState === 'loading'
+              ? 'Deleting the team... Please wait.'
+              : modalState === 'success'
+              ? 'The team has been deleted successfully.'
+              : 'Failed to delete the team. Please try again.'
+          }
+          countdown={modalState === 'success' ? countdown : undefined}
+          onConfirm={modalState === 'confirm' ? handleConfirmDelete : undefined}
+          onCancel={
+            modalState === 'success'
+              ? () => navigate('/teams') // Navigate after success
+              : closeModal
+          }
+          onRetry={modalState === 'error' ? handleRetry : undefined}
+        />
       </div>
     </div>
   );

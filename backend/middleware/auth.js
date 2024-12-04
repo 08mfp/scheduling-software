@@ -33,7 +33,7 @@ exports.authenticate = async (req, res, next) => {
       user.requestResetTime = currentTime;
     }
 
-    if (user.requestCount >= 100) {
+    if (user.requestCount >= 1000) {
       logger.warn(`Rate limit exceeded for user: ${user.email}`);
       return res.status(429).json({ message: 'Rate limit exceeded' });
     }
