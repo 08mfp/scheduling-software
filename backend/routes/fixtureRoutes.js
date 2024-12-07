@@ -41,7 +41,9 @@ const { authenticate, authorize } = require('../middleware/auth');
 router.get('/', fixtureController.getAllFixtures);
 // router.get('/seasons', authenticate, authorize('admin', 'manager', 'viewer', 'guest', ''), fixtureController.getAllSeasons);
 router.get('/seasons', fixtureController.getAllSeasons);
-router.get('/:id', authenticate, authorize('admin', 'manager', 'viewer', 'guest'), fixtureController.getFixtureById);
+router.get('/:id', fixtureController.getFixtureById);
+
+// router.get('/:id', authenticate, authorize('admin', 'manager', 'viewer', 'guest'), fixtureController.getFixtureById);
 
 // Admin-only routes
 router.post('/', authenticate, authorize('admin'), fixtureController.createFixture);
