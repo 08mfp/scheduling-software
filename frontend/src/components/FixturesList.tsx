@@ -3,33 +3,41 @@
 import React, { useEffect, useState, useContext, useMemo } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { FaInfoCircle, FaSun, FaMoon } from 'react-icons/fa';
 import { AuthContext } from '../contexts/AuthContext';
 import { Fixture } from '../interfaces/Fixture';
 import { Team } from '../interfaces/Team';
-// import { Stadium } from '../interfaces/Stadium'; // Ensure this interface exists
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
 
 export interface Stadium {
   _id: string;
   stadiumName: string;
-  stadiumCity?: string;      // Made optional
-  stadiumCountry?: string;  // Made optional
-  latitude?: number;        // Made optional
-  longitude?: number;       // Made optional
-  stadiumCapacity?: number; // Made optional
-  surfaceType?: 'Grass' | 'Artificial Turf'; // Made optional
+  stadiumCity?: string;
+  stadiumCountry?: string;
+  latitude?: number;
+  longitude?: number;
+  stadiumCapacity?: number;
+  surfaceType?: 'Grass' | 'Artificial Turf';
 }
 
 const FixturesList: React.FC = () => {
   // **State Variables**
+
+  // Dark Mode State
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark' || false;
+    }
+    return false;
+  });
 
   // Basic Data
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [season, setSeason] = useState<number>(new Date().getFullYear());
   const [seasons, setSeasons] = useState<number[]>([]);
   const [teamMap, setTeamMap] = useState<{ [key: string]: Team }>({});
-  
+
   // Loading and Error States
   const [loadingSeasons, setLoadingSeasons] = useState<boolean>(true);
   const [loadingFixtures, setLoadingFixtures] = useState<boolean>(true);
@@ -37,18 +45,18 @@ const FixturesList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // **Filters State**
-  
+
   // Team and Round Filters
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedRounds, setSelectedRounds] = useState<number[]>([]);
-  
+
   // Date Range Filter
   const [startDate, setStartDate] = useState<string>(''); // Format: YYYY-MM-DD
   const [endDate, setEndDate] = useState<string>('');     // Format: YYYY-MM-DD
 
   // Venue/Stadium Filter
   const [selectedStadiums, setSelectedStadiums] = useState<string[]>([]);
-  const [stadiums, setStadiums] = useState<Stadium[]>([]); // Using Stadium interface with optional fields
+  const [stadiums, setStadiums] = useState<Stadium[]>([]);
 
   // Home/Away Team Filter
   const [teamRole, setTeamRole] = useState<'home' | 'away' | 'both'>('both');
@@ -65,6 +73,9 @@ const FixturesList: React.FC = () => {
 
   // **Filtered Fixtures State**
   const [filteredFixtures, setFilteredFixtures] = useState<Fixture[]>([]);
+
+  // **Loading Delay State**
+  const [loadingDelayComplete, setLoadingDelayComplete] = useState<boolean>(false);
 
   // **Context**
   const { user } = useContext(AuthContext);
@@ -89,6 +100,20 @@ const FixturesList: React.FC = () => {
     }
   };
 
+  // **Dark Mode Side Effect**
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  // **Toggle Dark Mode Handler**
+  const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
+
   // **Fetch Seasons**
   useEffect(() => {
     const fetchSeasons = async () => {
@@ -106,10 +131,12 @@ const FixturesList: React.FC = () => {
     fetchSeasons();
   }, []);
 
-  // **Fetch Fixtures and Teams**
+  // **Fetch Fixtures and Teams with 2-Second Delay**
   useEffect(() => {
     const fetchFixtures = async () => {
       setLoadingFixtures(true);
+      const fetchStartTime = Date.now(); // Record the start time
+
       try {
         const response = await axios.get<Fixture[]>(`${BACKEND_URL}/api/fixtures?season=${season}`);
         console.log('Fetched Fixtures:', response.data); // Debug the fixture data
@@ -158,6 +185,16 @@ const FixturesList: React.FC = () => {
         console.error('Error fetching fixtures:', err);
         setError('Failed to load fixtures.');
         setLoadingFixtures(false);
+      } finally {
+        const elapsed = Date.now() - fetchStartTime;
+        const remaining = 2000 - elapsed;
+        if (remaining > 0) {
+          setTimeout(() => {
+            setLoadingDelayComplete(true);
+          }, remaining);
+        } else {
+          setLoadingDelayComplete(true);
+        }
       }
     };
     fetchFixtures();
@@ -358,489 +395,637 @@ const FixturesList: React.FC = () => {
       : rounds.sort((a, b) => b - a);
   }, [groupedFixtures, sortOrder]);
 
+  // **Skeleton Loader Components**
+  const renderSkeleton = () => (
+    <div className="space-y-4">
+      {/* Season Dropdown Skeleton */}
+      <div className="flex justify-center space-x-4">
+        <div className="h-10 w-32 bg-gray-300 dark:bg-gray-700 rounded"></div>
+        <div className="h-10 w-48 bg-gray-300 dark:bg-gray-700 rounded"></div>
+        <div className="h-10 w-32 bg-gray-300 dark:bg-gray-700 rounded"></div>
+        <div className="h-10 w-32 bg-gray-300 dark:bg-gray-700 rounded"></div>
+      </div>
+
+      {/* Filters Skeleton */}
+      {isFilterVisible && (
+        <div className="space-y-2">
+          {/* Each filter section skeleton */}
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-6 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
+          ))}
+        </div>
+      )}
+
+      {/* Fixtures List Skeleton */}
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="bg-gray-50 dark:bg-gray-700 p-4 rounded shadow-md space-y-4 animate-pulse">
+          <div className="flex justify-between items-center space-x-4">
+            <div className="h-8 w-8 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+            <div className="h-6 w-1/2 bg-gray-300 dark:bg-gray-600 rounded"></div>
+            <div className="h-8 w-8 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+          </div>
+          <div className="flex justify-between items-center space-x-4">
+            <div className="h-4 w-1/3 bg-gray-300 dark:bg-gray-600 rounded"></div>
+            <div className="h-4 w-1/3 bg-gray-300 dark:bg-gray-600 rounded"></div>
+            <div className="h-4 w-1/4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   // **Early Returns for Loading and Error States**
   // **Important:** All Hooks are called before these returns
 
-  if (loadingSeasons || loadingFixtures || loadingTeams) {
-    return <div className="text-center py-10">Loading...</div>;
+  if (loadingSeasons || loadingFixtures || loadingTeams || !loadingDelayComplete) {
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl w-full">
+          {/* Navbar */}
+          <div className="flex justify-between items-center mb-8 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
+            <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
+              <Link to="/" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
+                <FaInfoCircle className="mr-1" />
+                Home
+              </Link>
+              <span className="text-gray-500 dark:text-gray-400">/</span>
+              <span className="text-gray-700 dark:text-gray-300 font-semibold">Fixtures</span>
+            </nav>
+            <button
+              onClick={toggleDarkMode}
+              className="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+              aria-label="Toggle Dark Mode"
+            >
+              {isDarkMode ? (
+                <>
+                  <FaSun className="mr-2" />
+                  Light Mode
+                </>
+              ) : (
+                <>
+                  <FaMoon className="mr-2" />
+                  Dark Mode
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Main Content with Skeleton Loader */}
+          <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 space-y-8 transition-colors duration-300">
+            {renderSkeleton()}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="text-center text-red-500 py-10">{error}</div>;
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl w-full">
+          {/* Navbar */}
+          <div className="flex justify-between items-center mb-8 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
+            <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
+              <Link to="/" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
+                <FaInfoCircle className="mr-1" />
+                Home
+              </Link>
+              <span className="text-gray-500 dark:text-gray-400">/</span>
+              <span className="text-gray-700 dark:text-gray-300 font-semibold">Fixtures</span>
+            </nav>
+            <button
+              onClick={toggleDarkMode}
+              className="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+              aria-label="Toggle Dark Mode"
+            >
+              {isDarkMode ? (
+                <>
+                  <FaSun className="mr-2" />
+                  Light Mode
+                </>
+              ) : (
+                <>
+                  <FaMoon className="mr-2" />
+                  Dark Mode
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Error Message */}
+          <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 space-y-8 transition-colors duration-300">
+            <div className="text-center text-red-500 py-10">{error}</div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl w-full bg-white shadow-md rounded-lg p-8">
-        <h2 className="text-2xl font-bold text-center mb-6">Fixtures for Season {season}</h2>
-        
-        {/* **Season Dropdown, Search Bar, Sort Button, and Filter Toggle Container** */}
-        <div className="flex flex-col sm:flex-row justify-center items-center mb-4 space-y-2 sm:space-y-0 sm:space-x-4">
-          {/* Season Dropdown */}
-          <div className="flex items-center">
-            <label className="mr-2 font-semibold">Season:</label>
-            <select
-              value={season}
-              onChange={(e) => setSeason(parseInt(e.target.value))}
-              className="border border-gray-300 p-2 rounded"
-            >
-              {seasons.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* **Search Bar with Search Icon and Clear Button** */}
-          <div className="flex items-center relative">
-            <label className="mr-2 font-semibold flex items-center space-x-2">
-              {/* Search Icon */}
-              <svg
-                className="w-5 h-5 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <span>Search:</span>
-            </label>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search fixtures..."
-              className="border border-gray-300 p-2 rounded w-48 sm:w-64 pr-8"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                aria-label="Clear search"
-              >
-                {/* 'X' Icon */}
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl w-full">
+        {/* Navbar */}
+        <div className="flex justify-between items-center mb-8 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
+          <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
+            <Link to="/" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
+              <FaInfoCircle className="mr-1" />
+              Home
+            </Link>
+            <span className="text-gray-500 dark:text-gray-400">/</span>
+            <span className="text-gray-700 dark:text-gray-300 font-semibold">Fixtures</span>
+          </nav>
+          <button
+            onClick={toggleDarkMode}
+            className="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+            aria-label="Toggle Dark Mode"
+          >
+            {isDarkMode ? (
+              <>
+                <FaSun className="mr-2" />
+                Light Mode
+              </>
+            ) : (
+              <>
+                <FaMoon className="mr-2" />
+                Dark Mode
+              </>
             )}
-          </div>
-
-          {/* **Sort Button** */}
-          <div className="flex items-center">
-            <button
-              onClick={toggleSortOrder}
-              className="flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              {sortOrder === 'asc' ? (
-                <>
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {/* Up Arrow Icon */}
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                  </svg>
-                  Sort Descending
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {/* Down Arrow Icon */}
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                  Sort Ascending
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* **Filter Toggle Button** */}
-          <div className="flex items-center">
-            <button
-              onClick={() => setIsFilterVisible(!isFilterVisible)}
-              className="flex items-center px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              {isFilterVisible ? (
-                <>
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {/* Up Arrow Icon */}
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                  </svg>
-                  Hide Filters
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {/* Down Arrow Icon */}
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                  Show Filters
-                </>
-              )}
-            </button>
-          </div>
+          </button>
         </div>
 
-        {/* **Filter Section** */}
-        {isFilterVisible && (
-          <div className="border border-gray-300 p-4 rounded mb-4">
-            {/* **Team Filter** */}
-            <div className="mb-2">
-              <button
-                onClick={() => setIsTeamFilterOpen(!isTeamFilterOpen)}
-                className="w-full flex justify-between items-center px-2 py-1 bg-gray-100 rounded"
-              >
-                <span className="font-semibold">Filter by Team</span>
-                <svg
-                  className={`w-5 h-5 transform transition-transform duration-200 ${
-                    isTeamFilterOpen ? 'rotate-180' : 'rotate-0'
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
+        {/* Main Content */}
+        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 space-y-8 transition-colors duration-300">
+          {/* **Fixtures Content** */}
+          <div className="space-y-8">
+            {/* Season Dropdown, Search Bar, Sort Button, and Filter Toggle Container */}
+            <div className="flex flex-col sm:flex-row justify-center items-center mb-4 space-y-2 sm:space-y-0 sm:space-x-4">
+              {/* Season Dropdown */}
+              <div className="flex items-center">
+                <label className="mr-2 font-semibold text-gray-800 dark:text-gray-200">Season:</label>
+                <select
+                  value={season}
+                  onChange={(e) => setSeason(parseInt(e.target.value))}
+                  className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-2 rounded"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {isTeamFilterOpen && (
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {Object.values(teamMap).map((team) => (
-                    <label key={team._id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        value={team._id}
-                        onChange={() => handleTeamSelection(team._id)}
-                        checked={selectedTeams.includes(team._id)}
-                        className="form-checkbox h-4 w-4 text-blue-600"
-                      />
-                      <span className="text-sm">{team.teamName}</span>
-                    </label>
+                  {seasons.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
-                </div>
-              )}
-            </div>
+                </select>
+              </div>
 
-            {/* **Round Filter** */}
-            <div className="mb-2">
-              <button
-                onClick={() => setIsRoundFilterOpen(!isRoundFilterOpen)}
-                className="w-full flex justify-between items-center px-2 py-1 bg-gray-100 rounded"
-              >
-                <span className="font-semibold">Filter by Round</span>
-                <svg
-                  className={`w-5 h-5 transform transition-transform duration-200 ${
-                    isRoundFilterOpen ? 'rotate-180' : 'rotate-0'
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {isRoundFilterOpen && (
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {[1, 2, 3, 4, 5].map((round) => (
-                    <label key={round} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        value={round}
-                        onChange={() => handleRoundSelection(round)}
-                        checked={selectedRounds.includes(round)}
-                        className="form-checkbox h-4 w-4 text-blue-600"
-                      />
-                      <span className="text-sm">Round {round}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* **Date Range Filter** */}
-            <div className="mb-2">
-              <button
-                onClick={() => setIsDateFilterOpen(!isDateFilterOpen)}
-                className="w-full flex justify-between items-center px-2 py-1 bg-gray-100 rounded"
-              >
-                <span className="font-semibold">Filter by Date</span>
-                <svg
-                  className={`w-5 h-5 transform transition-transform duration-200 ${
-                    isDateFilterOpen ? 'rotate-180' : 'rotate-0'
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {isDateFilterOpen && (
-                <div className="mt-2 flex flex-col sm:flex-row sm:space-x-4">
-                  <div className="mb-2 sm:mb-0">
-                    <label className="block text-sm font-medium text-gray-700">Start Date</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="mt-1 block w-full border border-gray-300 rounded p-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">End Date</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="mt-1 block w-full border border-gray-300 rounded p-2 text-sm"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* **Venue/Stadium Filter** */}
-            <div className="mb-2">
-              <button
-                onClick={() => setIsStadiumFilterOpen(!isStadiumFilterOpen)}
-                className="w-full flex justify-between items-center px-2 py-1 bg-gray-100 rounded"
-              >
-                <span className="font-semibold">Filter by Stadium</span>
-                <svg
-                  className={`w-5 h-5 transform transition-transform duration-200 ${
-                    isStadiumFilterOpen ? 'rotate-180' : 'rotate-0'
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {isStadiumFilterOpen && (
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {stadiums.map((stadium) => (
-                    <label key={stadium._id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        value={stadium._id}
-                        onChange={() => handleStadiumSelection(stadium._id)}
-                        checked={selectedStadiums.includes(stadium._id)}
-                        className="form-checkbox h-4 w-4 text-blue-600"
-                      />
-                      <span className="text-sm">{stadium.stadiumName}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* **Home/Away Team Filter** */}
-            <div className="mb-2">
-              <button
-                onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
-                className="w-full flex justify-between items-center px-2 py-1 bg-gray-100 rounded"
-              >
-                <span className="font-semibold">Filter by Team Role</span>
-                <svg
-                  className={`w-5 h-5 transform transition-transform duration-200 ${
-                    isRoleFilterOpen ? 'rotate-180' : 'rotate-0'
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {isRoleFilterOpen && (
-                <div className="mt-2 flex space-x-4">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      name="teamRole"
-                      value="both"
-                      checked={teamRole === 'both'}
-                      onChange={() => setTeamRole('both')}
-                      className="form-radio h-4 w-4 text-blue-600"
-                    />
-                    <span className="text-sm">Both</span>
-                  </label>
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      name="teamRole"
-                      value="home"
-                      checked={teamRole === 'home'}
-                      onChange={() => setTeamRole('home')}
-                      className="form-radio h-4 w-4 text-blue-600"
-                    />
-                    <span className="text-sm">Home</span>
-                  </label>
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      name="teamRole"
-                      value="away"
-                      checked={teamRole === 'away'}
-                      onChange={() => setTeamRole('away')}
-                      className="form-radio h-4 w-4 text-blue-600"
-                    />
-                    <span className="text-sm">Away</span>
-                  </label>
-                </div>
-              )}
-            </div>
-
-            {/* **Clear All Filters Button** */}
-            <div className="mt-4 text-center">
-              <button
-                onClick={clearAllFilters}
-                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-              >
-                Clear All Filters
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* **Optional: Display Number of Fixtures Found** */}
-        <div className="text-center mb-4">
-          <span className="text-gray-700">
-            {filteredFixtures.length} fixtures found.
-          </span>
-        </div>
-
-        {/* **Fixtures List** */}
-        <div className="w-full">
-          {sortedRoundNumbers.map((round) => (
-            <div key={round} className="mb-8">
-              <h3 className="text-xl font-bold mb-4">Round {round}</h3>
-              {groupedFixtures[round].map((fixture: Fixture) => {
-                const homeTeam = teamMap[fixture.homeTeam._id];
-                const awayTeam = teamMap[fixture.awayTeam._id];
-                const stadiumName = fixture.stadium.stadiumName;
-                const matchDate = new Date(fixture.date);
-                const matchDateStr = matchDate.toLocaleDateString();
-                const matchTimeStr = matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                const homeTeamStyle = getTeamColor(homeTeam?.teamName || '');
-                const awayTeamStyle = getTeamColor(awayTeam?.teamName || '');
-
-                return (
-                  <div
-                    key={fixture._id}
-                    className="flex flex-col bg-white border rounded p-4 mb-4 shadow-md space-y-4"
+              {/* Search Bar with Search Icon and Clear Button */}
+              <div className="flex items-center relative">
+                <label className="mr-2 font-semibold flex items-center space-x-2 text-gray-800 dark:text-gray-200">
+                  {/* Search Icon */}
+                  <svg
+                    className="w-5 h-5 text-gray-500 dark:text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
                   >
-                    {/* **Teams Row** */}
-                    <div className="flex justify-between items-center space-x-4">
-                      {/* Home Team Block */}
-                      <Link
-                        to={`/teams/${homeTeam?._id}`}
-                        className="flex justify-center items-center space-x-2 p-2 rounded border border-black"
-                        style={{
-                          backgroundColor: homeTeamStyle.backgroundColor,
-                          color: homeTeamStyle.textColor, // Text color
-                          flex: '1 1 45%',
-                        }}
-                      >
-                        <img
-                          src={`${BACKEND_URL}${homeTeam?.image || '/images/default-home-team-logo.png'}`}
-                          alt={`${homeTeam?.teamName} logo`}
-                          className="w-8 h-8"
-                        />
-                        <span className="font-semibold text-center text-2xl">
-                          {highlightText(homeTeam?.teamName || '', searchTokens)}
-                        </span>
-                      </Link>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <span>Search:</span>
+                </label>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search fixtures..."
+                  className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-2 rounded w-48 sm:w-64 pr-8"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
+                    aria-label="Clear search"
+                  >
+                    {/* 'X' Icon */}
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
 
-                      {/* vs Text */}
-                      <span className="text-gray-800 font-bold">vs</span>
-
-                      {/* Away Team Block */}
-                      <Link
-                        to={`/teams/${awayTeam?._id}`}
-                        className="flex justify-center items-center space-x-2 p-2 rounded border border-black"
-                        style={{
-                          backgroundColor: awayTeamStyle.backgroundColor,
-                          color: awayTeamStyle.textColor, // Text color
-                          flex: '1 1 45%',
-                        }}
+              {/* Sort Button */}
+              <div className="flex items-center">
+                <button
+                  onClick={toggleSortOrder}
+                  className="flex items-center px-4 py-2 bg-blue-500 dark:bg-blue-700 text-white rounded hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors duration-200"
+                >
+                  {sortOrder === 'asc' ? (
+                    <>
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
                       >
-                        <img
-                          src={`${BACKEND_URL}${awayTeam?.image || '/images/default-away-team-logo.png'}`}
-                          alt={`${awayTeam?.teamName} logo`}
-                          className="w-8 h-8"
-                        />
-                        <span className="font-semibold text-center text-2xl">
-                          {highlightText(awayTeam?.teamName || '', searchTokens)}
-                        </span>
-                      </Link>
+                        {/* Up Arrow Icon */}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                      Sort Descending
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        {/* Down Arrow Icon */}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                      Sort Ascending
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Filter Toggle Button */}
+              <div className="flex items-center">
+                <button
+                  onClick={() => setIsFilterVisible(!isFilterVisible)}
+                  className="flex items-center px-4 py-2 bg-green-500 dark:bg-green-700 text-white rounded hover:bg-green-600 dark:hover:bg-green-800 transition-colors duration-200"
+                >
+                  {isFilterVisible ? (
+                    <>
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        {/* Up Arrow Icon */}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                      Hide Filters
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        {/* Down Arrow Icon */}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                      Show Filters
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* **Filter Section** */}
+            {isFilterVisible && (
+              <div className="border border-gray-300 dark:border-gray-600 p-4 rounded mb-4">
+                {/* **Team Filter** */}
+                <div className="mb-2">
+                  <button
+                    onClick={() => setIsTeamFilterOpen(!isTeamFilterOpen)}
+                    className="w-full flex justify-between items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded"
+                  >
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">Filter by Team</span>
+                    <svg
+                      className={`w-5 h-5 transform transition-transform duration-200 ${
+                        isTeamFilterOpen ? 'rotate-180' : 'rotate-0'
+                      } text-gray-800 dark:text-gray-200`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isTeamFilterOpen && (
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {Object.values(teamMap).map((team) => (
+                        <label key={team._id} className="flex items-center space-x-2 text-gray-800 dark:text-gray-200">
+                          <input
+                            type="checkbox"
+                            value={team._id}
+                            onChange={() => handleTeamSelection(team._id)}
+                            checked={selectedTeams.includes(team._id)}
+                            className="form-checkbox h-4 w-4 text-blue-600 dark:text-blue-400"
+                          />
+                          <span className="text-sm">{team.teamName}</span>
+                        </label>
+                      ))}
                     </div>
+                  )}
+                </div>
 
-                    {/* **Match Details Row** */}
-                    <div className="flex flex-col items-center sm:flex-row sm:justify-between mt-4 space-y-2 sm:space-y-0">
-                      {/* Stadium */}
-                      <Link
-                        to={`/stadiums/${fixture.stadium._id}`}
-                        className="text-black font-bold hover:underline text-sm"
-                      >
-                        {highlightText(stadiumName, searchTokens)}
-                      </Link>
+                {/* **Round Filter** */}
+                <div className="mb-2">
+                  <button
+                    onClick={() => setIsRoundFilterOpen(!isRoundFilterOpen)}
+                    className="w-full flex justify-between items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded"
+                  >
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">Filter by Round</span>
+                    <svg
+                      className={`w-5 h-5 transform transition-transform duration-200 ${
+                        isRoundFilterOpen ? 'rotate-180' : 'rotate-0'
+                      } text-gray-800 dark:text-gray-200`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isRoundFilterOpen && (
+                    <div className="mt-2 grid grid-cols-3 gap-2">
+                      {[1, 2, 3, 4, 5].map((round) => (
+                        <label key={round} className="flex items-center space-x-2 text-gray-800 dark:text-gray-200">
+                          <input
+                            type="checkbox"
+                            value={round}
+                            onChange={() => handleRoundSelection(round)}
+                            checked={selectedRounds.includes(round)}
+                            className="form-checkbox h-4 w-4 text-blue-600 dark:text-blue-400"
+                          />
+                          <span className="text-sm">Round {round}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                      {/* Date and Time */}
-                      <div className="flex flex-col sm:flex-row sm:items-center space-x-0 sm:space-x-2 text-black font-bold text-sm">
-                        <span>{matchDateStr}</span>
-                        <span>{matchTimeStr}</span>
+                {/* **Date Range Filter** */}
+                <div className="mb-2">
+                  <button
+                    onClick={() => setIsDateFilterOpen(!isDateFilterOpen)}
+                    className="w-full flex justify-between items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded"
+                  >
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">Filter by Date</span>
+                    <svg
+                      className={`w-5 h-5 transform transition-transform duration-200 ${
+                        isDateFilterOpen ? 'rotate-180' : 'rotate-0'
+                      } text-gray-800 dark:text-gray-200`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isDateFilterOpen && (
+                    <div className="mt-2 flex flex-col sm:flex-row sm:space-x-4">
+                      <div className="mb-2 sm:mb-0">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm"
+                        />
                       </div>
-
-                      {/* View Details Button */}
-                      <Link
-                        to={`/fixtures/${fixture._id}`}
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                      >
-                        View Details
-                      </Link>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
+                        <input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm"
+                        />
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  )}
+                </div>
+
+                {/* **Venue/Stadium Filter** */}
+                <div className="mb-2">
+                  <button
+                    onClick={() => setIsStadiumFilterOpen(!isStadiumFilterOpen)}
+                    className="w-full flex justify-between items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded"
+                  >
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">Filter by Stadium</span>
+                    <svg
+                      className={`w-5 h-5 transform transition-transform duration-200 ${
+                        isStadiumFilterOpen ? 'rotate-180' : 'rotate-0'
+                      } text-gray-800 dark:text-gray-200`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isStadiumFilterOpen && (
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {stadiums.map((stadium) => (
+                        <label key={stadium._id} className="flex items-center space-x-2 text-gray-800 dark:text-gray-200">
+                          <input
+                            type="checkbox"
+                            value={stadium._id}
+                            onChange={() => handleStadiumSelection(stadium._id)}
+                            checked={selectedStadiums.includes(stadium._id)}
+                            className="form-checkbox h-4 w-4 text-blue-600 dark:text-blue-400"
+                          />
+                          <span className="text-sm">{stadium.stadiumName}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* **Home/Away Team Filter** */}
+                <div className="mb-2">
+                  <button
+                    onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
+                    className="w-full flex justify-between items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded"
+                  >
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">Filter by Team Role</span>
+                    <svg
+                      className={`w-5 h-5 transform transition-transform duration-200 ${
+                        isRoleFilterOpen ? 'rotate-180' : 'rotate-0'
+                      } text-gray-800 dark:text-gray-200`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isRoleFilterOpen && (
+                    <div className="mt-2 flex space-x-4">
+                      <label className="flex items-center space-x-2 text-gray-800 dark:text-gray-200">
+                        <input
+                          type="radio"
+                          name="teamRole"
+                          value="both"
+                          checked={teamRole === 'both'}
+                          onChange={() => setTeamRole('both')}
+                          className="form-radio h-4 w-4 text-blue-600 dark:text-blue-400"
+                        />
+                        <span className="text-sm">Both</span>
+                      </label>
+                      <label className="flex items-center space-x-2 text-gray-800 dark:text-gray-200">
+                        <input
+                          type="radio"
+                          name="teamRole"
+                          value="home"
+                          checked={teamRole === 'home'}
+                          onChange={() => setTeamRole('home')}
+                          className="form-radio h-4 w-4 text-blue-600 dark:text-blue-400"
+                        />
+                        <span className="text-sm">Home</span>
+                      </label>
+                      <label className="flex items-center space-x-2 text-gray-800 dark:text-gray-200">
+                        <input
+                          type="radio"
+                          name="teamRole"
+                          value="away"
+                          checked={teamRole === 'away'}
+                          onChange={() => setTeamRole('away')}
+                          className="form-radio h-4 w-4 text-blue-600 dark:text-blue-400"
+                        />
+                        <span className="text-sm">Away</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {/* **Clear All Filters Button** */}
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={clearAllFilters}
+                    className="px-3 py-1 bg-red-500 dark:bg-red-700 text-white rounded hover:bg-red-600 dark:hover:bg-red-800 text-sm"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* **Optional: Display Number of Fixtures Found** */}
+            <div className="text-center mb-4">
+              <span className="text-gray-700 dark:text-gray-300">
+                {filteredFixtures.length} fixtures found.
+              </span>
             </div>
-          ))}
+
+            {/* **Fixtures List** */}
+            <div className="w-full">
+              {sortedRoundNumbers.map((round) => (
+                <div key={round} className="mb-8">
+                  <h3 className="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Round {round}</h3>
+                  {groupedFixtures[round].map((fixture: Fixture) => {
+                    const homeTeam = teamMap[fixture.homeTeam._id];
+                    const awayTeam = teamMap[fixture.awayTeam._id];
+                    const stadiumName = fixture.stadium.stadiumName;
+                    const matchDate = new Date(fixture.date);
+                    const matchDateStr = matchDate.toLocaleDateString();
+                    const matchTimeStr = matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    const homeTeamStyle = getTeamColor(homeTeam?.teamName || '');
+                    const awayTeamStyle = getTeamColor(awayTeam?.teamName || '');
+
+                    return (
+                      <div
+                        key={fixture._id}
+                        className="flex flex-col bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded p-4 mb-4 shadow-md space-y-4 transition-colors duration-300"
+                      >
+                        {/* **Teams Row** */}
+                        <div className="flex justify-between items-center space-x-4">
+                          {/* Home Team Block */}
+                          <Link
+                            to={`/teams/${homeTeam?._id}`}
+                            className="flex justify-center items-center space-x-2 p-2 rounded border border-black dark:border-gray-200"
+                            style={{
+                              backgroundColor: homeTeamStyle.backgroundColor,
+                              color: homeTeamStyle.textColor, // Text color
+                              flex: '1 1 45%',
+                            }}
+                          >
+                            <img
+                              src={`${BACKEND_URL}${homeTeam?.image || '/images/default-home-team-logo.png'}`}
+                              alt={`${homeTeam?.teamName} logo`}
+                              className="w-8 h-8"
+                            />
+                            <span className="font-semibold text-center text-2xl">
+                              {highlightText(homeTeam?.teamName || '', searchTokens)}
+                            </span>
+                          </Link>
+
+                          {/* vs Text */}
+                          <span className="text-gray-800 dark:text-gray-200 font-bold">vs</span>
+
+                          {/* Away Team Block */}
+                          <Link
+                            to={`/teams/${awayTeam?._id}`}
+                            className="flex justify-center items-center space-x-2 p-2 rounded border border-black dark:border-gray-200"
+                            style={{
+                              backgroundColor: awayTeamStyle.backgroundColor,
+                              color: awayTeamStyle.textColor, // Text color
+                              flex: '1 1 45%',
+                            }}
+                          >
+                            <img
+                              src={`${BACKEND_URL}${awayTeam?.image || '/images/default-away-team-logo.png'}`}
+                              alt={`${awayTeam?.teamName} logo`}
+                              className="w-8 h-8"
+                            />
+                            <span className="font-semibold text-center text-2xl">
+                              {highlightText(awayTeam?.teamName || '', searchTokens)}
+                            </span>
+                          </Link>
+                        </div>
+
+                        {/* **Match Details Row** */}
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
+                          {/* Stadium */}
+                          <Link
+                            to={`/stadiums/${fixture.stadium._id}`}
+                            className="text-gray-800 dark:text-gray-200 font-bold hover:underline text-sm"
+                          >
+                            {highlightText(stadiumName, searchTokens)}
+                          </Link>
+
+                          {/* Date and Time */}
+                          <div className="flex flex-col sm:flex-row sm:items-center space-x-0 sm:space-x-2 text-gray-800 dark:text-gray-200 font-bold text-sm">
+                            <span>{matchDateStr}</span>
+                            <span>{matchTimeStr}</span>
+                          </div>
+
+                          {/* View Details Button */}
+                          <Link
+                            to={`/fixtures/${fixture._id}`}
+                            className="px-3 py-1 bg-blue-500 dark:bg-blue-700 text-white rounded hover:bg-blue-600 dark:hover:bg-blue-800 text-sm"
+                          >
+                            View Details
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

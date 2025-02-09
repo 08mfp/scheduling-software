@@ -128,7 +128,7 @@ const Navbar: React.FC = () => {
             <li>
               <Link
                 to="/"
-                className="block py-2 px-3 text-blue-700 dark:text-blue-500 rounded hover:bg-blue-700 hover:text-white dark:hover:bg-gray-700 md:hover:bg-transparent md:hover:text-blue-700"
+                className="block py-2 px-3 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 md:hover:bg-transparent md:hover:text-blue-700"
                 aria-current="page"
                 onClick={() => {
                   console.log('Navigated to Home');
@@ -136,6 +136,19 @@ const Navbar: React.FC = () => {
                 }}
               >
                 Home
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/about"
+                className="block py-2 px-3 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 md:hover:bg-transparent md:hover:text-blue-700"
+                aria-current="page"
+                onClick={() => {
+                  console.log('Navigated to About');
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                About
               </Link>
             </li>
             <li>
@@ -280,6 +293,19 @@ const Navbar: React.FC = () => {
                 )}
               </>
             )}
+            <li>
+              <Link
+                to="/contact"
+                className="block py-2 px-3 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 md:hover:bg-transparent md:hover:text-blue-700"
+                aria-current="page"
+                onClick={() => {
+                  console.log('Navigated to Contact');
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                Contact
+              </Link>
+            </li>
           </ul>
         </div>
 

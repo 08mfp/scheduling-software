@@ -4,13 +4,13 @@ import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
 import { Player } from '../interfaces/Player';
 import { AuthContext } from '../contexts/AuthContext';
 import ConfirmModal from './ConfirmModal';
-import { FaHome, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaHome, FaEdit, FaTrash, FaSun, FaMoon } from 'react-icons/fa';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
 
 const PlayerDetail: React.FC = () => {
   const [player, setPlayer] = useState<Player | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const { id } = useParams<{ id: string }>();
@@ -22,21 +22,47 @@ const PlayerDetail: React.FC = () => {
   const [countdown, setCountdown] = useState<number>(3);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark' || false;
+    }
+    return false;
+  });
+
   useEffect(() => {
     if (user && ['admin', 'manager', 'viewer'].includes(user.role)) {
       fetchPlayer();
     }
   }, [id, user]);
 
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
   const fetchPlayer = async () => {
+    const startTime = Date.now();
     try {
       const response = await axios.get<Player>(`${BACKEND_URL}/api/players/${id}`);
       setPlayer(response.data);
-      setLoading(false);
+
+      // Show skeleton for at least 3 seconds
+      const elapsed = Date.now() - startTime;
+      const remaining = 3000 - elapsed;
+      if (remaining > 0) {
+        setTimeout(() => setIsLoading(false), remaining);
+      } else {
+        setIsLoading(false);
+      }
     } catch (err) {
       setError('Failed to load player details. Please try again later.');
       console.error('Error fetching player:', err);
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -48,37 +74,11 @@ const PlayerDetail: React.FC = () => {
 
     try {
       await axios.delete(`${BACKEND_URL}/api/players/${id}`);
-      // After successful deletion, show success modal
       setModalState('success');
     } catch (err) {
-      setError('Failed to delete the player.');
       console.error('Error deleting player:', err);
       setModalState('error');
     }
-  };
-
-  // Open confirm modal
-  const openConfirmModal = () => setModalState('confirm');
-
-  const closeModal = () => {
-    setModalState(null);
-    setCountdown(3);
-  };
-
-  const handleConfirmDelete = () => {
-    setModalState('loading');
-    // Simulate a short delay for the loading state
-    setTimeout(() => {
-      deletePlayer();
-    }, 3000);
-  };
-
-  const handleRetry = () => {
-    setModalState('loading');
-    // Simulate a short delay before retrying deletion
-    setTimeout(() => {
-      deletePlayer();
-    }, 3000);
   };
 
   // Handle countdown for success modal
@@ -90,8 +90,8 @@ const PlayerDetail: React.FC = () => {
             if (countdownRef.current) {
               clearInterval(countdownRef.current);
             }
-            setModalState(null); 
-            navigate('/players'); // Navigate back after countdown
+            setModalState(null);
+            navigate('/players'); 
             return 0;
           }
           return prev - 1;
@@ -104,42 +104,33 @@ const PlayerDetail: React.FC = () => {
     };
   }, [modalState, navigate]);
 
+  const openConfirmModal = () => setModalState('confirm');
+  const closeModal = () => {
+    setModalState(null);
+    setCountdown(3);
+  };
+
+  const handleConfirmDelete = () => {
+    setModalState('loading');
+    setTimeout(() => {
+      deletePlayer();
+    }, 3000);
+  };
+
+  const handleRetry = () => {
+    setModalState('loading');
+    setTimeout(() => {
+      deletePlayer();
+    }, 3000);
+  };
+
   // If the user is not authenticated or doesn't have the required role, redirect
   if (!user || !['admin', 'manager', 'viewer'].includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="animate-spin h-12 w-12 border-4 border-purple-400 border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
+  const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-center">
-        <p className="text-red-500">{error}</p>
-        <button
-          onClick={fetchPlayer}
-          className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  if (!player) {
-    return (
-      <div className="flex items-start justify-center min-h-screen bg-gray-100">
-        <p className="text-gray-500">No player found.</p>
-      </div>
-    );
-  }
-
-  // Dynamic border color based on team name if needed, or default
   const getTeamColor = (teamName: string): { borderColor: string } => {
     switch (teamName) {
       case 'England':
@@ -159,40 +150,141 @@ const PlayerDetail: React.FC = () => {
     }
   };
 
+  const renderSkeleton = () => (
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8 animate-pulse">
+        {/* Top bar skeleton */}
+        <div className="h-6 bg-gray-300 dark:bg-gray-700 w-1/4 rounded"></div>
+        
+        {/* Player Header Skeleton */}
+        <div className="flex flex-col items-center mb-8 space-y-4">
+          <div className="h-48 w-48 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
+          <div className="h-8 bg-gray-300 dark:bg-gray-700 w-1/2 rounded"></div>
+          <div className="h-4 bg-gray-300 dark:bg-gray-700 w-1/4 rounded"></div>
+        </div>
+
+        {/* Details Skeleton */}
+        <div className="space-y-4 text-center">
+          <div className="h-4 bg-gray-300 dark:bg-gray-700 w-1/4 mx-auto rounded"></div>
+          <div className="h-4 bg-gray-300 dark:bg-gray-700 w-1/3 mx-auto rounded"></div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isLoading) {
+    return renderSkeleton();
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 text-center">
+        <div
+          className="bg-red-100 dark:bg-red-800 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded relative max-w-md text-center"
+          role="alert"
+        >
+          <strong className="font-bold">Error:</strong>
+          <span className="block sm:inline"> {error}</span>
+          <button
+            onClick={() => {
+              setError(null);
+              setIsLoading(true);
+              fetchPlayer();
+            }}
+            className="mt-4 inline-flex items-center px-4 py-2 bg-red-500 dark:bg-red-600 text-white rounded-md hover:bg-red-600 dark:hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 dark:focus:ring-red-500"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!player) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+        <p className="text-center text-gray-500 dark:text-gray-400">No player found.</p>
+      </div>
+    );
+  }
+
   const teamColor = getTeamColor(player.team.teamName);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div
-        className="max-w-4xl w-full bg-white shadow-lg rounded-lg p-10"
-        style={{ border: `8px solid ${teamColor.borderColor}` }}
-      >
-        {/* Breadcrumb Navigation */}
-        <div className="flex items-center space-x-2 mb-6">
-          <Link to="/players" className="text-blue-600 hover:underline flex items-center">
-            <FaHome className="mr-1" />
-            Players
-          </Link>
-          <span className="text-gray-500">/</span>
-          <span className="text-gray-700">
-            {player.firstName} {player.lastName}
-          </span>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8 transition-colors duration-300">
+        
+        {/* Top bar with breadcrumb and dark mode toggle */}
+        <div className="flex justify-between items-center mb-8 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
+          <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
+            <Link to="/players" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
+              <FaHome className="mr-1" />
+              Players
+            </Link>
+            <span className="text-gray-500 dark:text-gray-400">/</span>
+            <span className="text-gray-700 dark:text-gray-300 font-semibold">
+              {player.firstName} {player.lastName}
+            </span>
+          </nav>
+          <button
+            onClick={toggleDarkMode}
+            className="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 
+                       rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 
+                       focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+            aria-label="Toggle Dark Mode"
+          >
+            {isDarkMode ? (
+              <>
+                <FaSun className="mr-2" />
+                Light Mode
+              </>
+            ) : (
+              <>
+                <FaMoon className="mr-2" />
+                Dark Mode
+              </>
+            )}
+          </button>
         </div>
 
+        {/* Player Header with subtle accent line and ring */}
         <div className="flex flex-col items-center mb-8">
           {player.image && (
-            <img
-              src={`${BACKEND_URL}${player.image}`}
-              alt={`${player.firstName} ${player.lastName}`}
-              className="w-48 h-48 object-cover rounded-full mb-6"
-            />
+            <div className="relative inline-block mb-6">
+              <img
+                src={`${BACKEND_URL}${player.image}`}
+                alt={`${player.firstName} ${player.lastName}`}
+                className="w-48 h-48 object-cover rounded-full"
+                onError={(e) => {
+                  e.currentTarget.src = '/images/default-player.png';
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-0 rounded-full"
+                style={{
+                  boxShadow: `0 0 0 4px ${teamColor.borderColor}`
+                }}
+              />
+            </div>
           )}
-          <h2 className="text-4xl font-extrabold text-gray-900 mb-4 text-center">
+          <h2 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100 text-center">
             {player.firstName} {player.lastName}
           </h2>
-          <div className="flex items-center text-lg text-gray-600">
+          <hr
+            className="w-24 mt-3"
+            style={{
+              borderColor: teamColor.borderColor,
+              borderWidth: '2px',
+              borderStyle: 'solid'
+            }}
+          />
+        </div>
+
+        {/* Player Details */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="flex items-center text-lg text-gray-600 dark:text-gray-300 mb-4">
             <svg
-              className="w-6 h-6 text-gray-800 mr-2"
+              className="w-6 h-6 text-gray-800 dark:text-gray-200 mr-2"
               xmlns="http://www.w3.org/2000/svg"
               fill="currentColor"
               viewBox="0 0 24 24"
@@ -204,38 +296,38 @@ const PlayerDetail: React.FC = () => {
                 clipRule="evenodd"
               />
             </svg>
-            <strong>Team:</strong>{' '}
-            <Link to={`/teams/${player.team._id}`} className="text-purple-600 hover:underline">
+            <strong className="mr-1">Team:</strong>
+            <Link to={`/teams/${player.team._id}`} className="text-purple-600 dark:text-purple-400 hover:underline">
               {player.team.teamName}
             </Link>
           </div>
-        </div>
 
-        <div className="space-y-4 text-center">
-          <p className="text-lg">
+          <p className="text-lg text-gray-800 dark:text-gray-200 mb-2">
             <strong>Age:</strong> {player.age}
           </p>
-          <p className="text-lg">
+          <p className="text-lg text-gray-800 dark:text-gray-200">
             <strong>Date of Birth:</strong> {new Date(player.dateOfBirth).toLocaleDateString()}
           </p>
         </div>
 
-        <div className="mt-8 flex justify-center gap-4">
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-4">
           {['admin', 'manager'].includes(user.role) && (
             <Link to={`/players/edit/${player._id}`}>
-              <button className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                <FaEdit className="inline-block mr-2" />
-                Edit Player
+              <button className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center">
+                <FaEdit className="mr-2" />
+                Edit
               </button>
             </Link>
           )}
           {user.role === 'admin' && (
             <button
               onClick={openConfirmModal}
-              className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700"
+              className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-800 transition-colors duration-200 flex items-center"
+              aria-label="Delete Player"
             >
-              <FaTrash className="inline-block mr-2" />
-              Delete Player
+              <FaTrash className="mr-2" />
+              Delete
             </button>
           )}
         </div>
@@ -260,14 +352,14 @@ const PlayerDetail: React.FC = () => {
             : modalState === 'loading'
             ? 'Deleting the player... Please wait.'
             : modalState === 'success'
-            ? 'The player has been deleted successfully.'
+            ? `The player has been deleted successfully. Redirecting in ${countdown} seconds...`
             : 'Failed to delete the player. Please try again.'
         }
         countdown={modalState === 'success' ? countdown : undefined}
         onConfirm={modalState === 'confirm' ? handleConfirmDelete : undefined}
         onCancel={
           modalState === 'success'
-            ? () => navigate('/players') // Navigate after success
+            ? () => navigate('/players')
             : closeModal
         }
         onRetry={modalState === 'error' ? handleRetry : undefined}

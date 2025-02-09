@@ -37,4 +37,16 @@
     transform: rotate(360deg);
   }
 } */
+@keyframes highlight {
+  0%, 100% {
+    background-color: #fef08a; /* Light yellow */
+  }
+  50% {
+    background-color: #fde047; /* Darker yellow */
+  }
+}
+
+.animate-highlight {
+  animation: highlight 1s infinite;
+}
 
