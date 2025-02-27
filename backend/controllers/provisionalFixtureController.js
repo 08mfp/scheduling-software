@@ -1,25 +1,23 @@
 // backend/controllers/provisionalFixtureController.js
 /**
  * @module backend/controllers/provisionalFixtureController
- * @description This file contains the controller functions for managing provisional fixtures in the database. It is used by the scheduling algorithm to generate provisional fixtures, which are then saved to the main datyabase.
+ * @description This file contains controller functions for managing provisional fixtures.
+ * It supports generating, saving, and clearing provisional fixtures using different algorithms.
+ * Now includes the option for rest weeks.
  * @api ManualFixture
- * @version 1.0.0
+ * @version 1.1.0
  * @authors github.com/08mfp
  */
-
-//! NEED TO CLEANUP THIS CODE. CONFUSING IF ELSE STATEMENTS
 
 const ProvisionalFixture = require('../models/ProvisionalFixture');
 const Fixture = require('../models/Fixture');
 const Team = require('../models/Team');
 
-// Import algorithms
+// Import algorithms.
 const { generateRandomFixtures } = require('../algorithms/randomAlgorithm');
 const { generateRound5ExtravaganzaFixtures } = require('../algorithms/round5Extravaganza');
 const { generateTravelOptimizedFixtures } = require('../algorithms/travelOptimizedScheduler');
 const { generateBalancedTravelFixtures } = require('../algorithms/balancedTravelScheduler');
-
-
 
 /**
  * @desc    Generate provisional fixtures
@@ -27,106 +25,105 @@ const { generateBalancedTravelFixtures } = require('../algorithms/balancedTravel
  * @access  Private (Admin only)
  */
 exports.generateProvisionalFixtures = async (req, res) => {
-    try {
-      const { algorithm, season, teams: selectedTeamIds } = req.body;
+  try {
+    const { algorithm, season, teams: selectedTeamIds, restWeeks } = req.body;
 
-      // Clear existing provisional fixtures for the selected season (so that we don't have duplicate fixtures)
-      await ProvisionalFixture.deleteMany({ season });
+    // Clear existing provisional fixtures for the selected season.
+    await ProvisionalFixture.deleteMany({ season });
 
-      let result;
+    let result;
 
-      if (algorithm === 'random') {
-        // Validate that exactly 6 team IDs are provided (we will restrict this on front end interface)
-        if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
-          return res.status(400).json({ message: 'Exactly 6 teams must be selected for the Random algorithm.' });
-        }
-
-        // Fetch selected teams from the database
-        const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
-
-        if (teams.length !== 6) {
-          return res.status(400).json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
-        }
-
-        // sort teams by ranking  //! helps with the round 5 extravaganza algorithm
-        teams.sort((a, b) => a.teamRanking - b.teamRanking);
-
-        // Generate fixtures using the selected teams
-        result = await generateRandomFixtures(teams, season);
-      } else if (algorithm === 'round5Extravaganza') {
-        // Validate that exactly 6 team IDs are provided
-        if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
-          return res.status(400).json({ message: 'Exactly 6 teams must be selected for the Round 5 Extravaganza algorithm.' });
-        }
-
-        // Fetch selected teams from the database
-        const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium'); //duplicate code?
-
-        if (teams.length !== 6) {
-          return res.status(400).json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
-        }
-
-        // sort teams by ranking 
-        teams.sort((a, b) => a.teamRanking - b.teamRanking);
-
-        // Generate fixtures using the selected teams
-        result = await generateRound5ExtravaganzaFixtures(teams, season);
-      } else if (algorithm === 'travelOptimized') {
-        // Validate that exactly 6 team IDs are provided
-        if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
-          return res.status(400).json({ message: 'Exactly 6 teams must be selected for the Travel Optimized algorithm.' });
-        }
-      
-        // Fetch selected teams from the database
-        const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
-      
-        if (teams.length !== 6) {
-          return res.status(400).json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
-        }
-      
-        // Generate fixtures using the selected teams
-        result = await generateTravelOptimizedFixtures(teams, season);
-    }
-
-    else if (algorithm === 'balancedTravel') { // New Algorithm Handling
-        // Validate that exactly 6 team IDs are provided
-        if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
-          return res.status(400).json({ message: 'Exactly 6 teams must be selected for the Balanced Travel algorithm.' });
-        }
-  
-        // Fetch selected teams from the database
-        const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
-  
-        if (teams.length !== 6) {
-          return res.status(400).json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
-        }
-  
-        // Generate fixtures using the selected teams
-        result = await generateBalancedTravelFixtures(teams, season);
-      }
-      
-      else {
-        return res.status(400).json({ message: 'Algorithm not implemented' });
+    if (algorithm === 'random') {
+      if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
+        return res
+          .status(400)
+          .json({ message: 'Exactly 6 teams must be selected for the Random algorithm.' });
       }
 
-      // Save provisional fixtures to database
-      await ProvisionalFixture.insertMany(result.fixtures);
+      const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
 
-      // Populate fixtures for response
-      const populatedFixtures = await ProvisionalFixture.find({ season })
-        .populate('homeTeam', 'teamName')
-        .populate('awayTeam', 'teamName')
-        .populate('stadium', 'stadiumName');
+      if (teams.length !== 6) {
+        return res
+          .status(400)
+          .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
+      }
 
-      res.status(200).json({
-        message: 'Provisional fixtures generated',
-        fixtures: populatedFixtures,
-        summary: result.summary,
-      });
-    } catch (error) {
-      console.error('Error generating provisional fixtures:', error);
-      res.status(500).json({ message: 'Server error', error: error.message });
+      // Sort teams by ranking.
+      teams.sort((a, b) => a.teamRanking - b.teamRanking);
+
+      // Pass restWeeks to generateRandomFixtures.
+      result = await generateRandomFixtures(teams, season, restWeeks);
+    } else if (algorithm === 'round5Extravaganza') {
+      if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
+        return res
+          .status(400)
+          .json({ message: 'Exactly 6 teams must be selected for the Round 5 Extravaganza algorithm.' });
+      }
+
+      const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
+
+      if (teams.length !== 6) {
+        return res
+          .status(400)
+          .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
+      }
+
+      teams.sort((a, b) => a.teamRanking - b.teamRanking);
+      result = await generateRound5ExtravaganzaFixtures(teams, season);
+    } else if (algorithm === 'travelOptimized') {
+      if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
+        return res
+          .status(400)
+          .json({ message: 'Exactly 6 teams must be selected for the Travel Optimized algorithm.' });
+      }
+
+      const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
+
+      if (teams.length !== 6) {
+        return res
+          .status(400)
+          .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
+      }
+
+      result = await generateTravelOptimizedFixtures(teams, season);
+    } else if (algorithm === 'balancedTravel') {
+      if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
+        return res
+          .status(400)
+          .json({ message: 'Exactly 6 teams must be selected for the Balanced Travel algorithm.' });
+      }
+
+      const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
+
+      if (teams.length !== 6) {
+        return res
+          .status(400)
+          .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
+      }
+
+      result = await generateBalancedTravelFixtures(teams, season);
+    } else {
+      return res.status(400).json({ message: 'Algorithm not implemented' });
     }
+
+    // Save provisional fixtures to the database.
+    await ProvisionalFixture.insertMany(result.fixtures);
+
+    // Populate fixtures for response.
+    const populatedFixtures = await ProvisionalFixture.find({ season })
+      .populate('homeTeam', 'teamName')
+      .populate('awayTeam', 'teamName')
+      .populate('stadium', 'stadiumName');
+
+    res.status(200).json({
+      message: 'Provisional fixtures generated',
+      fixtures: populatedFixtures,
+      summary: result.summary,
+    });
+  } catch (error) {
+    console.error('Error generating provisional fixtures:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
 };
 
 /**
@@ -156,13 +153,11 @@ exports.saveProvisionalFixtures = async (req, res) => {
   try {
     const { season } = req.body;
 
-    // Delete existing fixtures for the season (so that we don't have duplicate fixtures)
+    // Delete existing fixtures for the season.
     await Fixture.deleteMany({ season });
 
-    // Get provisional fixtures
     const provisionalFixtures = await ProvisionalFixture.find({ season });
 
-    // Save provisional fixtures to main fixtures collection (database)
     const fixturesData = provisionalFixtures.map((fixture) => ({
       round: fixture.round,
       date: fixture.date,
@@ -175,7 +170,7 @@ exports.saveProvisionalFixtures = async (req, res) => {
 
     await Fixture.insertMany(fixturesData);
 
-    // Clear provisional fixtures
+    // Clear provisional fixtures.
     await ProvisionalFixture.deleteMany({ season });
 
     res.status(200).json({ message: 'Fixtures saved' });
@@ -186,7 +181,7 @@ exports.saveProvisionalFixtures = async (req, res) => {
 };
 
 /**
- * @desc    Clear all provisional fixtures. So that we can start fresh next time
+ * @desc    Clear all provisional fixtures.
  * @route   DELETE /api/provisional-fixtures
  * @access  Private (Admin only)
  */

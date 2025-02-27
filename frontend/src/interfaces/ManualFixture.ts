@@ -11,6 +11,7 @@ export interface Team {
     teamLocation?: string;
     teamCoach?: string;
     stadium?: Stadium;
+    image?: string;
 }
 
 export interface Fixture {

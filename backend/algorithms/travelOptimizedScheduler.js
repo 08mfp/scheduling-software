@@ -1,4 +1,4 @@
- // backend/algorithms/travelOptimizedScheduler.js
+// backend/algorithms/travelOptimizedScheduler.js
 /**
  * @module backend/algorithms/travelOptimizedScheduler
  * @description This module contains the algorithm for generating fixtures in a way where total travel distance is minimized.
@@ -42,8 +42,9 @@ const Fixture = require('../models/Fixture');
 const Team = require('../models/Team');
 const axios = require('axios');
 const NodeCache = require('node-cache');
-const { Client } = require('@googlemaps/google-maps-services-js'); // Google Maps API Client (used for distance matrix)
-const client = new Client({}); // Initialize Google Maps API Client
+// Removed Google Maps API Client as we are now using the Haversine formula for distance calculations
+// const { Client } = require('@googlemaps/google-maps-services-js'); // Google Maps API Client (used for distance matrix)
+// const client = new Client({}); // Initialize Google Maps API Client
 require('dotenv').config();
 
 // Initialize cache with a TTL of 24 hours
@@ -78,7 +79,7 @@ async function generateTravelOptimizedFixtures(teams, season) {
   for (const fixture of previousSeasonFixtures) { 
     const homeId = fixture.homeTeam._id.toString(); 
     const awayId = fixture.awayTeam._id.toString();
-    const key = [homeId, awayId].sort().join('-'); // sot and join to make sure the key is always in the same order
+    const key = [homeId, awayId].sort().join('-'); // sort and join to make sure the key is always in the same order
     previousFixtureMap.set(key, fixture);
   }
 
@@ -87,7 +88,7 @@ async function generateTravelOptimizedFixtures(teams, season) {
   console.log('All distances have been precomputed.');
 
   // Run the algorithm multiple times and keep the best result
-  const maxAttempts = 10000; //! EXTREMELY HIGH NUMBER OF ATTEMPTS.
+  const maxAttempts = 100; //! EXTREMELY HIGH NUMBER OF ATTEMPTS.
   let bestResult = null;
   let minimalTotalDistance = Infinity;
 
@@ -134,7 +135,7 @@ async function generateTravelOptimizedFixtures(teams, season) {
  * @param {Array} teams - List of team objects.
  * @param {Number} season - The season year.
  * @param {Map} previousFixtureMap - Map of previous season fixtures.
- * @param {Object} distances - Precomputed distances between teams from Google Maps API.
+ * @param {Object} distances - Precomputed distances between teams from Haversine formula.
  * @param {Array} distanceMessages - Messages from distance calculations.
  * @returns {Object} - An object containing fixtures, summary, and totalTravelDistance.
  */
@@ -212,7 +213,7 @@ async function generateFixturesWithPreviousData(
  *
  * @param {Array} teams - List of team objects.
  * @param {Number} season - The season year.
- * @param {Object} distances - Precomputed distances between teams from Google Maps API.
+ * @param {Object} distances - Precomputed distances between teams from Haversine formula.
  * @param {Array} distanceMessages - Messages from distance calculations.
  * @returns {Object} - An object containing fixtures, summary, and totalTravelDistance.
  */
@@ -399,7 +400,7 @@ function optimizeHomeAwayAssignments(fixtures, previousFixtureMap, teams, distan
           previousFixture.awayTeam._id
         )}`,
         currentMatchup: `${selectedOption.homeTeam.teamName} vs ${selectedOption.awayTeam.teamName}`,
-        note: 'Venue alternated from previous season.',
+        note: 'Venue alternated.',
       });
     } else {
       // No previous season data, assign while balancing home/away counts
@@ -439,7 +440,7 @@ function optimizeHomeAwayAssignments(fixtures, previousFixtureMap, teams, distan
       matchupChanges.push({ // record the change made
         previousMatchup: 'No previous matchup',
         currentMatchup: `${selectedOption.homeTeam.teamName} vs ${selectedOption.awayTeam.teamName}`,
-        note: 'Venue assigned while balancing home and away counts.',
+        note: 'Venue assigned to manage constraints.',
       });
     }
 
@@ -522,7 +523,7 @@ function balanceHomeAwayCounts(fixtures, homeCounts, awayCounts, teams, previous
                 adjustmentsMade = true;
               }
 
-              // Update stadium and location (same as other methid)
+              // Update stadium and location (same as other method)
               const homeTeamStadium = fixture.homeTeam.stadium;
               if (!homeTeamStadium) {
                 console.warn(
@@ -874,7 +875,7 @@ async function scheduleFixturesOptimized(fixtures, season, distances) {
 
         if (matchDay) {
           for (let time of matchDay.timeSlots) { // for each time slot
-            const dateTimeString = `${roundDateCursor // create a date time string
+            const dateTimeString = `${roundDateCursor
               .toISOString()
               .split('T')[0]}T${time}:00`;
             const dateTime = new Date(dateTimeString); // create a date object
@@ -1064,28 +1065,28 @@ function buildSummary(
   totalTravelDistance
 ) {
   const summary = [];
-  summary.push('===== Fixture Scheduling Summary =====');
-  summary.push('- Total travel distance minimized for teams.');
-  summary.push('- Home and away games balanced for each team (at least 2 home and 2 away games).');
-  summary.push('- Alternating venue rule applied based on previous season.');
-  summary.push('- Each team plays once per week.');
-  summary.push('- Sequential away games scheduled when possible.');
-  summary.push('========================================\n');
+  // summary.push('===== Fixture Scheduling Summary =====');
+  // summary.push('- Total travel distance minimized for teams.');
+  // summary.push('- Home and away games balanced for each team (at least 2 home and 2 away games).');
+  // summary.push('- Alternating venue rule applied based on previous season.');
+  // summary.push('- Each team plays once per week.');
+  // summary.push('- Sequential away games scheduled when possible.');
+  // summary.push('========================================\n');
 
   summary.push(`Total Overall Travel Distance: ${totalTravelDistance.toFixed(2)} km`);
 
   summary.push('\nPrevious and Current Season Matchups:');
   matchupChanges.forEach((mc) => {
     summary.push(
-      `  Previous: ${mc.previousMatchup}, Current: ${mc.currentMatchup}, Note: ${mc.note}`
+      `  Previous: ${mc.previousMatchup} ||| Current: ${mc.currentMatchup} { ${mc.note} }`
     );
   });
 
-  summary.push('\nDistance Calculations (via Google API):');
+  summary.push('\nDistance Calculations:');
   summary.push(...distanceMessages); // add the distance messages
 
   summary.push('\nTravel Distance Breakdown per Match:');
-  // Create a mapping from coordinates to team names
+  // Create a mapping from stadium coordinates to team names
   const coordToTeamName = {}; // create a mapping from coordinates to team names
   teams.forEach((team) => { // for each team
     const stadium = team.stadium;
@@ -1120,11 +1121,11 @@ function buildSummary(
       );
     } else {
       summary.push(
-        `  Round ${md.round}: ${md.teamName} travels from ${fromTeamName}[${md.from.latitude.toFixed(
+        `  Round ${md.round}: ${md.teamName}: ${fromTeamName}[${md.from.latitude.toFixed(
           2
         )}, ${md.from.longitude.toFixed(2)}] to ${toTeamName}[${md.to.latitude.toFixed(
           2
-        )}, ${md.to.longitude.toFixed(2)}] to play against ${md.opponent} - ${md.distance.toFixed(
+        )}, ${md.to.longitude.toFixed(2)}] to play ${md.opponent} - ${md.distance.toFixed(
           2
         )} km${note}`
       );
@@ -1142,56 +1143,27 @@ function buildSummary(
 }
 
 /**
- * Calculate the driving distance between two locations using Google Distance Matrix API with caching. IS THIS EVEN BEING USED.
+ * Calculate the driving distance between two locations using the Haversine formula with caching.
  *
  * @param {Object} origin - Origin coordinates { latitude, longitude }.
  * @param {Object} destination - Destination coordinates { latitude, longitude }.
  * @returns {Number} - Distance in kilometers.
  */
 async function getDistanceBetweenLocations(origin, destination) {
-  const apiKey = process.env.GOOGLE_API_KEY; 
-
-  const cacheKey = `${origin.latitude},${origin.longitude}-${destination.latitude},${destination.longitude}`; // create a cache key
-  const cachedDistance = distanceCache.get(cacheKey); // get the cached distance
+  const cacheKey = `${origin.latitude},${origin.longitude}-${destination.latitude},${destination.longitude}`;
+  const cachedDistance = distanceCache.get(cacheKey);
   if (cachedDistance !== undefined) {
-    console.log(
-      `Cache hit for distance between ${cacheKey}: ${cachedDistance.toFixed(2)} km` // log the cache hit
-    );
+    console.log(`Cache hit for distance between ${cacheKey}: ${cachedDistance.toFixed(2)} km`);
     return cachedDistance;
   }
-
-  try {
-    console.log(
-      `Fetching distance from Google Distance Matrix API between ${cacheKey}...`
-    );
-    const response = await client.distancematrix({
-      params: {
-        origins: [`${origin.latitude},${origin.longitude}`], // get the origins
-        destinations: [`${destination.latitude},${destination.longitude}`], // get the destinations
-        key: apiKey,
-        mode: 'driving', 
-      },
-      timeout: 5000, // 5 seconds timeout
-    });
-
-    if (response.data.rows[0].elements[0].status === 'OK') { // if the status is OK
-      const distanceInMeters = response.data.rows[0].elements[0].distance.value; // get the distance in meters
-      const distanceInKilometers = distanceInMeters / 1000; // convert to kilometers
-      const message = `Google API: Calculated distance is ${distanceInKilometers.toFixed(2)} km.`; 
-      console.log(message);
-
-      // Cache the distance
-      distanceCache.set(cacheKey, distanceInKilometers);
-
-      return distanceInKilometers;
-    } else {
-      console.error('Google API: No routes found between the two locations.');
-      return 0;
-    }
-  } catch (error) {
-    console.error('Google API Error:', error.message);
-    return 0;
-  }
+  
+  // Calculate distance using the Haversine formula
+  const distanceInKilometers = calculateDistanceBetweenCoordinates(origin, destination);
+  console.log(`Calculated distance between ${cacheKey} using Haversine formula: ${distanceInKilometers.toFixed(2)} km.`);
+  
+  // Cache the distance
+  distanceCache.set(cacheKey, distanceInKilometers);
+  return distanceInKilometers;
 }
 
 module.exports = {
