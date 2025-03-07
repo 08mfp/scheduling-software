@@ -845,6 +845,26 @@ function getWeekend(d: Date): string {
 
   // Step 1: Team Selection with color-coded buttons
   const TeamSelection = () => (
+    < div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-6 mb-8 space-y-6">
+          <div className="flex flex-col items-center">
+            <label
+              htmlFor="season"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
+            >
+              Season:
+            </label>
+            <input
+              type="number"
+              id="season"
+              value={season}
+              onChange={(e) => setSeason(parseInt(e.target.value))}
+              min={2000}
+              className="border border-gray-300 dark:border-gray-600 
+                         bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 
+                         rounded px-3 py-1 w-60 text-center"
+            />
+          </div>
+
     <div className="text-center mb-8">
       <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
         Select 6 Teams for the Season
@@ -860,7 +880,12 @@ function getWeekend(d: Date): string {
         <button
           key={team._id}
           onClick={() => toggleSelectedTeam(team._id)}
-          className="px-4 py-3 text-sm font-medium rounded-md w-44 h-20 flex flex-col items-center justify-center relative border border-black dark:border-white"
+          className={`
+                      px-4 py-3 text-sm font-medium rounded-md focus:outline-none 
+                      focus:ring-2 focus:ring-blue-500 transition-colors
+                      w-44 h-20 flex flex-col items-center justify-center
+                      relative border border-black dark:border-white
+                    `}
           style={{
             backgroundColor,
             color: textColor,
@@ -904,6 +929,7 @@ function getWeekend(d: Date): string {
         Proceed to Schedule Fixtures
       </button>
     </div>
+    </div>
   );
 
   // Table classes for summary table
@@ -940,7 +966,7 @@ function getWeekend(d: Date): string {
               <FaInfoCircle className="mr-1" />
               Home
             </Link>
-            <span className="text-gray-500 dark:text-gray-400">/</span>
+            <span className="text-gray-500 dark:text-gray-400">/ Admin /</span>
             <span className="text-gray-700 dark:text-gray-300 font-semibold">
               Manual Fixture Scheduler
             </span>
@@ -973,32 +999,31 @@ function getWeekend(d: Date): string {
       {/* MAIN CARD */}
       <div className="max-w-7xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300">
         {/* TITLE, DESCRIPTION & SEASON PICKER */}
-        <div className="text-center mb-6">
-          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-2">
-            Manual Fixture Scheduler
-          </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">
-            Use this interface to manually schedule fixtures while ensuring valid matchups and adherence to date/time and round constraints.
-          </p>
-          <div className="mt-2">
-            <label
-              htmlFor="season"
-              className="text-gray-800 dark:text-gray-200 font-medium mr-2"
-            >
-              Season:
-            </label>
-            <input
-              type="number"
-              id="season"
-              value={season}
-              onChange={(e) => setSeason(parseInt(e.target.value))}
-              min={2000}
-              className="border border-gray-300 dark:border-gray-600 
-                         bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 
-                         rounded px-3 py-1"
-            />
-          </div>
-        </div>
+        <div className="text-left mb-6">
+        <h2
+          className="font-extrabold text-gray-900 dark:text-gray-100 mb-2"
+          style={{ fontSize: '34px' }}
+        >
+          Manual Fixture Scheduler
+        </h2>
+        <p
+          className="text-gray-600 dark:text-gray-300 mb-2"
+          style={{ fontSize: '16px' }}
+        >
+          This interface allows you to manually schedule your fixtures using an interactive interface with a live tracker that ensures every round is fully scheduled and adheres to Six Nations rules. Benefit from real-time constraint checking and handy suggestion buttons that offer valid matchups to fill any gaps in your schedule.
+        </p>
+        <br />
+        <p
+          className="text-sm text-gray-500 dark:text-gray-400 italic"
+          style={{ fontSize: '12px' }}
+        >
+          Note: Because scheduling is sequential, some combinations might later prove infeasible. In such cases, feedback is provided to help you backtrack and correct errors.
+        </p>
+
+
+      </div>
+      {/* <br/> */}
+
 
         {/* GRID LAYOUT FOR PANELS */}
         <div className="grid grid-cols-1 lg:grid-cols-[repeat(14,minmax(0,1fr))] gap-4">

@@ -9,6 +9,7 @@ import {
   FaArrowUp,
 } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
+import logo from '../assets/Images/logo2.png';
 
 const Footer: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -44,7 +45,7 @@ const Footer: React.FC = () => {
         <section>
           <Link to="/" className="flex items-center space-x-3 mb-4">
             <img
-              src="https://flowbite.com/docs/images/logo.svg"
+              src={logo}
               className="h-8"
               alt="Six Nations Logo"
               loading="lazy"
@@ -85,7 +86,7 @@ const Footer: React.FC = () => {
                 Sign Up
               </Link>
             </li>
-            {/* Additional Links */}
+            {/* Additional Links
             <li>
               <Link to="/privacy" className="flex items-center hover:text-pink-400 transition-colors duration-300">
                 <FaChevronRight className="mr-2" />
@@ -102,8 +103,8 @@ const Footer: React.FC = () => {
               <Link to="/faq" className="flex items-center hover:text-pink-400 transition-colors duration-300">
                 <FaChevronRight className="mr-2" />
                 FAQs
-              </Link>
-            </li>
+              </Link> */}
+            {/* </li> */}
           </ul>
         </nav>
 
@@ -114,7 +115,7 @@ const Footer: React.FC = () => {
             Email: <a href="mailto:info@sixnations.com" className="hover:text-pink-400">info@sixnations.com</a>
           </p>
           <p className="text-base">
-            Phone: <a href="tel:+15551234567" className="hover:text-pink-400">+1 (555) 123-4567</a>
+            Phone: <a href="tel:+15551234567" className="hover:text-pink-400">+44 (111) 1111-1111</a>
           </p>
           <p className="text-base mt-2">
             123 Rugby Way<br />
@@ -134,7 +135,7 @@ const Footer: React.FC = () => {
               id="newsletter-email"
               type="email"
               className="w-full sm:w-auto flex-1 px-3 py-2 rounded-md text-black focus:outline-none focus:ring-2 focus:ring-pink-500"
-              placeholder="Functionality not implemented"
+              placeholder="Placeholder Only"
               required
             />
             <button
@@ -150,7 +151,7 @@ const Footer: React.FC = () => {
       {/* Social Icons */}
       <div className="mt-12 border-t border-white/20 dark:border-gray-100 pt-6 flex justify-center space-x-6">
         <a
-          href="https://twitter.com/yourprofile" // Replace with your actual Twitter URL
+          href="https://twitter.com" // Replace with your actual Twitter URL
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-pink-400 dark:hover:text-pink-400 transition-colors duration-300 text-white dark:text-gray-300"
@@ -159,7 +160,7 @@ const Footer: React.FC = () => {
           <FaTwitter size={24} />
         </a>
         <a
-          href="https://facebook.com/yourprofile" // Replace with your actual Facebook URL
+          href="https://facebook.com" // Replace with your actual Facebook URL
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-pink-400 dark:hover:text-pink-400 transition-colors duration-300 text-white dark:text-gray-300"
@@ -168,7 +169,7 @@ const Footer: React.FC = () => {
           <FaFacebookF size={24} />
         </a>
         <a
-          href="https://instagram.com/yourprofile" // Replace with your actual Instagram URL
+          href="https://instagram.com" // Replace with your actual Instagram URL
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-pink-400 dark:hover:text-pink-400 transition-colors duration-300 text-white dark:text-gray-300"

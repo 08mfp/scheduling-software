@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { FaSun, FaMoon } from 'react-icons/fa';
 
 const SignUp: React.FC = () => {
   const { signUp } = useContext(AuthContext);
@@ -32,13 +33,56 @@ const SignUp: React.FC = () => {
     }
   };
 
+  // Dark mode state and toggle logic (consistent with other components)
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark';
+    }
+    return false;
+  });
+
+  const toggleDarkMode = () => {
+    setIsDarkMode((prev) => {
+      const newTheme = !prev;
+      if (newTheme) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      }
+      return newTheme;
+    });
+  };
+
   return (
-    <div className="min-h-screen flex items-start justify-center bg-gradient-to-br from-purple-100 via-purple-200 to-purple-300 px-4 p-12">
-      <div className="max-w-xl w-full bg-white shadow-2xl rounded-lg p-12 text-center">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
+      <div className="max-w-xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-12 text-center">
+        {/* Dark Mode Toggle */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleDarkMode}
+            className="flex items-center px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+            aria-label="Toggle Dark Mode"
+          >
+            {isDarkMode ? (
+              <>
+                <FaSun className="mr-2" />
+                Light Mode
+              </>
+            ) : (
+              <>
+                <FaMoon className="mr-2" />
+                Dark Mode
+              </>
+            )}
+          </button>
+        </div>
+
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <svg
-            className="h-32 w-32 text-purple-600"
+            className="h-20 w-20 text-blue-600 dark:text-blue-400"
             xmlns="http://www.w3.org/2000/svg"
             fill="currentColor"
             viewBox="0 0 24 24"
@@ -52,80 +96,91 @@ const SignUp: React.FC = () => {
         </div>
 
         {/* Heading */}
-        <h2 className="text-3xl font-bold text-gray-800 mb-6">Create Your Account</h2>
+        <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">
+          Create Your Account
+        </h2>
 
         {/* Error Message */}
-        {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
 
         {/* Sign-Up Form */}
         <form onSubmit={onSubmit} className="space-y-6">
           {/* First Name */}
           <div>
-            <label className="block text-left font-medium mb-2">First Name</label>
+            <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
+              First Name
+            </label>
             <div className="flex items-center space-x-3">
-            <svg
-              className="w-6 h-6 text-gray-800 dark:text-white"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                fillRule="evenodd"
-                d="M12 20a7.966 7.966 0 0 1-5.002-1.756l.002.001v-.683c0-1.794 1.492-3.25 3.333-3.25h3.334c1.84 0 3.333 1.456 3.333 3.25v.683A7.966 7.966 0 0 1 12 20ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10c0 5.5-4.44 9.963-9.932 10h-.138C6.438 21.962 2 17.5 2 12Zm10-5c-1.84 0-3.333 1.455-3.333 3.25S10.159 13.5 12 13.5c1.84 0 3.333-1.455 3.333-3.25S13.841 7 12 7Z"
-                clipRule="evenodd"
-              />
-            </svg>
-
+              <svg
+                className="w-6 h-6 text-gray-800 dark:text-gray-200"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M12 20a7.966 7.966 0 0 1-5.002-1.756l.002.001v-.683c0-1.794 1.492-3.25 3.333-3.25h3.334c1.84 0 3.333 1.456 3.333 3.25v.683A7.966 7.966 0 0 1 12 20ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10c0 5.5-4.44 9.963-9.932 10h-.138C6.438 21.962 2 17.5 2 12Zm10-5c-1.84 0-3.333 1.455-3.333 3.25S10.159 13.5 12 13.5c1.84 0 3.333-1.455 3.333-3.25S13.841 7 12 7Z"
+                  clipRule="evenodd"
+                />
+              </svg>
               <input
                 name="firstName"
                 value={firstName}
                 onChange={onChange}
                 placeholder="e.g. John"
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
               />
             </div>
           </div>
 
           {/* Last Name */}
           <div>
-            <label className="block text-left font-medium mb-2">Last Name</label>
+            <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
+              Last Name
+            </label>
             <div className="flex items-center space-x-3">
-            <svg
-              className="w-6 h-6 text-gray-800 dark:text-white"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                fillRule="evenodd"
-                d="M12 20a7.966 7.966 0 0 1-5.002-1.756l.002.001v-.683c0-1.794 1.492-3.25 3.333-3.25h3.334c1.84 0 3.333 1.456 3.333 3.25v.683A7.966 7.966 0 0 1 12 20ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10c0 5.5-4.44 9.963-9.932 10h-.138C6.438 21.962 2 17.5 2 12Zm10-5c-1.84 0-3.333 1.455-3.333 3.25S10.159 13.5 12 13.5c1.84 0 3.333-1.455 3.333-3.25S13.841 7 12 7Z"
-                clipRule="evenodd"
-              />
-            </svg>
+              <svg
+                className="w-6 h-6 text-gray-800 dark:text-gray-200"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M12 20a7.966 7.966 0 0 1-5.002-1.756l.002.001v-.683c0-1.794 1.492-3.25 3.333-3.25h3.334c1.84 0 3.333 1.456 3.333 3.25v.683A7.966 7.966 0 0 1 12 20ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10c0 5.5-4.44 9.963-9.932 10h-.138C6.438 21.962 2 17.5 2 12Zm10-5c-1.84 0-3.333 1.455-3.333 3.25S10.159 13.5 12 13.5c1.84 0 3.333-1.455 3.333-3.25S13.841 7 12 7Z"
+                  clipRule="evenodd"
+                />
+              </svg>
               <input
                 name="lastName"
                 value={lastName}
                 onChange={onChange}
                 placeholder="e.g. Doe"
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
               />
             </div>
           </div>
 
           {/* Email */}
           <div>
-            <label className="block text-left font-medium mb-2">Email</label>
+            <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
+              Email
+            </label>
             <div className="flex items-center space-x-3">
-            <svg
-                className="w-6 h-6 text-gray-800 dark:text-white"
+              <svg
+                className="w-6 h-6 text-gray-800 dark:text-gray-200"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="currentColor"
                 viewBox="0 0 24 24"
@@ -139,17 +194,19 @@ const SignUp: React.FC = () => {
                 onChange={onChange}
                 placeholder="e.g. johndoe@gmail.com"
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
               />
             </div>
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-left font-medium mb-2">Password</label>
+            <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
+              Password
+            </label>
             <div className="flex items-center space-x-3">
               <svg
-                className="w-6 h-6 text-gray-800 dark:text-white"
+                className="w-6 h-6 text-gray-800 dark:text-gray-200"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="currentColor"
                 viewBox="0 0 24 24"
@@ -167,17 +224,19 @@ const SignUp: React.FC = () => {
                 onChange={onChange}
                 placeholder="Your password"
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
               />
             </div>
           </div>
 
           {/* Role */}
           <div>
-            <label className="block text-left font-medium mb-2">Role</label>
+            <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
+              Role
+            </label>
             <div className="flex items-center space-x-3">
-            <svg
-                className="w-6 h-6 text-gray-800 dark:text-white"
+              <svg
+                className="w-6 h-6 text-gray-800 dark:text-gray-200"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="currentColor"
                 viewBox="0 0 24 24"
@@ -192,7 +251,7 @@ const SignUp: React.FC = () => {
                 name="role"
                 value={role}
                 onChange={onChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
               >
                 <option value="guest">Guest</option>
                 <option value="viewer">Viewer</option>
@@ -205,10 +264,12 @@ const SignUp: React.FC = () => {
           {/* Secret Code */}
           {(role === 'manager' || role === 'admin') && (
             <div>
-              <label className="block text-left font-medium mb-2">Secret Code</label>
+              <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
+                Secret Code
+              </label>
               <div className="flex items-center space-x-3">
                 <svg
-                  className="w-6 h-6 text-gray-800 dark:text-white"
+                  className="w-6 h-6 text-gray-800 dark:text-gray-200"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -227,7 +288,7 @@ const SignUp: React.FC = () => {
                   onChange={onChange}
                   placeholder="Enter Authorization Code"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
                 />
               </div>
             </div>
@@ -236,7 +297,7 @@ const SignUp: React.FC = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-md hover:from-purple-700 hover:to-purple-800 focus:outline-none"
+            className="w-full py-3 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none transition-colors duration-200"
           >
             Sign Up
           </button>

@@ -153,6 +153,11 @@ const PlayersList: React.FC = () => {
   // **Skeleton Loader**
   const renderSkeleton = () => (
     <div className="animate-pulse space-y-6">
+            {/* Header Skeleton */}
+            <div className="flex flex-col items-center mt-6 space-y-4">
+        <div className="h-8 w-32 bg-gray-300 dark:bg-gray-700 rounded" />
+        {/* <div className="h-8 w-40 bg-gray-300 dark:bg-gray-700 rounded" /> */}
+      </div>
       {/* Top Controls (Search, Sort, Filter Toggle) Skeleton */}
       <div className="flex flex-col sm:flex-row justify-center items-center mb-4 space-y-2 sm:space-y-0 sm:space-x-4">
         {/* Search Input Skeleton */}
@@ -171,7 +176,7 @@ const PlayersList: React.FC = () => {
       {/* Header Skeleton */}
       <div className="flex flex-col items-center mt-6 space-y-4">
         <div className="h-8 w-32 bg-gray-300 dark:bg-gray-700 rounded" />
-        <div className="h-8 w-40 bg-gray-300 dark:bg-gray-700 rounded" />
+        {/* <div className="h-8 w-40 bg-gray-300 dark:bg-gray-700 rounded" /> */}
       </div>
 
       {/* Players List Skeleton (repeated items) */}
@@ -263,7 +268,30 @@ const PlayersList: React.FC = () => {
           ) : (
             <>
               {/* Controls: Search, Sort, Filter Toggle */}
+              <div className="text-center">
+          <h1
+            className="font-extrabold text-gray-900 dark:text-gray-100 mb-2"
+            style={{ fontSize: '34px' }}
+          >
+            Players
+          </h1>
+          <p
+            className="text-gray-600 dark:text-gray-300 mb-2"
+            style={{ fontSize: '16px' }}
+          >
+            This page allows you to explore detailed player profiles, including team statistics, and biographical information.
+          </p>
+          <br />
+          <p
+            className="text-sm text-gray-500 dark:text-gray-400 italic"
+            style={{ fontSize: '12px' }}
+          >
+            Note: All information is presented for reference and may be updated or corrected at any time.
+          </p>
+          <br/>
+        </div>
               <div className="flex flex-col sm:flex-row justify-center items-center mb-4 space-y-2 sm:space-y-0 sm:space-x-4">
+                
                 {/* Search Bar */}
                 <div className="flex items-center relative">
                   <label className="mr-2 font-semibold flex items-center space-x-2 text-gray-800 dark:text-gray-200">
@@ -456,7 +484,7 @@ const PlayersList: React.FC = () => {
 
               {/* Header + Add Player */}
               <div className="flex flex-col items-center mt-6">
-                <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">Players</h2>
+                {/* <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">Players</h2> */}
                 {['admin', 'manager'].includes(user.role) && (
                   <Link to="/players/add" className="mt-4">
                     <button

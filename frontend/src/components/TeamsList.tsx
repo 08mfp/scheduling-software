@@ -168,6 +168,11 @@ const TeamsList: React.FC = () => {
   //-----------------------
   const renderSkeleton = () => (
     <div className="animate-pulse space-y-6">
+            {/* Header Skeleton */}
+            <div className="flex flex-col items-center mt-6 space-y-4">
+        <div className="h-8 w-32 bg-gray-300 dark:bg-gray-700 rounded" />
+        {/* <div className="h-8 w-40 bg-gray-300 dark:bg-gray-700 rounded" /> */}
+      </div>
       {/* Controls (Search + Sort) Skeleton */}
       <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-4 mb-6">
         {/* Search Input */}
@@ -180,7 +185,6 @@ const TeamsList: React.FC = () => {
       {/* Header Skeleton */}
       <div className="flex flex-col items-center mb-6 space-y-3">
         <div className="h-8 w-32 bg-gray-300 dark:bg-gray-700 rounded" />
-        <div className="h-8 w-40 bg-gray-300 dark:bg-gray-700 rounded" />
       </div>
 
       {/* Teams List Skeleton */}
@@ -262,6 +266,28 @@ const TeamsList: React.FC = () => {
             <div className="text-center text-red-500 py-10">{error}</div>
           ) : (
             <>
+        <div className="text-center">
+          <h1
+            className="font-extrabold text-gray-900 dark:text-gray-100 mb-2"
+            style={{ fontSize: '34px' }}
+          >
+            Teams
+          </h1>
+          <p
+            className="text-gray-600 dark:text-gray-300 mb-2"
+            style={{ fontSize: '16px' }}
+          >
+            This page allows you to access comprehensive team data, including rankings, performance stats, player profiles, coaching information, stadium details, and more.
+          </p>
+          <br />
+          <p
+            className="text-sm text-gray-500 dark:text-gray-400 italic"
+            style={{ fontSize: '12px' }}
+          >
+            Note: All information is presented for reference and may be updated or corrected at any time.
+          </p>
+          <br/>
+        </div>
               {/* Search & Sort Controls */}
               <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-4">
                 {/* Immediate Search Input */}
@@ -413,7 +439,6 @@ const TeamsList: React.FC = () => {
 
               {/* Header: Title and Add Button */}
               <div className="flex flex-col items-center mt-6">
-                <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">Teams</h2>
                 {user.role === 'admin' && (
                   <Link to="/teams/add" className="mt-4">
                     <button

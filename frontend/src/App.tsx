@@ -28,9 +28,12 @@ import HomePage from './components/HomePage';
 import TeamsRanking from './components/TeamsRanking';
 import About from './components/About';
 import Contact from './components/Contact';
+import FAQ from './pages/FAQ';
+import NotFound from './pages/NotFound';
 import Footer from './components/Footer';
 import 'flowbite'; 
 import './App.css';
+
 
 const App: React.FC = () => {
   return (
@@ -46,6 +49,7 @@ const App: React.FC = () => {
             <Route path="/signup" element={<SignUp />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path='/fixtures/:id' element={< FixtureDetail/>} />
+            <Route path="/not-found" element={<NotFound />} />
 
             {/* Unauthorized Page */}
             <Route path="/unauthorized" element={<Unauthorized />} />
@@ -79,13 +83,14 @@ const App: React.FC = () => {
               <Route path="/manual-fixture-scheduler" element={<ManualFixtureScheduler />} />
               <Route path="/teams-ranking" element={<TeamsRanking />} />
               <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/faq" element={<FAQ />} />
             </Route>
 
             {/* Public Routes */}
             <Route path="/contact" element={<Contact />} />
 
             {/* Catch-All Route */}
-            <Route path="*" element={<Unauthorized />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />
         </div>

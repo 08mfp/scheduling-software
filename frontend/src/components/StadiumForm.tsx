@@ -160,38 +160,38 @@ const StadiumForm: React.FC = () => {
   const okText = modalState === 'success' ? 'OK' : undefined;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl w-full bg-white shadow-lg rounded-lg p-10 space-y-8">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2 mb-6">
-          <a href="/stadiums" className="text-blue-600 hover:underline flex items-center">
+          <a href="/stadiums" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
             <FaHome className="mr-1" />
             Stadiums
           </a>
           {id && stadium.stadiumName ? (
             <>
-              <span className="text-gray-500">/</span>
-              <a href={`/stadiums/${id}`} className="text-gray-700 hover:underline">
+              <span className="text-gray-500 dark:text-gray-400">/</span>
+              <a href={`/stadiums/${id}`} className="text-gray-700 dark:text-gray-300 hover:underline">
                 {stadium.stadiumName}
               </a>
-              <span className="text-gray-500">/</span>
-              <span className="text-gray-700">Edit Stadium</span>
+              <span className="text-gray-500 dark:text-gray-400">/</span>
+              <span className="text-gray-700 dark:text-gray-300">Edit Stadium</span>
             </>
           ) : (
             <>
-              <span className="text-gray-500">/</span>
-              <span className="text-gray-700">Add Stadium</span>
+              <span className="text-gray-500 dark:text-gray-400">/</span>
+              <span className="text-gray-700 dark:text-gray-300">Add Stadium</span>
             </>
           )}
         </div>
 
         {/* Header */}
         <div className="flex flex-col items-center mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-4">
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
             {id ? 'Edit Stadium' : 'Add New Stadium'}
           </h2>
           {error && (
-            <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-center">
+            <div className="w-full bg-red-100 dark:bg-red-800 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded relative text-center">
               <span className="block sm:inline">{error}</span>
               <button
                 onClick={() => setError(null)}
@@ -220,7 +220,7 @@ const StadiumForm: React.FC = () => {
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="stadiumName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="stadiumName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Stadium Name<span className="text-red-500">*</span>
               </label>
               <input
@@ -230,12 +230,12 @@ const StadiumForm: React.FC = () => {
                 value={stadium.stadiumName}
                 onChange={handleChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label htmlFor="stadiumCity" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="stadiumCity" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 City<span className="text-red-500">*</span>
               </label>
               <input
@@ -245,12 +245,12 @@ const StadiumForm: React.FC = () => {
                 value={stadium.stadiumCity}
                 onChange={handleChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label htmlFor="stadiumCountry" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="stadiumCountry" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Country<span className="text-red-500">*</span>
               </label>
               <input
@@ -260,12 +260,12 @@ const StadiumForm: React.FC = () => {
                 value={stadium.stadiumCountry}
                 onChange={handleChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label htmlFor="latitude" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Latitude<span className="text-red-500">*</span>
               </label>
               <input
@@ -276,12 +276,12 @@ const StadiumForm: React.FC = () => {
                 value={stadium.latitude}
                 onChange={handleChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label htmlFor="longitude" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="longitude" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Longitude<span className="text-red-500">*</span>
               </label>
               <input
@@ -292,12 +292,12 @@ const StadiumForm: React.FC = () => {
                 value={stadium.longitude}
                 onChange={handleChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label htmlFor="stadiumCapacity" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="stadiumCapacity" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Capacity<span className="text-red-500">*</span>
               </label>
               <input
@@ -307,13 +307,13 @@ const StadiumForm: React.FC = () => {
                 value={stadium.stadiumCapacity}
                 onChange={handleChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="surfaceType" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="surfaceType" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Surface Type<span className="text-red-500">*</span>
             </label>
             <select
@@ -322,7 +322,7 @@ const StadiumForm: React.FC = () => {
               value={stadium.surfaceType}
               onChange={handleChange}
               required
-              className="mt-1 block w-full border border-gray-300 bg-white rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="Grass">Grass</option>
               <option value="Artificial Turf">Artificial Turf</option>
@@ -331,7 +331,7 @@ const StadiumForm: React.FC = () => {
 
           {/* Form Buttons */}
           <div className="flex items-center justify-between mt-6">
-            <a href="/stadiums" className="text-sm text-blue-600 hover:underline flex items-center">
+            <a href="/stadiums" className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center">
               <FaArrowLeft className="mr-1" />
               Back to Stadiums
             </a>
@@ -339,7 +339,7 @@ const StadiumForm: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/stadiums')}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 aria-label="Cancel"
               >
                 <FaTimes className="mr-2" />
@@ -414,7 +414,6 @@ const StadiumForm: React.FC = () => {
         cancelText={modalState === 'error' ? 'Cancel' : undefined}
         retryText={modalState === 'error' ? 'Retry' : undefined}
         okText={modalState === 'success' ? 'OK' : undefined}
-
         onCancel={
           modalState === 'success'
             ? () => navigate('/stadiums')

@@ -18,6 +18,8 @@ const { generateRandomFixtures } = require('../algorithms/randomAlgorithm');
 const { generateRound5ExtravaganzaFixtures } = require('../algorithms/round5Extravaganza');
 const { generateTravelOptimizedFixtures } = require('../algorithms/travelOptimizedScheduler');
 const { generateBalancedTravelFixtures } = require('../algorithms/balancedTravelScheduler');
+const { generateComprehensiveFairFixtures } = require('../algorithms/unifiedScheduler');
+
 
 /**
  * @desc    Generate provisional fixtures
@@ -69,7 +71,7 @@ exports.generateProvisionalFixtures = async (req, res) => {
       }
 
       teams.sort((a, b) => a.teamRanking - b.teamRanking);
-      result = await generateRound5ExtravaganzaFixtures(teams, season);
+      result = await generateRound5ExtravaganzaFixtures(teams, season, restWeeks);
     } else if (algorithm === 'travelOptimized') {
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
@@ -85,7 +87,7 @@ exports.generateProvisionalFixtures = async (req, res) => {
           .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
       }
 
-      result = await generateTravelOptimizedFixtures(teams, season);
+      result = await generateTravelOptimizedFixtures(teams, season, restWeeks);
     } else if (algorithm === 'balancedTravel') {
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
@@ -102,7 +104,65 @@ exports.generateProvisionalFixtures = async (req, res) => {
       }
 
       result = await generateBalancedTravelFixtures(teams, season);
-    } else {
+    } 
+    
+    else if (algorithm === 'unifiedScheduler') {
+      // Validate teams for the new unified scheduler.
+      if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
+        return res
+          .status(400)
+          .json({ message: 'Exactly 6 teams must be selected for the Unified Scheduler algorithm.' });
+      }
+
+      const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
+
+      if (teams.length !== 6) {
+        return res
+          .status(400)
+          .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
+      }
+
+      teams.sort((a, b) => a.teamRanking - b.teamRanking);
+
+      // Additional options for unified scheduler.
+      // const lockedHomeAwayMap = req.body.lockedHomeAwayMap || null;
+      // const weights = req.body.weights || {};
+      // const teamsReturnHome = req.body.teamsReturnHome || false;
+      // const runLocalSearch = req.body.runLocalSearch || false;
+
+      const weights = req.body.weights || {};  // If you want custom cost weights
+      const runLocalSearch = req.body.runLocalSearch || false;
+      const partialLocks = req.body.partialLocks || {};        // or lockedHomeAwayMap, etc.
+      const previousYearHome = req.body.previousYearHome || {};
+
+      const options = {
+        partialLocks,
+        previousYearHome,
+        runLocalSearch, // or any other flags
+        // Possibly userSelectedPattern or anything else
+      };
+
+      result = await generateComprehensiveFairFixtures(
+        teams,
+        season,
+        restWeeks,   // This is your requestedRestCount
+        weights,
+        options      // The object that includes partialLocks, previousYearHome, etc.
+      );
+      
+
+      // result = await generateComprehensiveFairFixtures(
+      //   teams,
+      //   season,
+      //   restWeeks,            // requestedRestCount from client
+      //   lockedHomeAwayMap,
+      //   weights,
+      //   teamsReturnHome,
+      //   runLocalSearch
+      // );
+    }
+    
+    else {
       return res.status(400).json({ message: 'Algorithm not implemented' });
     }
 

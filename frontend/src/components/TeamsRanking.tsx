@@ -210,7 +210,7 @@ const TeamsRanking: React.FC = () => {
                  transition-colors duration-300"
     >
       {/* Navbar (Breadcrumb + Dark Mode) */}
-      <div className="max-w-4xl w-full mb-8">
+      <div className="max-w-7xl w-full mb-8">
         <div
           className="flex justify-between items-center px-4 py-2
                      bg-gray-100 dark:bg-gray-800 rounded-md"
@@ -223,7 +223,7 @@ const TeamsRanking: React.FC = () => {
               <FaInfoCircle className="mr-1" />
               Home
             </Link>
-            <span className="text-gray-500 dark:text-gray-400">/</span>
+            <span className="text-gray-500 dark:text-gray-400">/ Admin /</span>
             <span className="text-gray-700 dark:text-gray-300 font-semibold">
               Teams Ranking
             </span>
@@ -253,19 +253,37 @@ const TeamsRanking: React.FC = () => {
       </div>
 
       {/* Main Card */}
-      <div className="max-w-4xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300">
-        {/* Title & Description */}
-        <div className="mb-6">
-          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
-            Team Rankings
-          </h2>
-          <p className="mt-2 text-gray-700 dark:text-gray-300">
-            Reorder teams by clicking the Up and Down arrows. Save changes when ready,
-            or reset to discard unsaved changes.
-          </p>
-        </div>
+      {/* <div className="max-w-4xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300"> */}
+      <div className="max-w-7xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300">
+      {/* Title & Description */}
+      <div className="mb-6">
+      <h2
+        className="font-extrabold text-gray-900 dark:text-gray-100 mb-2"
+        style={{ fontSize: '34px' }}
+      >
+        Team Rankings
+      </h2>
+      <p
+        className="mt-2 text-gray-700 dark:text-gray-300 mb-2"
+        style={{ fontSize: '16px' }}
+      >
+        Reorder teams by clicking the Up and Down arrows. Save changes when ready,
+        or reset to discard unsaved changes. Updated rankings will affect future scheduling algorithms.
+      </p>
+      <br />
+      <p
+        className="mt-1 text-sm text-gray-500 dark:text-gray-400 italic"
+        style={{ fontSize: '12px' }}
+      >
+        Note: Changes update the rankings immediately and are logged for auditing.
+      </p>
+      <br/>
+      </div>
+
+
 
         {/* Teams List */}
+        < div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-6 mb-8 space-y-6">
         <div className="space-y-4">
           {teams.map((team, index) => {
             const { backgroundColor, textColor } = getTeamColor(team.teamName);
@@ -365,6 +383,7 @@ const TeamsRanking: React.FC = () => {
         onCancel={handleCancel}
         onRetry={modalState === 'error' ? handleRetry : undefined}
       />
+    </div>
     </div>
   );
 };

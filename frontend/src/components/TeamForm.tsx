@@ -316,8 +316,8 @@ const TeamForm: React.FC = () => {
   const okText = modalState === 'success' ? 'OK' : undefined;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl w-full bg-white shadow-lg rounded-lg p-10 space-y-8">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2 mb-6">
           <Link to="/teams" className="text-blue-600 hover:underline flex items-center">
@@ -326,17 +326,17 @@ const TeamForm: React.FC = () => {
           </Link>
           {id && team.teamName ? (
             <>
-              <span className="text-gray-500">/</span>
-              <Link to={`/teams/${id}`} className="text-gray-700 hover:underline">
+              <span className="text-gray-500 dark:text-gray-400">/</span>
+              <Link to={`/teams/${id}`} className="text-gray-700 dark:text-gray-300 hover:underline">
                 {team.teamName}
               </Link>
-              <span className="text-gray-500">/</span>
-              <span className="text-gray-700">Edit Team</span>
+              <span className="text-gray-500 dark:text-gray-400">/</span>
+              <span className="text-gray-700 dark:text-gray-300">Edit Team</span>
             </>
           ) : (
             <>
-              <span className="text-gray-500">/</span>
-              <span className="text-gray-700">Add Team</span>
+              <span className="text-gray-500 dark:text-gray-400">/</span>
+              <span className="text-gray-700 dark:text-gray-300">Add Team</span>
             </>
           )}
         </div>
@@ -350,15 +350,15 @@ const TeamForm: React.FC = () => {
               className="w-48 h-48 object-contain rounded-full mb-6"
             />
           ) : (
-            <div className="w-48 h-48 bg-gray-200 rounded-full mb-6 flex items-center justify-center">
+            <div className="w-48 h-48 bg-gray-200 dark:bg-gray-700 rounded-full mb-6 flex items-center justify-center">
               <span className="text-gray-500">No Image</span>
             </div>
           )}
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-4">
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
             {id ? 'Edit Team' : 'Add New Team'}
           </h2>
           {error && (
-            <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-center">
+            <div className="w-full bg-red-100 dark:bg-red-800 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded relative text-center">
               <span className="block sm:inline">{error}</span>
               <button
                 onClick={() => setError(null)}
@@ -387,7 +387,7 @@ const TeamForm: React.FC = () => {
         <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="teamName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="teamName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Team Name<span className="text-red-500">*</span>
               </label>
               <input
@@ -397,11 +397,11 @@ const TeamForm: React.FC = () => {
                 value={team.teamName || ''}
                 onChange={handleChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div>
-              <label htmlFor="teamRanking" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="teamRanking" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Team Ranking<span className="text-red-500">*</span>
               </label>
               <input
@@ -413,13 +413,13 @@ const TeamForm: React.FC = () => {
                 required
                 min="0"
                 className={`mt-1 block w-full border ${
-                  rankError ? 'border-red-500' : 'border-gray-300'
-                } rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500`}
+                  rankError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                } rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500`}
               />
               {rankError && <p className="mt-2 text-sm text-red-600">{rankError}</p>}
             </div>
             <div>
-              <label htmlFor="teamLocation" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="teamLocation" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Team Location<span className="text-red-500">*</span>
               </label>
               <input
@@ -429,11 +429,11 @@ const TeamForm: React.FC = () => {
                 value={team.teamLocation || ''}
                 onChange={handleChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div>
-              <label htmlFor="teamCoach" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="teamCoach" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Team Coach<span className="text-red-500">*</span>
               </label>
               <input
@@ -443,11 +443,11 @@ const TeamForm: React.FC = () => {
                 value={team.teamCoach || ''}
                 onChange={handleChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="stadium" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="stadium" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Home Stadium<span className="text-red-500">*</span>
               </label>
               <select
@@ -456,7 +456,7 @@ const TeamForm: React.FC = () => {
                 value={team.stadium?._id || ''}
                 onChange={handleStadiumChange}
                 required
-                className="mt-1 block w-full border border-gray-300 bg-white rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select a stadium</option>
                 {stadiums.map((std) => (
@@ -468,7 +468,7 @@ const TeamForm: React.FC = () => {
             </div>
           </div>
           <div>
-            <label htmlFor="image" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Team Image
             </label>
             <div className="mt-1 flex items-center">
@@ -478,12 +478,12 @@ const TeamForm: React.FC = () => {
                 id="image"
                 accept="image/*"
                 onChange={handleImageChange}
-                className="file-input file-input-bordered file-input-primary w-full max-w-xs"
+                className="file-input file-input-bordered file-input-primary w-full max-w-xs dark:bg-gray-700 dark:text-gray-200"
               />
             </div>
             {id && team.image && !selectedImage && (
               <div className="mt-4">
-                <p className="text-sm text-gray-600">Current Image:</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Current Image:</p>
                 <img
                   src={`${BACKEND_URL}${team.image}`}
                   alt="Team"
@@ -493,7 +493,7 @@ const TeamForm: React.FC = () => {
             )}
             {selectedImage && (
               <div className="mt-4">
-                <p className="text-sm text-gray-600">Selected Image:</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Selected Image:</p>
                 <img
                   src={URL.createObjectURL(selectedImage)}
                   alt="Selected Team"
@@ -503,7 +503,7 @@ const TeamForm: React.FC = () => {
             )}
           </div>
           <div className="flex items-center justify-between">
-            <Link to="/teams" className="text-sm text-blue-600 hover:underline flex items-center">
+            <Link to="/teams" className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center">
               <FaArrowLeft className="mr-1" />
               Back to Teams
             </Link>
@@ -511,7 +511,7 @@ const TeamForm: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/teams')}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 aria-label="Cancel"
               >
                 <FaTimes className="mr-2" />

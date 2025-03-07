@@ -57,7 +57,7 @@ const distanceCache = new NodeCache({ stdTTL: 86400 }); // 24 hours so that we d
  * @param {Number} season - The season year.
  * @returns {Object} - An object containing fixtures and summary.
  */
-async function generateTravelOptimizedFixtures(teams, season) {
+async function generateTravelOptimizedFixtures(teams, season, restWeeks = []) {
   console.log('===== Starting Fixture Generation ====='); //! This is for console logging only
 
   // Validation: Ensure there are exactly 6 teams given 
@@ -88,7 +88,7 @@ async function generateTravelOptimizedFixtures(teams, season) {
   console.log('All distances have been precomputed.');
 
   // Run the algorithm multiple times and keep the best result
-  const maxAttempts = 100; //! EXTREMELY HIGH NUMBER OF ATTEMPTS.
+  const maxAttempts = 10;
   let bestResult = null;
   let minimalTotalDistance = Infinity;
 
@@ -103,7 +103,8 @@ async function generateTravelOptimizedFixtures(teams, season) {
         season,
         previousFixtureMap,
         distances,
-        distanceMessages
+        distanceMessages,
+        restWeeks
       );
     } else {
       // No previous season data
@@ -111,7 +112,8 @@ async function generateTravelOptimizedFixtures(teams, season) {
         teams,
         season,
         distances,
-        distanceMessages
+        distanceMessages,
+        restWeeks
       );
     }
 
@@ -144,7 +146,8 @@ async function generateFixturesWithPreviousData(
   season,
   previousFixtureMap,
   distances,
-  distanceMessages
+  distanceMessages,
+  restWeeks = []
 ) {
   console.log('Generating fixtures using previous season data...');
 
@@ -166,7 +169,7 @@ async function generateFixturesWithPreviousData(
   console.log('Fixtures have been assigned to rounds with optimization.');
 
   // Step 4: Schedule Dates and Times Considering Sequential Games 
-  const finalScheduledFixtures = await scheduleFixturesOptimized(scheduledFixtures, season, distances);
+  const finalScheduledFixtures = await scheduleFixturesOptimized(scheduledFixtures, season, distances, restWeeks);
   console.log('Dates and times scheduled with consideration for sequential games.');
 
   // Step 5: Calculate Total Travel Distances (Per Team and Per Match)
@@ -221,7 +224,8 @@ async function generateFixturesWithoutPreviousData(
   teams,
   season,
   distances,
-  distanceMessages
+  distanceMessages,
+  restWeeks = []
 ) {
   console.log('Generating fixtures without previous season data...');
 
@@ -832,7 +836,7 @@ function calculateDistanceBetweenCoordinates(coord1, coord2) {
  * @param {Object} distances - Precomputed distances between teams.
  * @returns {Array} - Fixtures with date and time scheduled.
  */
-async function scheduleFixturesOptimized(fixtures, season, distances) {
+async function scheduleFixturesOptimized(fixtures, season, distances, restWeeks = []) {
   console.log('Scheduling fixtures with consideration for sequential games...');
 
   // Define possible match times
@@ -922,6 +926,13 @@ async function scheduleFixturesOptimized(fixtures, season, distances) {
     // Move dateCursor to the next week after the round
     dateCursor.setDate(dateCursor.getDate() + 7); 
     console.log(`  Moving to next week starting from ${dateCursor.toDateString()}`);
+    // Check if a rest week is specified for this round; if so, skip an extra week.
+    if (restWeeks.includes(round)) {
+      dateCursor.setDate(dateCursor.getDate() + 7);
+      console.log(`  Rest week inserted after Round ${round}. New start date: ${dateCursor.toDateString()}`);
+    } else {
+      console.log(`  Moving to next week starting from ${dateCursor.toDateString()}`);
+    }
   }
 
   console.log('All fixtures have been scheduled with dates and times.');

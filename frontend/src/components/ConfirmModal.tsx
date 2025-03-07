@@ -1,4 +1,3 @@
-// src/components/ConfirmModal.tsx
 import React, { Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import {
@@ -40,16 +39,25 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onCancel,
   onRetry,
 }) => {
+  // For confirm type, use red icon if the title indicates deletion
+  const getConfirmIcon = () => {
+    const effectiveTitle = title || getDefaultTitle();
+    const iconColor = effectiveTitle.toLowerCase().includes('delete')
+      ? 'text-red-900'
+      : 'text-red-600';
+    return <FaExclamationTriangle className={`w-12 h-12 ${iconColor} align-middle`} />;
+  };
+
   const getIcon = () => {
     switch (type) {
       case 'confirm':
-        return <FaExclamationTriangle className="w-12 h-12 text-yellow-500" />;
+        return getConfirmIcon();
       case 'loading':
-        return <FaSpinner className="w-12 h-12 text-blue-500 animate-spin" />;
+        return <FaSpinner className="w-12 h-12 text-blue-500 animate-spin align-middle" />;
       case 'success':
-        return <FaCheckCircle className="w-12 h-12 text-green-500" />;
+        return <FaCheckCircle className="w-12 h-12 text-green-500 align-middle" />;
       case 'error':
-        return <FaTimesCircle className="w-12 h-12 text-red-500" />;
+        return <FaTimesCircle className="w-12 h-12 text-red-700 align-middle" />;
       default:
         return null;
     }
@@ -74,7 +82,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             </button>
             <button
               onClick={onCancel}
-              className="mt-3 inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              className="mt-3 inline-flex justify-center rounded-md border border-gray-300 bg-white dark:bg-gray-700 px-4 py-2 text-base font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
             >
               {defaultCancelText}
             </button>
@@ -102,7 +110,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             </button>
             <button
               onClick={onCancel}
-              className="mt-3 inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              className="mt-3 inline-flex justify-center rounded-md border border-gray-300 bg-white dark:bg-gray-700 px-4 py-2 text-base font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
             >
               {defaultCancelText}
             </button>
@@ -146,17 +154,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             leaveFrom="opacity-50"
             leaveTo="opacity-0"
           >
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0"
-              enterTo="opacity-50"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-50"
-              leaveTo="opacity-0"
-            >
-              <div className="fixed inset-0 bg-gray-500 transition-opacity" />
-            </Transition.Child>
+            <div className="fixed inset-0 bg-gray-500 transition-opacity" />
           </Transition.Child>
 
           {/* Trick to center the modal */}
@@ -174,28 +172,28 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             leaveFrom="opacity-100 translate-y-0 sm:scale-100"
             leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
           >
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left
               overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              <div className="sm:flex sm:items-start">
+              <div className="sm:flex sm:items-center">
                 {/* Icon */}
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full">
+                <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full">
                   {getIcon()}
                 </div>
                 {/* Title and Message */}
                 <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                   <Dialog.Title
                     as="h3"
-                    className="text-lg leading-6 font-medium text-gray-900"
+                    className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100"
                   >
                     {title || getDefaultTitle()}
                   </Dialog.Title>
                   <div className="mt-2">
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       {message}
                     </p>
                     {/* Display countdown if provided and type is 'success' */}
                     {type === 'success' && countdown !== undefined && countdown > 0 && (
-                      <p className="mt-2 text-sm text-gray-500">
+                      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                         This modal will close in {countdown} second{countdown !== 1 ? 's' : ''}.
                       </p>
                     )}

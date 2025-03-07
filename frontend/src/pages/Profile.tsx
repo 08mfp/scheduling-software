@@ -129,16 +129,16 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl w-full bg-white shadow-lg rounded-lg p-10 space-y-8">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2 mb-6">
           <a href="/" className="text-blue-600 hover:underline flex items-center">
             <FaHome className="mr-1" />
             Home
           </a>
-          <span className="text-gray-500">/</span>
-          <span className="text-gray-700">Profile</span>
+          <span className="text-gray-500 dark:text-gray-400">/</span>
+          <span className="text-gray-700 dark:text-gray-300">Profile</span>
         </div>
 
         {/* Header */}
@@ -150,13 +150,13 @@ const Profile: React.FC = () => {
               className="w-32 h-32 object-cover rounded-full mb-4"
             />
           ) : (
-            <div className="w-32 h-32 bg-gray-200 rounded-full mb-4 flex items-center justify-center">
+            <div className="w-32 h-32 bg-gray-200 dark:bg-gray-700 rounded-full mb-4 flex items-center justify-center">
               <span className="text-gray-500">No Image</span>
             </div>
           )}
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-2">My Profile</h2>
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-2">My Profile</h2>
           {error && (
-            <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-center">
+            <div className="w-full bg-red-100 dark:bg-red-800 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded relative text-center">
               <span className="block sm:inline">{error}</span>
               <button
                 onClick={() => setError(null)}
@@ -186,7 +186,7 @@ const Profile: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* First Name */}
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 First Name<span className="text-red-500">*</span>
               </label>
               {isEditing ? (
@@ -197,10 +197,10 @@ const Profile: React.FC = () => {
                   value={formData.firstName}
                   onChange={onChange}
                   required
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
                 />
               ) : (
-                <div className="mt-1 block w-full text-gray-900 p-2 bg-gray-50 rounded-md">
+                <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                   {formData.firstName}
                 </div>
               )}
@@ -208,7 +208,7 @@ const Profile: React.FC = () => {
 
             {/* Last Name */}
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Last Name<span className="text-red-500">*</span>
               </label>
               {isEditing ? (
@@ -219,10 +219,10 @@ const Profile: React.FC = () => {
                   value={formData.lastName}
                   onChange={onChange}
                   required
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
                 />
               ) : (
-                <div className="mt-1 block w-full text-gray-900 p-2 bg-gray-50 rounded-md">
+                <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                   {formData.lastName}
                 </div>
               )}
@@ -231,7 +231,7 @@ const Profile: React.FC = () => {
 
           {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Email<span className="text-red-500">*</span>
             </label>
             {isEditing ? (
@@ -242,10 +242,10 @@ const Profile: React.FC = () => {
                 value={formData.email}
                 onChange={onChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             ) : (
-              <div className="mt-1 block w-full text-gray-900 p-2 bg-gray-50 rounded-md">
+              <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                 {formData.email}
               </div>
             )}
@@ -254,7 +254,7 @@ const Profile: React.FC = () => {
           {/* New Password */}
           {isEditing && (
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 New Password
               </label>
               <input
@@ -263,7 +263,7 @@ const Profile: React.FC = () => {
                 id="password"
                 placeholder="Enter new password if you wish to change it"
                 onChange={onChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           )}
@@ -271,7 +271,7 @@ const Profile: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Home City */}
             <div>
-              <label htmlFor="homeCity" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="homeCity" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Home City
               </label>
               {isEditing ? (
@@ -281,10 +281,10 @@ const Profile: React.FC = () => {
                   id="homeCity"
                   value={formData.homeCity}
                   onChange={onChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
                 />
               ) : (
-                <div className="mt-1 block w-full text-gray-900 p-2 bg-gray-50 rounded-md">
+                <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                   {formData.homeCity || 'N/A'}
                 </div>
               )}
@@ -292,7 +292,7 @@ const Profile: React.FC = () => {
 
             {/* Age */}
             <div>
-              <label htmlFor="age" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="age" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Age
               </label>
               {isEditing ? (
@@ -302,10 +302,10 @@ const Profile: React.FC = () => {
                   id="age"
                   value={formData.age || ''}
                   onChange={onChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
                 />
               ) : (
-                <div className="mt-1 block w-full text-gray-900 p-2 bg-gray-50 rounded-md">
+                <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                   {formData.age || 'N/A'}
                 </div>
               )}
@@ -314,7 +314,7 @@ const Profile: React.FC = () => {
 
           {/* Profile Image */}
           <div>
-            <label htmlFor="image" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Profile Image
             </label>
             <div className="mt-2 flex items-center">
@@ -325,7 +325,7 @@ const Profile: React.FC = () => {
                   className="w-24 h-24 object-cover rounded-full mr-4"
                 />
               ) : (
-                <div className="w-24 h-24 bg-gray-200 rounded-full mr-4 flex items-center justify-center">
+                <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mr-4 flex items-center justify-center">
                   <span className="text-gray-500">No Image</span>
                 </div>
               )}
@@ -335,13 +335,13 @@ const Profile: React.FC = () => {
                     type="file"
                     accept="image/*"
                     onChange={onFileChange}
-                    className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer bg-white focus:outline-none"
+                    className="block w-full text-sm text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer bg-white dark:bg-gray-700 focus:outline-none"
                   />
                   {imagePreview && (
                     <button
                       type="button"
                       onClick={onDeleteImage}
-                      className="mt-2 flex items-center text-red-600 hover:text-red-800"
+                      className="mt-2 flex items-center text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-600"
                     >
                       <FaTimes className="mr-1" />
                       Remove Image
@@ -354,13 +354,13 @@ const Profile: React.FC = () => {
 
           {/* Role */}
           <div>
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Role
             </label>
-            <div className="mt-1 block w-full text-gray-900 p-2 bg-gray-50 rounded-md">
+            <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
               {formData.role}
             </div>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               To change your role, please contact an administrator.
             </p>
           </div>
@@ -371,7 +371,7 @@ const Profile: React.FC = () => {
               <div className="flex space-x-4">
                 <button
                   type="submit"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   aria-label="Save Changes"
                 >
                   <FaSave className="mr-2" />
@@ -383,7 +383,7 @@ const Profile: React.FC = () => {
                     setIsEditing(false);
                     fetchUserData();
                   }}
-                  className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                   aria-label="Cancel"
                 >
                   <FaTimes className="mr-2" />
@@ -394,7 +394,10 @@ const Profile: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white  
+                           rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 
+                           transition-colors duration-200 focus:outline-none 
+                           focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500"
                 aria-label="Edit Profile"
               >
                 <FaEdit className="mr-2" />
@@ -403,7 +406,7 @@ const Profile: React.FC = () => {
             )}
             <button
               onClick={() => signOut()}
-              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              className="inline-flex items-center px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
               aria-label="Sign Out"
             >
               <FaSignOutAlt className="mr-2" />

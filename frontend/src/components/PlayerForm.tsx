@@ -193,27 +193,27 @@ const PlayerForm: React.FC = () => {
   const okText = modalState === 'success' ? 'OK' : undefined;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl w-full bg-white shadow-lg rounded-lg p-10 space-y-8">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2 mb-6">
-          <a href="/players" className="text-blue-600 hover:underline flex items-center">
+          <a href="/players" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
             <FaHome className="mr-1" />
             Players
           </a>
           {id && player.firstName ? (
             <>
-              <span className="text-gray-500">/</span>
-              <a href={`/players/${id}`} className="text-gray-700 hover:underline">
+              <span className="text-gray-500 dark:text-gray-400">/</span>
+              <a href={`/players/${id}`} className="text-gray-700 dark:text-gray-300 hover:underline">
                 {player.firstName} {player.lastName}
               </a>
-              <span className="text-gray-500">/</span>
-              <span className="text-gray-700">Edit Player</span>
+              <span className="text-gray-500 dark:text-gray-400">/</span>
+              <span className="text-gray-700 dark:text-gray-300">Edit Player</span>
             </>
           ) : (
             <>
-              <span className="text-gray-500">/</span>
-              <span className="text-gray-700">Add Player</span>
+              <span className="text-gray-500 dark:text-gray-400">/</span>
+              <span className="text-gray-700 dark:text-gray-300">Add Player</span>
             </>
           )}
         </div>
@@ -227,15 +227,15 @@ const PlayerForm: React.FC = () => {
               className="w-48 h-48 object-cover rounded-full mb-6"
             />
           ) : (
-            <div className="w-48 h-48 bg-gray-200 rounded-full mb-6 flex items-center justify-center">
+            <div className="w-48 h-48 bg-gray-200 dark:bg-gray-700 rounded-full mb-6 flex items-center justify-center">
               <span className="text-gray-500">No Image</span>
             </div>
           )}
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-4">
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
             {id ? 'Edit Player' : 'Add New Player'}
           </h2>
           {error && (
-            <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-center">
+            <div className="w-full bg-red-100 dark:bg-red-800 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded relative text-center">
               <span className="block sm:inline">{error}</span>
               <button
                 onClick={() => setError(null)}
@@ -265,7 +265,7 @@ const PlayerForm: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* First Name */}
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 First Name<span className="text-red-500">*</span>
               </label>
               <input
@@ -275,13 +275,13 @@ const PlayerForm: React.FC = () => {
                 value={player.firstName || ''}
                 onChange={handleChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
             {/* Last Name */}
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Last Name<span className="text-red-500">*</span>
               </label>
               <input
@@ -291,14 +291,14 @@ const PlayerForm: React.FC = () => {
                 value={player.lastName || ''}
                 onChange={handleChange}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
 
           {/* Image Upload */}
           <div>
-            <label htmlFor="image" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Player Image
             </label>
             <div className="mt-1 flex items-center">
@@ -308,12 +308,12 @@ const PlayerForm: React.FC = () => {
                 id="image"
                 accept="image/*"
                 onChange={handleImageChange}
-                className="file-input file-input-bordered file-input-primary w-full max-w-xs"
+                className="file-input file-input-bordered file-input-primary w-full max-w-xs dark:bg-gray-700 dark:text-gray-200"
               />
             </div>
             {player.image && !removeImage && (
               <div className="mt-4">
-                <p className="text-sm text-gray-600">Current Image:</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Current Image:</p>
                 <img
                   src={`${BACKEND_URL}${player.image}`}
                   alt="Player"
@@ -322,7 +322,7 @@ const PlayerForm: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleRemoveImage}
-                  className="mt-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className="mt-2 px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700"
                 >
                   Remove Image
                 </button>
@@ -330,7 +330,7 @@ const PlayerForm: React.FC = () => {
             )}
             {selectedImage && (
               <div className="mt-4">
-                <p className="text-sm text-gray-600">Selected Image:</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Selected Image:</p>
                 <img
                   src={URL.createObjectURL(selectedImage)}
                   alt="Selected Player"
@@ -342,7 +342,7 @@ const PlayerForm: React.FC = () => {
 
           {/* Date of Birth */}
           <div>
-            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Date of Birth<span className="text-red-500">*</span>
             </label>
             <input
@@ -352,13 +352,13 @@ const PlayerForm: React.FC = () => {
               value={player.dateOfBirth ? player.dateOfBirth.slice(0, 10) : ''}
               onChange={handleChange}
               required
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
           {/* Team Select */}
           <div>
-            <label htmlFor="team" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="team" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Team<span className="text-red-500">*</span>
             </label>
             <select
@@ -367,7 +367,7 @@ const PlayerForm: React.FC = () => {
               value={player.team?._id || ''}
               onChange={handleTeamChange}
               required
-              className="mt-1 block w-full border border-gray-300 bg-white rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Select a team</option>
               {teams.map((t) => (
@@ -380,7 +380,7 @@ const PlayerForm: React.FC = () => {
 
           {/* Form Buttons */}
           <div className="flex items-center justify-between">
-            <a href="/players" className="text-sm text-blue-600 hover:underline flex items-center">
+            <a href="/players" className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center">
               <FaArrowLeft className="mr-1" />
               Back to Players
             </a>
@@ -388,7 +388,7 @@ const PlayerForm: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/players')}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 aria-label="Cancel"
               >
                 <FaTimes className="mr-2" />
@@ -463,7 +463,6 @@ const PlayerForm: React.FC = () => {
         cancelText={modalState === 'error' ? 'Cancel' : undefined}
         retryText={modalState === 'error' ? 'Retry' : undefined}
         okText={modalState === 'success' ? 'OK' : undefined}
-
         onCancel={
           modalState === 'success'
             ? () => navigate('/players')

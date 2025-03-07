@@ -7,6 +7,7 @@ import { FaInfoCircle, FaSun, FaMoon } from 'react-icons/fa';
 import { AuthContext } from '../contexts/AuthContext';
 import { Fixture } from '../interfaces/Fixture';
 import { Team } from '../interfaces/Team';
+import RankBadge from './RankBadge';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
 
@@ -398,6 +399,11 @@ const FixturesList: React.FC = () => {
   // **Skeleton Loader Components**
   const renderSkeleton = () => (
     <div className="space-y-4">
+      {/* Header Skeleton */}
+      <div className="flex flex-col items-center mt-6 space-y-4">
+        <div className="h-8 w-32 bg-gray-300 dark:bg-gray-700 rounded" />
+        {/* <div className="h-8 w-40 bg-gray-300 dark:bg-gray-700 rounded" /> */}
+      </div>
       {/* Season Dropdown Skeleton */}
       <div className="flex justify-center space-x-4">
         <div className="h-10 w-32 bg-gray-300 dark:bg-gray-700 rounded"></div>
@@ -555,6 +561,28 @@ const FixturesList: React.FC = () => {
 
         {/* Main Content */}
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 space-y-8 transition-colors duration-300">
+        <div className="text-center">
+          <h1
+            className="font-extrabold text-gray-900 dark:text-gray-100 mb-2"
+            style={{ fontSize: '34px' }}
+          >
+            Fixtures
+          </h1>
+          <p
+            className="text-gray-600 dark:text-gray-300 mb-2"
+            style={{ fontSize: '16px' }}
+          >
+            This page allows you to review past rugby fixtures, explore detailed statistics—including score rankings, locations, and stadium information—and check upcoming match schedules.
+          </p>
+          <br />
+          <p
+            className="text-sm text-gray-500 dark:text-gray-400 italic"
+            style={{ fontSize: '12px' }}
+          >
+            Note: All details are for reference only; please verify with official sources.
+          </p>
+          <br/>
+        </div>
           {/* **Fixtures Content** */}
           <div className="space-y-8">
             {/* Season Dropdown, Search Bar, Sort Button, and Filter Toggle Container */}
@@ -954,10 +982,10 @@ const FixturesList: React.FC = () => {
                           {/* Home Team Block */}
                           <Link
                             to={`/teams/${homeTeam?._id}`}
-                            className="flex justify-center items-center space-x-2 p-2 rounded border border-black dark:border-gray-200"
+                            className="flex flex-col items-center p-2 rounded border border-black dark:border-gray-200"
                             style={{
                               backgroundColor: homeTeamStyle.backgroundColor,
-                              color: homeTeamStyle.textColor, // Text color
+                              color: homeTeamStyle.textColor,
                               flex: '1 1 45%',
                             }}
                           >
@@ -969,6 +997,7 @@ const FixturesList: React.FC = () => {
                             <span className="font-semibold text-center text-2xl">
                               {highlightText(homeTeam?.teamName || '', searchTokens)}
                             </span>
+                            <RankBadge rank={homeTeam ? homeTeam.teamRanking : 'N/A'} />
                           </Link>
 
                           {/* vs Text */}
@@ -977,10 +1006,10 @@ const FixturesList: React.FC = () => {
                           {/* Away Team Block */}
                           <Link
                             to={`/teams/${awayTeam?._id}`}
-                            className="flex justify-center items-center space-x-2 p-2 rounded border border-black dark:border-gray-200"
+                            className="flex flex-col items-center p-2 rounded border border-black dark:border-gray-200"
                             style={{
                               backgroundColor: awayTeamStyle.backgroundColor,
-                              color: awayTeamStyle.textColor, // Text color
+                              color: awayTeamStyle.textColor,
                               flex: '1 1 45%',
                             }}
                           >
@@ -992,6 +1021,7 @@ const FixturesList: React.FC = () => {
                             <span className="font-semibold text-center text-2xl">
                               {highlightText(awayTeam?.teamName || '', searchTokens)}
                             </span>
+                            <RankBadge rank={awayTeam ? awayTeam.teamRanking : 'N/A'} />
                           </Link>
                         </div>
 

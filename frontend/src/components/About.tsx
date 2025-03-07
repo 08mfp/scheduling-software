@@ -12,6 +12,7 @@ import {
   FaHeart,
 } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
+import founderImage from '../assets/Images/founder.png';
 
 const About: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -183,7 +184,7 @@ const About: React.FC = () => {
         {/* Main Content */}
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 space-y-8 transition-colors duration-300">
           {/* About Section */}
-          <div className="text-center">
+          {/* <div className="text-center">
             <h1 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
               About Us
             </h1>
@@ -191,7 +192,23 @@ const About: React.FC = () => {
               Welcome to your ultimate Six Nations scheduling hub! Stay informed, connected,
               and engaged with everything related to the Six Nations Rugby Tournament.
             </p>
-          </div>
+          </div> */}
+                        <div className="text-center">
+          <h1
+            className="font-extrabold text-gray-900 dark:text-gray-100 mb-2"
+            style={{ fontSize: '34px' }}
+          >
+            About Us
+          </h1>
+          <p
+            className="text-gray-600 dark:text-gray-300 mb-2"
+            style={{ fontSize: '16px' }}
+          >
+            Welcome to your ultimate Six Nations scheduling hub! Stay informed, connected,
+            and engaged with everything related to the Six Nations Rugby Tournament.
+          </p>
+          <br />
+        </div>
 
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -277,17 +294,17 @@ const About: React.FC = () => {
             </h2>
             <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md inline-block">
               <img
-                src="/images/founder.jpg" // Replace with actual image path
-                alt="Mohamed Mohamed"
+                src={founderImage}
+                alt="Mohamed Farid"
                 className="w-24 h-24 mx-auto rounded-full object-cover mb-4"
                 loading="lazy"
               />
               <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-                Mohamed Mohamed
+                Mohamed Farid
               </h3>
-              <p className="text-gray-600 dark:text-gray-300">Founder</p>
+              <p className="text-gray-600 dark:text-gray-300">CEO, CFO, CTO, COO</p>
               <p className="text-gray-700 dark:text-gray-300">
-                3rd Year Computer Science Student
+                Computer Science student at The University of Manchester.
               </p>
             </div>
           </div>

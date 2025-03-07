@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import 'flowbite';
+import logo from '../assets/Images/logo.png';
 
 const Navbar: React.FC = () => {
   const { user, signOut } = useContext(AuthContext);
@@ -65,12 +66,12 @@ const Navbar: React.FC = () => {
   }, []);
 
   return (
-    <nav className="w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-      <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
+    <nav className="w-full bg-white dark:bg-gray-900 border-b-4 border-gray-200 dark:border-gray-700 py-2">
+      <div className="-full flex items-center justify-between p-2">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-3">
-          <img src="https://flowbite.com/docs/images/logo.svg" className="h-8" alt="Logo" />
-          <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">
+          <img src={logo} className="h-8" alt="Logo" />
+          <span className="self-center text-xl font-semibold whitespace-nowrap dark:text-white">
             Six Nations
           </span>
         </Link>
@@ -286,6 +287,19 @@ const Navbar: React.FC = () => {
                               Team Rankings
                             </Link>
                           </li>
+                          <li>
+                            <Link
+                              to="/faq"
+                              className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                              onClick={() => {
+                                console.log('Navigated to FAQ');
+                                setIsMobileMenuOpen(false);
+                                setIsAdminMenuOpen(false);
+                              }}
+                            >
+                              FAQ
+                            </Link>
+                          </li>
                         </ul>
                       </div>
                     )}
@@ -314,7 +328,7 @@ const Navbar: React.FC = () => {
           {user ? (
             <div className="flex items-center space-x-2">
               {/* User's first name (hidden on small screens) */}
-              <span className="text-gray-700 dark:text-gray-300 hidden md:block">
+              <span className="text-gray-700 dark:text-gray-300 hidden md:block text-xl">
                 {user.firstName}
               </span>
               {/* User Dropdown */}

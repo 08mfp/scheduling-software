@@ -1,16 +1,13 @@
 import React, { useContext, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { FaSun, FaMoon } from 'react-icons/fa';
 
 const SignIn: React.FC = () => {
   const { signIn } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
 
   const { email, password } = formData;
@@ -28,13 +25,56 @@ const SignIn: React.FC = () => {
     }
   };
 
+  // Dark mode state and toggle logic (as seen in your other components)
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark';
+    }
+    return false;
+  });
+
+  const toggleDarkMode = () => {
+    setIsDarkMode((prev) => {
+      const newTheme = !prev;
+      if (newTheme) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      }
+      return newTheme;
+    });
+  };
+
   return (
-    <div className="min-h-screen flex items-start justify-center bg-gradient-to-br from-purple-100 via-purple-200 to-purple-300 px-4 p-12">
-      <div className="max-w-xl w-full bg-white shadow-2xl rounded-lg p-12 text-center">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-12 text-center transition-colors duration-300">
+        {/* Dark Mode Toggle */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleDarkMode}
+            className="flex items-center px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+            aria-label="Toggle Dark Mode"
+          >
+            {isDarkMode ? (
+              <>
+                <FaSun className="mr-2" />
+                Light Mode
+              </>
+            ) : (
+              <>
+                <FaMoon className="mr-2" />
+                Dark Mode
+              </>
+            )}
+          </button>
+        </div>
+
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <svg
-            className="h-32 w-32 text-purple-600"
+            className="h-20 w-20 text-blue-600 dark:text-blue-400"
             aria-hidden="true"
             xmlns="http://www.w3.org/2000/svg"
             width="24"
@@ -42,29 +82,35 @@ const SignIn: React.FC = () => {
             fill="none"
             viewBox="0 0 24 24"
           >
-            <path
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeWidth="2"
-              d="M8.737 8.737a21.49 21.49 0 0 1 3.308-2.724m0 0c3.063-2.026 5.99-2.641 7.331-1.3 1.827 1.828.026 6.591-4.023 10.64-4.049 4.049-8.812 5.85-10.64 4.023-1.33-1.33-.736-4.218 1.249-7.253m6.083-6.11c-3.063-2.026-5.99-2.641-7.331-1.3-1.827 1.828-.026 6.591 4.023 10.64m3.308-9.34a21.497 21.497 0 0 1 3.308 2.724m2.775 3.386c1.985 3.035 2.579 5.923 1.248 7.253-1.336 1.337-4.245.732-7.295-1.275M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"
-            />
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0a8.949 8.949 0 0 0 4.951-1.488A3.987 3.987 0 0 0 13 16h-2a3.987 3.987 0 0 0-3.951 3.512A8.948 8.948 0 0 0 12 21Zm3-11a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
           </svg>
         </div>
 
+
+        
+
         {/* Welcome Message */}
-        <h2 className="text-3xl font-bold text-gray-800 mb-6">Welcome Back!</h2>
+        <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">
+          Welcome Back!
+        </h2>
 
         {/* Error Message */}
-        {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
 
         {/* Sign-In Form */}
         <form onSubmit={onSubmit} className="space-y-6">
           {/* Email Field */}
           <div>
-            <label className="block text-left font-medium mb-2">Your email</label>
+            <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
+              Your email
+            </label>
             <div className="flex items-center space-x-3">
               <svg
-                className="w-6 h-6 text-gray-800 dark:text-white"
+                className="w-6 h-6 text-gray-800 dark:text-gray-200"
                 aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -85,17 +131,19 @@ const SignIn: React.FC = () => {
                 onChange={onChange}
                 placeholder="e.g. johndoe@gmail.com"
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
               />
             </div>
           </div>
 
           {/* Password Field */}
           <div>
-            <label className="block text-left font-medium mb-2">Your password</label>
+            <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
+              Your password
+            </label>
             <div className="flex items-center space-x-3">
               <svg
-                className="w-6 h-6 text-gray-800 dark:text-white"
+                className="w-6 h-6 text-gray-800 dark:text-gray-200"
                 aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -114,9 +162,9 @@ const SignIn: React.FC = () => {
                 type="password"
                 value={password}
                 onChange={onChange}
-                placeholder="your password"
+                placeholder="Your password"
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
               />
             </div>
           </div>
@@ -124,7 +172,7 @@ const SignIn: React.FC = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-md hover:from-purple-700 hover:to-purple-800 focus:outline-none"
+            className="w-full py-3 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none transition-colors duration-200"
           >
             Sign in
           </button>
@@ -132,10 +180,10 @@ const SignIn: React.FC = () => {
 
         {/* Footer Links */}
         <div className="mt-8 flex justify-between text-sm">
-          <a href="/signup" className="text-purple-600 hover:underline">
+          <a href="/signup" className="text-blue-600 dark:text-blue-400 hover:underline">
             Don't have an account?
           </a>
-          <a href="/forgot-password" className="text-purple-600 hover:underline">
+          <a href="/contact" className="text-blue-600 dark:text-blue-400 hover:underline">
             Forgot password?
           </a>
         </div>

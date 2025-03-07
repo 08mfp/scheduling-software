@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useContext, useMemo } from 'react';
+import React, { useEffect, useState, useContext, useMemo, useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import { FaInfoCircle, FaSun, FaMoon } from 'react-icons/fa';
 import { AuthContext } from '../contexts/AuthContext';
 import { Stadium } from '../interfaces/Stadium';
+import ConfirmModal from './ConfirmModal'; // Import the ConfirmModal
 
 // Adjust if needed
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
@@ -110,21 +111,75 @@ const StadiumList: React.FC = () => {
   }, [stadiums, debouncedSearchQuery]);
 
   //----------------------------
-  // 7) DELETE HANDLER
+  // 7) DELETE HANDLER USING CONFIRM MODAL
   //----------------------------
-  const handleDelete = (stadiumId: string) => {
-    if (window.confirm('Are you sure you want to delete this stadium?')) {
+  // New state variables to support modal-based deletion
+  const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success' | 'error' | null>(null);
+  const [stadiumToDelete, setStadiumToDelete] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number>(10);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Instead of using window.confirm, open the modal
+  const openConfirmModal = (stadiumId: string) => {
+    setStadiumToDelete(stadiumId);
+    setModalState('confirm');
+  };
+
+  // Called when the modal "Confirm" button is clicked
+  const handleConfirmDelete = () => {
+    if (!stadiumToDelete) return;
+    setModalState('loading');
+
+    // Simulate a delay (or remove setTimeout if not needed)
+    setTimeout(() => {
       axios
-        .delete(`${BACKEND_URL}/api/stadiums/${stadiumId}`)
+        .delete(`${BACKEND_URL}/api/stadiums/${stadiumToDelete}`)
         .then(() => {
           // Remove stadium from local state
-          setStadiums((prev) => prev.filter((s) => s._id !== stadiumId));
+          setStadiums((prev) => prev.filter((s) => s._id !== stadiumToDelete));
+          setModalState('success');
         })
-        .catch((error) => {
-          console.error('Error deleting stadium:', error);
+        .catch((err) => {
+          console.error('Error deleting stadium:', err);
+          setModalState('error');
         });
+    }, 3000);
+  };
+
+  const closeModal = () => {
+    setModalState(null);
+    setStadiumToDelete(null);
+    setCountdown(10);
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
     }
   };
+
+  const handleRetry = () => {
+    // Retry deletion if it failed
+    handleConfirmDelete();
+  };
+
+  // If modal state is success, start a countdown to auto-close the modal
+  useEffect(() => {
+    if (modalState === 'success') {
+      countdownRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownRef.current!);
+            closeModal();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
+    };
+  }, [modalState]);
 
   //----------------------------
   // 8) EARLY RETURN: UNAUTHORIZED
@@ -141,26 +196,29 @@ const StadiumList: React.FC = () => {
 
   const renderSkeleton = () => (
     <div className="animate-pulse space-y-6">
-      {/* Search Bar Skeleton */}
-      <div className="flex items-center space-x-2 mb-6">
-        <div className="h-8 w-48 bg-gray-300 rounded"></div>
-      </div>
-
-      {/* Header Skeleton */}
+      {/* Header Skeleton: Stadium header on left, search and add button on right */}
       <div className="flex justify-between items-center mb-6">
-        <div className="h-8 w-32 bg-gray-300 rounded"></div>
-        <div className="h-8 w-36 bg-gray-300 rounded"></div>
+        {/* Stadium Header Skeleton */}
+        <div className="h-8 w-32 bg-gray-300 dark:bg-gray-700 rounded"></div>
+        
+        {/* Right Side Skeleton: Search Input & Add Button */}
+        <div className="flex items-center space-x-4">
+          {/* Search Input Skeleton */}
+          <div className="h-8 w-48 bg-gray-300 dark:bg-gray-700 rounded"></div>
+          {/* Add New Stadium Button Skeleton */}
+          <div className="h-8 w-36 bg-gray-300 dark:bg-gray-700 rounded"></div>
+        </div>
       </div>
-
+  
       {/* Stadiums List Skeleton */}
       {[...Array(5)].map((_, i) => (
         <div
           key={i}
-          className="border border-gray-200 rounded-lg p-4 bg-gray-50 transition-colors duration-300 mb-2"
+          className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700 transition-colors duration-300 mb-2"
         >
-          <div className="h-4 w-1/2 bg-gray-300 rounded mb-2"></div>
-          <div className="h-3 w-1/4 bg-gray-300 rounded mb-2"></div>
-          <div className="h-8 w-24 bg-gray-300 rounded"></div>
+          <div className="h-4 w-1/2 bg-gray-300 dark:bg-gray-600 rounded mb-2"></div>
+          <div className="h-3 w-1/4 bg-gray-300 dark:bg-gray-600 rounded mb-2"></div>
+          <div className="h-8 w-24 bg-gray-300 dark:bg-gray-600 rounded"></div>
         </div>
       ))}
     </div>
@@ -256,7 +314,9 @@ const StadiumList: React.FC = () => {
     );
   }
 
-  // Finally, the real content
+  //----------------------------
+  // 11) FINAL RENDER: Stadium List with ConfirmModal
+  //----------------------------
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 
                     flex items-start justify-center py-12 px-4 
@@ -299,61 +359,89 @@ const StadiumList: React.FC = () => {
 
         {/* Main Card */}
         <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 space-y-8 transition-colors duration-300">
-          {/* Search */}
-          <div className="flex items-center relative mb-6">
-            <label className="mr-2 font-semibold flex items-center space-x-2 text-gray-800 dark:text-gray-200">
-              <svg
-                className="w-5 h-5 text-gray-500 dark:text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <span>Search:</span>
-            </label>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search stadiums..."
-              className="border border-gray-300 dark:border-gray-600 bg-white 
-                         dark:bg-gray-700 text-gray-800 dark:text-gray-200 
-                         p-2 rounded w-48 sm:w-64 pr-8"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 
-                           text-gray-500 dark:text-gray-400 hover:text-gray-700 
-                           dark:hover:text-gray-300 focus:outline-none"
-                aria-label="Clear search"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
+          {/* Header with Search & Add New Stadium */}
+          <div className="flex justify-between items-center mb-6">
+            {/* Stadium Header */}
+            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
+              Stadiums
+            </h2>
+
+            {/* Right Side: Search and Add Button */}
+            <div className="flex items-center space-x-4">
+              {/* Search */}
+              <div className="relative flex items-center">
+                <label className="mr-2 font-semibold flex items-center space-x-2 text-gray-800 dark:text-gray-200">
+                  <svg
+                    className="w-5 h-5 text-gray-500 dark:text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <span>Search:</span>
+                </label>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search stadiums..."
+                  className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-2 rounded w-48 sm:w-64 pr-8"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
+                    aria-label="Clear search"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {/* Add New Stadium Button */}
+              {user.role === 'admin' && (
+                <Link to="/stadiums/add">
+                  <button className="px-6 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600">
+                    Add New Stadium
+                  </button>
+                </Link>
+              )}
+            </div>
           </div>
 
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">Stadiums</h2>
-            {user.role === 'admin' && (
-              <Link to="/stadiums/add">
-                <button className="px-6 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md 
-                                   hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none 
-                                   focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600"
-                >
-                  Add New Stadium
-                </button>
-              </Link>
-            )}
+          <div className="text-left">
+            <p
+              className="text-gray-600 dark:text-gray-300 mb-2"
+              style={{ fontSize: '16px' }}
+            >
+              This page allows you to explore and navigate stadiums, providing comprehensive details on location, capacity, and more.
+            </p>
+            <br />
+            <p
+              className="text-sm text-gray-500 dark:text-gray-400 italic"
+              style={{ fontSize: '12px' }}
+            >
+              Note: All information is presented for reference and may be updated or corrected at any time.
+            </p>
+            <br/>
           </div>
 
           {/* Stadium List */}
@@ -380,17 +468,14 @@ const StadiumList: React.FC = () => {
                   <div className="mt-4 sm:mt-0 flex space-x-2">
                     <Link to={`/stadiums/edit/${stadium._id}`}>
                       <button
-                        className="px-4 py-2 bg-yellow-500 text-white rounded-md 
-                                   hover:bg-yellow-600 focus:outline-none 
-                                   focus:ring-2 focus:ring-yellow-400"
-                      >
+                        className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600">
                         Edit
                       </button>
                     </Link>
                     <button
-                      onClick={() => handleDelete(stadium._id)}
-                      className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 
-                                 focus:outline-none focus:ring-2 focus:ring-red-400"
+                      // Instead of calling window.confirm, open the modal
+                      onClick={() => openConfirmModal(stadium._id)}
+                      className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
                       Delete
                     </button>
@@ -407,6 +492,40 @@ const StadiumList: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Confirm/Loading/Success/Error Modal */}
+      <ConfirmModal
+        isOpen={modalState !== null}
+        type={modalState || 'confirm'}
+        title={
+          modalState === 'confirm'
+            ? 'Confirm Deletion'
+            : modalState === 'loading'
+            ? 'Processing...'
+            : modalState === 'success'
+            ? 'Deleted Successfully'
+            : 'Deletion Failed'
+        }
+        message={
+          modalState === 'confirm'
+            ? 'Are you sure you want to delete this stadium? This action cannot be undone.'
+            : modalState === 'loading'
+            ? 'Deleting the stadium... Please wait.'
+            : modalState === 'success'
+            ? 'The stadium has been deleted successfully.'
+            : 'Failed to delete the stadium. Please try again.'
+        }
+        countdown={modalState === 'success' ? countdown : undefined}
+        onConfirm={modalState === 'confirm' ? handleConfirmDelete : undefined}
+        onCancel={
+          modalState === 'success'
+            ? () => {
+                closeModal();
+              }
+            : closeModal
+        }
+        onRetry={modalState === 'error' ? handleRetry : undefined}
+      />
     </div>
   );
 };

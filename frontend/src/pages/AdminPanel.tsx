@@ -259,7 +259,7 @@ const AdminPanel: React.FC = () => {
                  flex items-start justify-center py-12 px-4 
                  sm:px-6 lg:px-8 transition-colors duration-300"
     >
-      <div className="max-w-6xl w-full">
+      <div className="max-w-7xl w-full">
         {/* Navbar (Breadcrumb + Dark Mode) */}
         <div
           className="flex justify-between items-center mb-8 px-4 py-2 
@@ -273,7 +273,7 @@ const AdminPanel: React.FC = () => {
               <FaInfoCircle className="mr-1" />
               Home
             </Link>
-            <span className="text-gray-500 dark:text-gray-400">/</span>
+            <span className="text-gray-500 dark:text-gray-400">/ Admin /</span>
             <span className="text-gray-700 dark:text-gray-300 font-semibold">
               Admin Panel
             </span>
@@ -302,20 +302,33 @@ const AdminPanel: React.FC = () => {
         </div>
 
         {/* Main Card */}
-        <div
-          className="bg-white dark:bg-gray-800 shadow-lg 
-                     rounded-lg p-8 space-y-8 
-                     transition-colors duration-300"
-        >
+        <div className="max-w-7xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300">
           {/* Title & Short Description */}
-          <div className="text-center">
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
-              Admin Panel
-            </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-300">
-              This page allows you to view, edit, and delete users, as well as manage their roles.
-            </p>
-          </div>
+          <div className="text-left">
+          <h1
+            className="font-extrabold text-gray-900 dark:text-gray-100 mb-2"
+            style={{ fontSize: '34px' }}
+          >
+            Admin Panel
+          </h1>
+          <p
+            className="text-gray-600 dark:text-gray-300 mb-2"
+            style={{ fontSize: '16px' }}
+          >
+            This page allows you to view, edit, and delete users, as well as manage their roles.
+          </p>
+          <br />
+          <p
+            className="text-sm text-gray-500 dark:text-gray-400 italic"
+            style={{ fontSize: '12px' }}
+          >
+            Note: Changes made here will be logged for audit purposes.
+          </p>
+          <br/>
+        </div>
+
+
+          < div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-6 mb-8 space-y-6">
 
           {/* Error Message */}
           {error && (
@@ -349,10 +362,9 @@ const AdminPanel: React.FC = () => {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search by first name..."
-                className="border border-gray-300 dark:border-gray-600 bg-white 
-                           dark:bg-gray-700 text-gray-800 dark:text-gray-200 
-                           p-2 rounded w-48 sm:w-64 pr-8 focus:outline-none focus:ring-1 
-                           focus:ring-blue-400 dark:focus:ring-blue-500"
+                className="border border-gray-300 dark:border-gray-600 
+                         bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 
+                         rounded px-3 py-1 w-60 text-center"
               />
               {searchQuery && (
                 <button
@@ -387,10 +399,9 @@ const AdminPanel: React.FC = () => {
               <select
                 value={roleFilter}
                 onChange={e => setRoleFilter(e.target.value as any)}
-                className="border border-gray-300 dark:border-gray-600 bg-white 
-                           dark:bg-gray-700 text-gray-800 dark:text-gray-200 
-                           p-2 rounded focus:outline-none focus:ring-1 
-                           focus:ring-blue-400 dark:focus:ring-blue-500"
+                className="border border-gray-300 dark:border-gray-600 
+                         bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 
+                         rounded px-3 py-1 w-60 text-center"
               >
                 <option value="all">All</option>
                 <option value="guest">Guest</option>
@@ -735,6 +746,7 @@ const AdminPanel: React.FC = () => {
           </div>
           */}
         </div>
+      </div>
       </div>
     </div>
   );
