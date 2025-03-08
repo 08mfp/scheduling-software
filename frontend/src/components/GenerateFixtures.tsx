@@ -301,6 +301,12 @@ const GenerateFixtures: React.FC = () => {
     fixturesByRound[fx.round].push(fx);
   });
 
+  // -- VISUAL-ONLY REST WEEKS FOR ROUNDS 2 AND 3 IF NONE SELECTED --
+  const autoRestWeeks =
+    selectedRestWeeks.size === 0 && algorithm !== 'unifiedScheduler'
+      ? new Set([2, 3])
+      : new Set();
+
   // ---------------------
   // 10) RENDER
   // ---------------------
@@ -412,6 +418,7 @@ const GenerateFixtures: React.FC = () => {
               <option value="random">Random</option>
               <option value="round5Extravaganza">Round 5 Extravaganza</option>
               <option value="travelOptimized">Travel Optimized Scheduler</option>
+              <option value="balancedTravel">Balanced Scheduler</option>
               <option value="unifiedScheduler">Unified Scheduler</option>
             </select>
           </div>
@@ -556,7 +563,10 @@ const GenerateFixtures: React.FC = () => {
                                 f.round === fixture.round
                             );
                             return (
-                              <tr key={`${fixture.homeTeam._id}-${fixture.awayTeam._id}-${fixture.round}-${i}`} className="border-b last:border-b-0 border-gray-200 dark:border-gray-600">
+                              <tr
+                                key={`${fixture.homeTeam._id}-${fixture.awayTeam._id}-${fixture.round}-${i}`}
+                                className="border-b last:border-b-0 border-gray-200 dark:border-gray-600"
+                              >
                                 <td className={tableCellClass}>
                                   <input
                                     type="datetime-local"
@@ -567,7 +577,9 @@ const GenerateFixtures: React.FC = () => {
                                 </td>
                                 <td className={tableCellClass}>{fixture.homeTeam.teamName}</td>
                                 <td className={tableCellClass}>{fixture.awayTeam.teamName}</td>
-                                <td className={tableCellClass}>{fixture.stadium ? fixture.stadium.stadiumName : 'Unknown'}</td>
+                                <td className={tableCellClass}>
+                                  {fixture.stadium ? fixture.stadium.stadiumName : 'Unknown'}
+                                </td>
                                 <td className={tableCellClass}>{fixture.location}</td>
                               </tr>
                             );
@@ -575,7 +587,7 @@ const GenerateFixtures: React.FC = () => {
                         </tbody>
                       </table>
                     </div>
-                    {selectedRestWeeks.has(round) && (
+                    {(selectedRestWeeks.has(round) || autoRestWeeks.has(round)) && (
                       <div className="text-center mb-2 font-bold text-red-700 dark:text-red-500">
                         REST WEEK
                       </div>
@@ -611,7 +623,7 @@ const GenerateFixtures: React.FC = () => {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-xl w-full relative">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-6xl w-full relative">
             <button
               onClick={() => setShowSummaryModal(false)}
               className="absolute top-4 right-4 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-500"
@@ -649,8 +661,20 @@ const GenerateFixtures: React.FC = () => {
                   type="button"
                   className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
                 >
-                  <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+                  <svg
+                    className="w-3 h-3"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 14 14"
+                  >
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+                    />
                   </svg>
                   <span className="sr-only">Close modal</span>
                 </button>
@@ -658,7 +682,10 @@ const GenerateFixtures: React.FC = () => {
               {/* Modal body */}
               <div className="p-4 md:p-5 space-y-4">
                 <p className="text-base leading-relaxed text-gray-500 dark:text-gray-400">
-                  Rest weeks have been hidden because the unified scheduler places rest weeks based on a cost function and penalty system. The rest weeks have been strategically placed to alleviate travel fatigue for teams who may be consecutively traveling or having to travel long distances.
+                  Rest weeks have been hidden because the unified scheduler places rest weeks based
+                  on a cost function and penalty system. The rest weeks have been strategically placed
+                  to alleviate travel fatigue for teams who may be consecutively traveling or having
+                  to travel long distances.
                 </p>
               </div>
               {/* Modal footer */}

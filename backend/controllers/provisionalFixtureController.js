@@ -17,7 +17,8 @@ const Team = require('../models/Team');
 const { generateRandomFixtures } = require('../algorithms/randomAlgorithm');
 const { generateRound5ExtravaganzaFixtures } = require('../algorithms/round5Extravaganza');
 const { generateTravelOptimizedFixtures } = require('../algorithms/travelOptimizedScheduler');
-const { generateBalancedTravelFixtures } = require('../algorithms/balancedTravelScheduler');
+const { generateStandardDeviationBalancedFixtures } = require('../algorithms/travelBalancedScheduler');
+// const { generateBalancedTravelFixtures } = require('../algorithms/balancedTravelScheduler');
 const { generateComprehensiveFairFixtures } = require('../algorithms/unifiedScheduler');
 
 
@@ -103,7 +104,7 @@ exports.generateProvisionalFixtures = async (req, res) => {
           .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
       }
 
-      result = await generateBalancedTravelFixtures(teams, season);
+      result = await generateStandardDeviationBalancedFixtures(teams, season, restWeeks);
     } 
     
     else if (algorithm === 'unifiedScheduler') {
