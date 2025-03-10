@@ -583,7 +583,7 @@ async function generateRound5ExtravaganzaFixtures(teams, season, userRestWeeks =
   ); // 13 matches
 
   // We'll do multiple attempts
-  const maxAttempts = 100;
+  const maxAttempts = 1000000;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       // We want to place big matches (high interest) last => 

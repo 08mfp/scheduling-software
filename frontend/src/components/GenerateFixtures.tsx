@@ -2,77 +2,28 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import axios, { CancelTokenSource } from 'axios';
 import { AuthContext } from '../contexts/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
-import { FaInfoCircle, FaSun, FaMoon, FaPlus, FaTimes } from 'react-icons/fa';
+import {
+  FaInfoCircle,
+  FaSun,
+  FaMoon,
+  FaPlus,
+  FaTimes,
+  FaMinus
+} from 'react-icons/fa';
 import ConfirmModal from './ConfirmModal';
+import SplashScreen from './SplashScreen'; // <-- or the correct path in your project
 
-//
-// 1) Wave Loader with color-shifting
-//
-const WaveLoader: React.FC = () => {
-  return (
-    <div className="wave-background p-6 rounded-md mb-4 w-full max-w-sm flex flex-col items-center">
-      {/* The wave bars */}
-      <div className="flex space-x-2 items-end mt-4">
-        <div className="w-3 h-8 wave-bar animation-delay-0" />
-        <div className="w-3 h-8 wave-bar animation-delay-1" />
-        <div className="w-3 h-8 wave-bar animation-delay-2" />
-        <div className="w-3 h-8 wave-bar animation-delay-3" />
-        <div className="w-3 h-8 wave-bar animation-delay-4" />
-      </div>
-    </div>
-  );
-};
+// --------------------------------------------------------------------------
+// 1) Splash Screen (inlined component)
+// --------------------------------------------------------------------------
+interface SplashScreenProps {
+  show: boolean;
+  onClose: () => void;
+}
 
-//
-// 2) Rotating text messages
-//
-const LoadingText: React.FC = () => {
-  const phrases = [
-    "Initiating schedule generation...",
-    "Analyzing constraints and teams...",
-    "Validating data integrity...",
-    "Applying scheduling algorithms...",
-    "Optimizing fixture lists...",
-    "Cross-checking stadium availability...",
-    "Enforcing rest week logic...",
-    "Minimizing travel distances...",
-    "Finalizing round structure...",
-    "Reviewing for conflicts...",
-    "Performing final checks...",
-    "Approaching completion...",
-    "Preparing final output...",
-    "Almost there...",
-    "Just a moment...",
-    "Final touches in progress...",
-    "Generating final schedule...",
-    "Polishing and verifying...",
-    "Completing setup...",
-    "Done!",
-    "Done!",
-    "Done!",
-    "Done!"
-
-  ];
-  
-  const [phaseIndex, setPhaseIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPhaseIndex((prev) => (prev + 1) % phrases.length);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="text-2xl font-bold text-gray-700 dark:text-gray-200 animate-pulse">
-      {phrases[phaseIndex]}
-    </div>
-  );
-};
-
-//
-// 3) Interface Definitions & Helpers
-//
+// --------------------------------------------------------------------------
+// 2) GenerateFixtures: Main Component
+// --------------------------------------------------------------------------
 interface Stadium {
   _id: string;
   stadiumName: string;
@@ -100,7 +51,10 @@ interface Fixture {
   season: number;
 }
 
-const getTeamColor = (teamName: string): { backgroundColor: string; textColor: string } => {
+// Helper to color teams
+const getTeamColor = (
+  teamName: string
+): { backgroundColor: string; textColor: string } => {
   switch (teamName) {
     case 'England':
       return { backgroundColor: '#ffffff', textColor: '#000000' };
@@ -121,19 +75,87 @@ const getTeamColor = (teamName: string): { backgroundColor: string; textColor: s
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
 
-//
-// 4) Main Component
-//
+// A small wave loader
+const WaveLoader: React.FC = () => {
+  return (
+    <div className="wave-background p-6 rounded-md mb-4 w-full max-w-sm flex flex-col items-center">
+      {/* The wave bars */}
+      <div className="flex space-x-2 items-end mt-4">
+        <div className="w-3 h-8 wave-bar animation-delay-0" />
+        <div className="w-3 h-8 wave-bar animation-delay-1" />
+        <div className="w-3 h-8 wave-bar animation-delay-2" />
+        <div className="w-3 h-8 wave-bar animation-delay-3" />
+        <div className="w-3 h-8 wave-bar animation-delay-4" />
+      </div>
+    </div>
+  );
+};
+
+// Rotating text messages
+const LoadingText: React.FC = () => {
+  const phrases = [
+    'Initiating schedule generation...',
+    'Analyzing constraints and teams...',
+    'Validating data integrity...',
+    'Applying scheduling algorithms...',
+    'Optimizing fixture lists...',
+    'Cross-checking stadium availability...',
+    'Enforcing rest week logic...',
+    'Minimizing travel distances...',
+    'Finalizing round structure...',
+    'Reviewing for conflicts...',
+    'Performing final checks...',
+    'Approaching completion...',
+    'Preparing final output...',
+    'Almost there...',
+    'Just a moment...',
+    'Final touches in progress...',
+    'Generating final schedule...',
+    'Polishing and verifying...',
+    'Completing setup...',
+    'Done!',
+    'Done!',
+    'Done!',
+    'Done!'
+  ];
+
+  const [phaseIndex, setPhaseIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPhaseIndex((prev) => (prev + 1) % phrases.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="text-2xl font-bold text-gray-700 dark:text-gray-200 animate-pulse">
+      {phrases[phaseIndex]}
+    </div>
+  );
+};
+
 const GenerateFixtures: React.FC = () => {
-  // -------------------------------------
-  // 4.1) Dark Mode
-  // -------------------------------------
+  // ----------------------------------------------------------------
+  // 2.1) Dark Mode + Splash Screen
+  // ----------------------------------------------------------------
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark';
     }
     return false;
   });
+
+  const [showSplash, setShowSplash] = useState(false);
+
+  // Show splash on first visit
+  useEffect(() => {
+    const hasVisited = localStorage.getItem('firstTimeGenerateFixtures');
+    if (!hasVisited) {
+      setShowSplash(true);
+      localStorage.setItem('firstTimeGenerateFixtures', 'true');
+    }
+  }, []);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -147,9 +169,9 @@ const GenerateFixtures: React.FC = () => {
 
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
-  // -------------------------------------
-  // 4.2) Main States
-  // -------------------------------------
+  // ----------------------------------------------------------------
+  // 2.2) Main States
+  // ----------------------------------------------------------------
   const [season, setSeason] = useState<number>(new Date().getFullYear() + 1);
   const [algorithm, setAlgorithm] = useState<string>('random');
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
@@ -164,7 +186,6 @@ const GenerateFixtures: React.FC = () => {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showUnifiedModal, setShowUnifiedModal] = useState(false);
 
-  // For canceling the request (no longer needed for an overlay, but we’ll keep it so we can cancel the request if we want)
   const [cancelSource, setCancelSource] = useState<CancelTokenSource | null>(null);
 
   // For saving
@@ -172,9 +193,9 @@ const GenerateFixtures: React.FC = () => {
   const [saveCountdown, setSaveCountdown] = useState<number>(10);
   const saveCountdownRef = useRef<NodeJS.Timeout | null>(null);
 
-  // -------------------------------------
-  // 4.3) Fetch Teams
-  // -------------------------------------
+  // ----------------------------------------------------------------
+  // 2.3) Fetch Teams
+  // ----------------------------------------------------------------
   useEffect(() => {
     if (user && user.role === 'admin') {
       const fetchTeams = async () => {
@@ -190,9 +211,9 @@ const GenerateFixtures: React.FC = () => {
     }
   }, [user]);
 
-  // -------------------------------------
-  // 4.4) Handlers
-  // -------------------------------------
+  // ----------------------------------------------------------------
+  // 2.4) Handlers
+  // ----------------------------------------------------------------
   const handleTeamSelection = (teamId: string) => {
     setErrorMessage('');
     setSelectedTeamIds((prevSelected) => {
@@ -235,9 +256,9 @@ const GenerateFixtures: React.FC = () => {
     return true;
   };
 
-  // -------------------------------------
-  // 4.5) Generate Fixtures
-  // -------------------------------------
+  // ----------------------------------------------------------------
+  // 2.5) Generate Fixtures
+  // ----------------------------------------------------------------
   const generateFixtures = async () => {
     if (cancelSource) {
       cancelSource.cancel('User started a new generation request');
@@ -257,7 +278,7 @@ const GenerateFixtures: React.FC = () => {
       season,
       algorithm,
       teams: Array.from(selectedTeamIds),
-      restWeeks: Array.from(selectedRestWeeks),
+      restWeeks: Array.from(selectedRestWeeks)
     };
 
     if (algorithm === 'unifiedScheduler') {
@@ -267,7 +288,6 @@ const GenerateFixtures: React.FC = () => {
       payload.runLocalSearch = false;
     }
 
-    // Create a new cancel token
     const source = axios.CancelToken.source();
     setCancelSource(source);
 
@@ -277,12 +297,12 @@ const GenerateFixtures: React.FC = () => {
         payload,
         {
           headers: { 'x-api-key': apiKey },
-          cancelToken: source.token,
+          cancelToken: source.token
         }
       );
       const generatedFixtures: Fixture[] = (response.data.fixtures || []).map((f: any) => ({
         ...f,
-        date: new Date(f.date).toISOString().slice(0, 16),
+        date: new Date(f.date).toISOString().slice(0, 16)
       }));
       setFixtures(generatedFixtures);
       setSummary(response.data.summary || []);
@@ -300,16 +320,16 @@ const GenerateFixtures: React.FC = () => {
     }
   };
 
-  // -------------------------------------
-  // 4.6) Save Fixtures
-  // -------------------------------------
+  // ----------------------------------------------------------------
+  // 2.6) Save Fixtures
+  // ----------------------------------------------------------------
   const saveFixtures = async () => {
     setLoading(true);
     setErrorMessage('');
     try {
       const fixturesToSave = fixtures.map((fx) => ({
         ...fx,
-        date: new Date(fx.date),
+        date: new Date(fx.date)
       }));
       await axios.post(
         `${BACKEND_URL}/api/provisional-fixtures/save`,
@@ -322,7 +342,8 @@ const GenerateFixtures: React.FC = () => {
       setSaveCountdown(10);
     } catch (error: any) {
       console.error('Error saving fixtures:', error);
-      const backendMessage = error.response?.data?.message || 'Error saving fixtures. Please try again.';
+      const backendMessage =
+        error.response?.data?.message || 'Error saving fixtures. Please try again.';
       setErrorMessage(backendMessage);
       setModalSaveState('error');
     } finally {
@@ -330,14 +351,13 @@ const GenerateFixtures: React.FC = () => {
     }
   };
 
+  // After a successful save, show countdown
   useEffect(() => {
     if (modalSaveState === 'success') {
       saveCountdownRef.current = setInterval(() => {
         setSaveCountdown((prev) => {
           if (prev <= 1) {
-            if (saveCountdownRef.current) {
-              clearInterval(saveCountdownRef.current);
-            }
+            if (saveCountdownRef.current) clearInterval(saveCountdownRef.current);
             setModalSaveState(null);
             return 0;
           }
@@ -350,9 +370,9 @@ const GenerateFixtures: React.FC = () => {
     };
   }, [modalSaveState]);
 
-  // -------------------------------------
-  // 4.7) Clear All
-  // -------------------------------------
+  // ----------------------------------------------------------------
+  // 2.7) Clear All
+  // ----------------------------------------------------------------
   const handleClearAll = () => {
     setFixtures([]);
     setSummary([]);
@@ -361,9 +381,9 @@ const GenerateFixtures: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // -------------------------------------
-  // 4.8) Handle Date Change
-  // -------------------------------------
+  // ----------------------------------------------------------------
+  // 2.8) Handle Date Change
+  // ----------------------------------------------------------------
   const handleDateChange = (index: number, newDate: string) => {
     setFixtures((prev) => {
       const updated = [...prev];
@@ -372,14 +392,14 @@ const GenerateFixtures: React.FC = () => {
     });
   };
 
-  // -------------------------------------
-  // 4.9) Early Return: Unauthorized
-  // -------------------------------------
+  // ----------------------------------------------------------------
+  // 2.9) Early Return: Unauthorized
+  // ----------------------------------------------------------------
   if (!user || user.role !== 'admin') {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Group by round
+  // Group fixtures by round
   const fixturesByRound: { [round: number]: Fixture[] } = {};
   fixtures.forEach((fx) => {
     if (!fixturesByRound[fx.round]) {
@@ -394,14 +414,17 @@ const GenerateFixtures: React.FC = () => {
       ? new Set([2, 3])
       : new Set();
 
-  // -------------------------------------
-  // 5) Return
-  // -------------------------------------
+  // ----------------------------------------------------------------
+  // 3) Return
+  // ----------------------------------------------------------------
   return (
     <>
+      {/* Splash Screen Overaly */}
+      <SplashScreen show={showSplash} onClose={() => setShowSplash(false)} />
+
+      {/* Custom wave color shifting for the loader */}
       <style>
         {`
-          /* Simple wave color shifting */
           @keyframes waveColor {
             0%   { transform: scaleY(0.3); background-color: #6366F1; }
             50%  { transform: scaleY(1);   background-color: #EC4899; }
@@ -410,18 +433,16 @@ const GenerateFixtures: React.FC = () => {
           .wave-bar {
             animation: waveColor 1.2s infinite ease-in-out;
           }
-          .animation-delay-0 { animation-delay: 0s;   }
+          .animation-delay-0 { animation-delay: 0s; }
           .animation-delay-1 { animation-delay: 0.1s; }
           .animation-delay-2 { animation-delay: 0.2s; }
           .animation-delay-3 { animation-delay: 0.3s; }
           .animation-delay-4 { animation-delay: 0.4s; }
-
-
         `}
       </style>
 
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
-        {/* 5.3) Nav / Breadcrumb */}
+        {/* Nav / Breadcrumb */}
         <div className="max-w-7xl w-full mb-8">
           <div className="flex justify-between items-center px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
             <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
@@ -438,52 +459,76 @@ const GenerateFixtures: React.FC = () => {
               </span>
             </nav>
 
-            <button
-              onClick={toggleDarkMode}
-              className="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 
-                         text-gray-800 dark:text-gray-200 rounded-md 
-                         hover:bg-gray-300 dark:hover:bg-gray-600 
-                         transition-colors duration-200 focus:outline-none 
-                         focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
-              aria-label="Toggle Dark Mode"
-            >
-              {isDarkMode ? (
-                <>
-                  <FaSun className="mr-2" />
-                  Light Mode
-                </>
-              ) : (
-                <>
-                  <FaMoon className="mr-2" />
-                  Dark Mode
-                </>
-              )}
-            </button>
+            <div className="flex items-center space-x-4">
+              {/* Info icon to re-open splash screen */}
+              <button
+                onClick={() => setShowSplash(true)}
+                className="flex items-center justify-center w-9 h-9 bg-gray-200 dark:bg-gray-700
+                           text-gray-800 dark:text-gray-200 rounded-md
+                           hover:bg-gray-300 dark:hover:bg-gray-600
+                           transition-colors duration-200 focus:outline-none
+                           focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+                aria-label="Show Splash Info"
+              >
+                <svg
+                  className="w-5 h-5"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10 11h2v5m-2 0h4m-2.592-8.5h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                  />
+                </svg>
+              </button>
+
+              {/* Dark Mode Toggle */}
+              <button
+                onClick={toggleDarkMode}
+                className="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 
+                           text-gray-800 dark:text-gray-200 rounded-md 
+                           hover:bg-gray-300 dark:hover:bg-gray-600 
+                           transition-colors duration-200 focus:outline-none 
+                           focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+                aria-label="Toggle Dark Mode"
+              >
+                {isDarkMode ? (
+                  <>
+                    <FaSun className="mr-2" />
+                    Light Mode
+                  </>
+                ) : (
+                  <>
+                    <FaMoon className="mr-2" />
+                    Dark Mode
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
-        
-        {/* 5.4) Main Card */}
+
+        {/* Main Card */}
         <div className="max-w-7xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300">
-          <h2
-            className="font-extrabold text-gray-900 dark:text-gray-100 mb-2 text-3xl"
-          >
+          <h2 className="font-extrabold text-gray-900 dark:text-gray-100 mb-2 text-3xl">
             Generate Fixtures
           </h2>
-          <p
-            className="text-gray-700 dark:text-gray-300 mb-2 text-base"
-          >
-            This interface generates fixtures based on your selected algorithm while adhering
-            to competition constraints.
+          <p className="text-gray-700 dark:text-gray-300 mb-2 text-base">
+            This interface generates fixtures based on your selected algorithm while
+            adhering to competition constraints.
           </p>
           <br />
-          <p
-            className="text-gray-500 dark:text-gray-400 italic text-xs"
-          >
+          <p className="text-gray-500 dark:text-gray-400 italic text-xs">
             Note: Fixture generation is automated. Only date adjustments are allowed post-generation.
           </p>
-          <br/>
+          <br />
 
-          {/* 5.4.1) Controls Card */}
+          {/* Controls Card */}
           <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-6 mb-8 space-y-6">
             {/* Season */}
             <div className="flex flex-col items-center">
@@ -579,7 +624,7 @@ const GenerateFixtures: React.FC = () => {
                       style={{
                         backgroundColor,
                         color: textColor,
-                        opacity: selected ? 1 : 0.85,
+                        opacity: selected ? 1 : 0.85
                       }}
                     >
                       {team.image && (
@@ -590,7 +635,9 @@ const GenerateFixtures: React.FC = () => {
                           style={{ backgroundColor: '#fff' }}
                         />
                       )}
-                      <span className="whitespace-nowrap font-semibold">{team.teamName}</span>
+                      <span className="whitespace-nowrap font-semibold">
+                        {team.teamName}
+                      </span>
                       {selected && <span className="text-xs font-bold">SELECTED</span>}
                     </button>
                   );
@@ -619,7 +666,7 @@ const GenerateFixtures: React.FC = () => {
                 {loading ? 'Generating...' : 'Generate'}
               </button>
 
-              {/* IN-LINE LOADING ANIMATION */}
+              {/* Inline Loading Animation */}
               {loading && (
                 <div className="mt-6 flex flex-col items-center">
                   <LoadingText />
@@ -703,14 +750,22 @@ const GenerateFixtures: React.FC = () => {
                                     <input
                                       type="datetime-local"
                                       value={fixture.date}
-                                      onChange={(e) => handleDateChange(globalIndex, e.target.value)}
+                                      onChange={(e) =>
+                                        handleDateChange(globalIndex, e.target.value)
+                                      }
                                       className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded px-2 py-1 w-full"
                                     />
                                   </td>
-                                  <td className={tableCellClass}>{fixture.homeTeam.teamName}</td>
-                                  <td className={tableCellClass}>{fixture.awayTeam.teamName}</td>
                                   <td className={tableCellClass}>
-                                    {fixture.stadium ? fixture.stadium.stadiumName : 'Unknown'}
+                                    {fixture.homeTeam.teamName}
+                                  </td>
+                                  <td className={tableCellClass}>
+                                    {fixture.awayTeam.teamName}
+                                  </td>
+                                  <td className={tableCellClass}>
+                                    {fixture.stadium
+                                      ? fixture.stadium.stadiumName
+                                      : 'Unknown'}
                                   </td>
                                   <td className={tableCellClass}>{fixture.location}</td>
                                 </tr>
@@ -753,7 +808,6 @@ const GenerateFixtures: React.FC = () => {
           )}
         </div>
 
-        {/* 5.5) Modals */}
         {/* Summary Modal */}
         {showSummaryModal && (
           <div
@@ -820,10 +874,10 @@ const GenerateFixtures: React.FC = () => {
                 </div>
                 <div className="p-4 md:p-5 space-y-4">
                   <p className="text-base leading-relaxed text-gray-500 dark:text-gray-400">
-                    Rest weeks have been hidden because the unified scheduler places rest weeks based
-                    on a cost function and penalty system. The rest weeks have been strategically placed
-                    to alleviate travel fatigue for teams who may be consecutively traveling or having
-                    to travel long distances.
+                    Rest weeks have been hidden because the unified scheduler places rest
+                    weeks based on a cost function and penalty system. The rest weeks have
+                    been strategically placed to alleviate travel fatigue for teams who
+                    may be consecutively traveling or having to travel long distances.
                   </p>
                 </div>
                 <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
@@ -845,8 +899,16 @@ const GenerateFixtures: React.FC = () => {
           <ConfirmModal
             isOpen={modalSaveState !== null}
             type={modalSaveState}
-            title="Saved Successfully"
-            message="The fixtures have been saved successfully."
+            title={
+              modalSaveState === 'success'
+                ? 'Saved Successfully'
+                : 'Error Saving Fixtures'
+            }
+            message={
+              modalSaveState === 'success'
+                ? 'The fixtures have been saved successfully.'
+                : errorMessage || 'An error occurred while saving.'
+            }
             countdown={modalSaveState === 'success' ? saveCountdown : undefined}
             onCancel={() => setModalSaveState(null)}
           />
@@ -856,9 +918,9 @@ const GenerateFixtures: React.FC = () => {
   );
 };
 
-//
-// 6) Table Classes
-//
+// --------------------------------------------------------------------------
+// 4) Table Classes
+// --------------------------------------------------------------------------
 const tableHeaderClass =
   'border border-gray-300 dark:border-gray-600 px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 text-center';
 const tableCellClass =

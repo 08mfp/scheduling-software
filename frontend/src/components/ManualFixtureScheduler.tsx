@@ -5,6 +5,8 @@ import { FaInfoCircle, FaSun, FaMoon, FaPlus, FaMinus } from 'react-icons/fa';
 
 import { Team, Fixture } from '../interfaces/ManualFixture';
 import { AuthContext } from '../contexts/AuthContext';
+import ManualSchedulerSplash from './ManualSchedulerSplash'; 
+
 
 interface ValidationError {
   message: string;
@@ -68,6 +70,17 @@ const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = () => {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
+
+  const [showSplash, setShowSplash] = useState(false);
+
+// Show the new splash on first visit
+useEffect(() => {
+  const hasVisited = localStorage.getItem('firstTimeManualFixtures');
+  if (!hasVisited) {
+    setShowSplash(true);
+    localStorage.setItem('firstTimeManualFixtures', 'true');
+  }
+}, []);
 
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
@@ -947,6 +960,13 @@ function getWeekend(d: Date): string {
   // MAIN RENDER
   // --------------------------
   return (
+
+    <>
+    <ManualSchedulerSplash
+      show={showSplash}
+      onClose={() => setShowSplash(false)}
+    />
+    
     <div
       className="min-h-screen bg-gray-100 dark:bg-gray-900 
                  flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8
@@ -972,29 +992,59 @@ function getWeekend(d: Date): string {
             </span>
           </nav>
 
-          <button
-            onClick={toggleDarkMode}
-            className="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 
-                       text-gray-800 dark:text-gray-200 rounded-md 
-                       hover:bg-gray-300 dark:hover:bg-gray-600 
-                       transition-colors duration-200 focus:outline-none 
-                       focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
-            aria-label="Toggle Dark Mode"
-          >
-            {isDarkMode ? (
-              <>
-                <FaSun className="mr-2" />
-                Light Mode
-              </>
-            ) : (
-              <>
-                <FaMoon className="mr-2" />
-                Dark Mode
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+                      <div className="flex items-center space-x-4">
+                        {/* Info icon to re-open splash screen */}
+                        <button
+                          onClick={() => setShowSplash(true)}
+                          className="flex items-center justify-center w-9 h-9 bg-gray-200 dark:bg-gray-700
+                                     text-gray-800 dark:text-gray-200 rounded-md
+                                     hover:bg-gray-300 dark:hover:bg-gray-600
+                                     transition-colors duration-200 focus:outline-none
+                                     focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+                          aria-label="Show Splash Info"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            aria-hidden="true"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M10 11h2v5m-2 0h4m-2.592-8.5h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                            />
+                          </svg>
+                        </button>
+          
+                        {/* Dark Mode Toggle */}
+                        <button
+                          onClick={toggleDarkMode}
+                          className="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 
+                                     text-gray-800 dark:text-gray-200 rounded-md 
+                                     hover:bg-gray-300 dark:hover:bg-gray-600 
+                                     transition-colors duration-200 focus:outline-none 
+                                     focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+                          aria-label="Toggle Dark Mode"
+                        >
+                          {isDarkMode ? (
+                            <>
+                              <FaSun className="mr-2" />
+                              Light Mode
+                            </>
+                          ) : (
+                            <>
+                              <FaMoon className="mr-2" />
+                              Dark Mode
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
 
       {/* MAIN CARD */}
       <div className="max-w-7xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300">
@@ -1667,6 +1717,7 @@ function getWeekend(d: Date): string {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

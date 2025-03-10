@@ -3,14 +3,13 @@
 /**
  * @module backend/algorithms/travelStdDevScheduler
  * @description
- * Generates fixtures attempting to minimize the standard deviation of travel distance
- * among all teams, while also enforcing that no team is > threshold from the median distance.
- *
- * Key features:
- *   - Up to 1000 attempts (random + minor local search)
- *   - Forcing teams home on rest weeks and after final round
- *   - Always flipping last year's home/away if it existed
- *   - Uses standard deviation + median threshold check
+ * A single-weekend-per-round scheduler that:
+ *   - Minimizes stdDev of travel distance (with ± threshold check around median).
+ *   - Flips home/away if last year's home was the same.
+ *   - Ensures each team plays exactly once per round (no duplicates).
+ *   - Has rest weeks (no matches) after certain rounds (e.g. R2, R4).
+ *   - Schedules each round's 3 matches on a single Saturday, final "Super Saturday" for Round 5.
+ *   - Uses a local search that checks constraints to avoid duplications in the same round.
  */
 
 const Stadium = require('../models/Stadium');
@@ -22,58 +21,56 @@ require('dotenv').config();
 // Cache distances for 24 hours
 const distanceCache = new NodeCache({ stdTTL: 86400 }); // 1 day
 
-// Example threshold: ±500 km from median
+// Example ± threshold from median
 const DISTANCE_THRESHOLD = 500;
 
 /**
- * Main export: tries multiple attempts (up to 1000).
- * Among attempts that pass the "median ± threshold" rule, pick the one with the smallest std dev.
- * If none pass the threshold rule, pick the arrangement with the smallest std dev overall.
+ * Main entry point:
+ *  - We attempt up to 1000 random schedules
+ *  - For each, we measure standard deviation & check if all teams are ± threshold from median
+ *  - We keep track of the best valid schedule and best overall schedule
+ *  - Return the best valid or fallback to best overall if none is valid
  */
 async function generateStandardDeviationBalancedFixtures(teams, season, restWeeks = []) {
   console.log('===== Starting StdDev-Balanced Fixture Generation =====');
 
-  // 1) Must have exactly 6 teams
   if (teams.length !== 6) {
-    throw new Error('Requires exactly 6 teams for standard-deviation balanced scheduling.');
+    throw new Error('This scheduler is built for exactly 6 teams.');
   }
 
-  // 2) Default rest weeks => [2,4] for 2-1-2 pattern
   if (!restWeeks || restWeeks.length === 0) {
-    restWeeks = [2, 4];
+    restWeeks = [2, 4]; // default 2-1-2 pattern for the Six Nations
   }
 
-  // 3) Fetch previous-season data for venue alternation
+  // Get last-season data to handle flipping home/away if repeated
   const previousSeasonFixtures = await Fixture.find({ season: season - 1 })
     .populate('homeTeam', '_id')
     .populate('awayTeam', '_id')
     .lean();
 
-  // Build a map for quick lookup of last season’s home/away
   const previousFixtureMap = new Map();
-  for (let fix of previousSeasonFixtures) {
+  for (const fix of previousSeasonFixtures) {
     const hId = fix.homeTeam._id.toString();
     const aId = fix.awayTeam._id.toString();
     const key = [hId, aId].sort().join('-');
     previousFixtureMap.set(key, fix);
   }
 
-  // 4) Precompute distances
+  // Precompute distances once for all pairs
   const { distances, distanceMessages } = await precomputeDistances(teams);
 
-  // 5) Try multiple attempts
+  // We'll do multiple attempts, track best
   const maxAttempts = 100000;
-  let bestValidResult = null;     // best among those that pass threshold
+  let bestValidResult = null;
   let bestValidStdDev = Infinity;
-  let bestOverallResult = null;   // best ignoring threshold
+  let bestOverallResult = null;
   let bestOverallStdDev = Infinity;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     console.log(`\n=== Attempt ${attempt} ===`);
 
-    // Generate a fixture arrangement
     let result;
-    if (previousSeasonFixtures.length > 0) {
+    if (previousFixtureMap.size > 0) {
       result = await generateFixturesWithPreviousData(
         teams,
         season,
@@ -92,7 +89,7 @@ async function generateStandardDeviationBalancedFixtures(teams, season, restWeek
       );
     }
 
-    // Evaluate the standard deviation & median-based threshold
+    // Evaluate standard deviation & threshold
     const stats = computeStats(result.teamTravelDistances);
     const stdDev = stats.stdDev;
     const withinThreshold = checkWithinMedianThreshold(
@@ -102,19 +99,17 @@ async function generateStandardDeviationBalancedFixtures(teams, season, restWeek
     );
 
     console.log(
-      `StdDev = ${stdDev.toFixed(2)} km; ` +
-        `Median = ${stats.median.toFixed(2)} km; ` +
-        `withinThreshold? ${withinThreshold}`
+      `StdDev = ${stdDev.toFixed(2)}; median = ${stats.median.toFixed(2)}; thresholdOK = ${withinThreshold}`
     );
 
-    // Track best overall
+    // Overall
     if (stdDev < bestOverallStdDev) {
       bestOverallStdDev = stdDev;
       bestOverallResult = result;
       console.log(`New best overall stdDev found on attempt ${attempt}.`);
     }
 
-    // Track best among valid (threshold-passing) attempts
+    // Threshold valid
     if (withinThreshold && stdDev < bestValidStdDev) {
       bestValidStdDev = stdDev;
       bestValidResult = result;
@@ -122,21 +117,16 @@ async function generateStandardDeviationBalancedFixtures(teams, season, restWeek
     }
   }
 
-  // Final decision
-  let finalResult = null;
+  let finalResult;
   if (bestValidResult) {
     finalResult = bestValidResult;
     console.log(
-      `\n===== Final: Chose threshold-valid arrangement with stdDev=${bestValidStdDev.toFixed(
-        2
-      )} =====\n`
+      `\n===== Final: threshold-valid arrangement with stdDev=${bestValidStdDev.toFixed(2)} =====\n`
     );
   } else {
     finalResult = bestOverallResult;
     console.log(
-      `\n===== No arrangement passed threshold => fallback to best overall stdDev=${bestOverallStdDev.toFixed(
-        2
-      )} =====\n`
+      `\n===== No threshold-valid arrangement => fallback to best overall stdDev=${bestOverallStdDev.toFixed(2)} =====\n`
     );
   }
 
@@ -144,53 +134,7 @@ async function generateStandardDeviationBalancedFixtures(teams, season, restWeek
 }
 
 /**
- * Basic stats function to get min, max, mean, median, stdDev.
- * - returns { min, max, mean, median, stdDev }
- */
-function computeStats(teamTravelDistances) {
-  const values = Object.values(teamTravelDistances);
-  values.sort((a, b) => a - b);
-
-  const count = values.length;
-  const minVal = values[0];
-  const maxVal = values[count - 1];
-
-  // mean
-  const sum = values.reduce((acc, x) => acc + x, 0);
-  const mean = sum / count;
-
-  // median
-  let median = 0;
-  if (count % 2 === 1) {
-    median = values[Math.floor(count / 2)];
-  } else {
-    const mid1 = values[count / 2 - 1];
-    const mid2 = values[count / 2];
-    median = (mid1 + mid2) / 2;
-  }
-
-  // standard deviation
-  let variance = 0;
-  for (let val of values) {
-    variance += (val - mean) ** 2;
-  }
-  variance /= count;
-  const stdDev = Math.sqrt(variance);
-
-  return { min: minVal, max: maxVal, mean, median, stdDev };
-}
-
-/**
- * Checks that all teams are within ± threshold of the given median.
- */
-function checkWithinMedianThreshold(teamTravelDistances, median, threshold) {
-  return Object.values(teamTravelDistances).every((dist) => {
-    return dist >= median - threshold && dist <= median + threshold;
-  });
-}
-
-/**
- * Generate fixtures using previous season data to alternate venue.
+ * Generates a schedule using last-season data to flip home/away if needed.
  */
 async function generateFixturesWithPreviousData(
   teams,
@@ -200,41 +144,36 @@ async function generateFixturesWithPreviousData(
   distanceMessages,
   restWeeks
 ) {
-  console.log('Generating with previous-season data (stdDev approach)...');
+  console.log('Generating with previous-season data...');
 
-  // 1) Round-robin matchups
+  // 1) Round-robin
   const initialFixtures = generateRoundRobinMatchups(teams);
-
-  // 2) Flip home/away if last year was the same
+  // 2) Flip or maintain home/away
   const { optimizedFixtures, matchupChanges } = optimizeHomeAwayAssignments(
     initialFixtures,
     previousFixtureMap,
     teams
   );
 
-  // 3) Assign to rounds
+  // 3) Assign to 5 rounds
   let { scheduledFixtures } = assignFixturesToRoundsOptimized(optimizedFixtures, teams);
+
+  // 4) Local search with constraint-check
   scheduledFixtures = localSearchRoundSwap(scheduledFixtures, teams, distances);
 
-  // 4) Schedule day/time
-  const finalScheduled = await scheduleFixturesOptimized(
-    scheduledFixtures,
-    season,
-    distances,
-    restWeeks
-  );
+  // 5) Schedule matches by round (single weekend), with rest weeks & Super Saturday
+  const finalScheduled = await scheduleFixturesByRound(scheduledFixtures, season, distances, restWeeks);
 
-  // 5) Calculate travel
+  // 6) Travel
   const { teamTravelDistances, matchTravelDistances } = calculateTeamTravelDistances(
     finalScheduled,
     distances,
     teams,
     restWeeks
   );
-
   const total = Object.values(teamTravelDistances).reduce((a, b) => a + b, 0);
 
-  // 6) Build summary
+  // 7) Summary
   const summary = buildSummary(
     teams,
     finalScheduled,
@@ -244,10 +183,10 @@ async function generateFixturesWithPreviousData(
     matchupChanges,
     total,
     restWeeks,
-    'StdDev Balanced'
+    'StdDev Balanced (with previous data)'
   );
 
-  // 7) Format for DB
+  // 8) Format for DB
   const formattedFixtures = finalScheduled.map((fix) => ({
     round: fix.round,
     date: fix.date,
@@ -268,7 +207,7 @@ async function generateFixturesWithPreviousData(
 }
 
 /**
- * Generate fixtures with no previous-season data.
+ * Generates a schedule with no previous-season data (naive home/away).
  */
 async function generateFixturesWithoutPreviousData(
   teams,
@@ -277,12 +216,11 @@ async function generateFixturesWithoutPreviousData(
   distanceMessages,
   restWeeks
 ) {
-  console.log('Generating with NO previous-season data (stdDev approach)...');
+  console.log('Generating with NO previous-season data...');
 
   // 1) Round-robin
   const initialFixtures = generateRoundRobinMatchups(teams);
-
-  // 2) Home/away naive approach
+  // 2) home/away naive
   const { optimizedFixtures, matchupChanges } = optimizeHomeAwayAssignments(
     initialFixtures,
     null,
@@ -291,17 +229,14 @@ async function generateFixturesWithoutPreviousData(
 
   // 3) Assign to rounds
   let { scheduledFixtures } = assignFixturesToRoundsOptimized(optimizedFixtures, teams);
+
+  // 4) local search
   scheduledFixtures = localSearchRoundSwap(scheduledFixtures, teams, distances);
 
-  // 4) schedule times
-  const finalScheduled = await scheduleFixturesOptimized(
-    scheduledFixtures,
-    season,
-    distances,
-    restWeeks
-  );
+  // 5) single-weekend scheduling
+  const finalScheduled = await scheduleFixturesByRound(scheduledFixtures, season, distances, restWeeks);
 
-  // 5) calc travel
+  // 6) travel
   const { teamTravelDistances, matchTravelDistances } = calculateTeamTravelDistances(
     finalScheduled,
     distances,
@@ -310,7 +245,7 @@ async function generateFixturesWithoutPreviousData(
   );
   const total = Object.values(teamTravelDistances).reduce((a, b) => a + b, 0);
 
-  // 6) summary
+  // 7) summary
   const summary = buildSummary(
     teams,
     finalScheduled,
@@ -320,10 +255,10 @@ async function generateFixturesWithoutPreviousData(
     matchupChanges,
     total,
     restWeeks,
-    'StdDev Balanced'
+    'StdDev Balanced (no previous data)'
   );
 
-  // 7) format
+  // 8) format
   const formattedFixtures = finalScheduled.map((fix) => ({
     round: fix.round,
     date: fix.date,
@@ -344,7 +279,7 @@ async function generateFixturesWithoutPreviousData(
 }
 
 /**
- * Generate standard round-robin (6 teams => 5 rounds, 3 matches each).
+ * Generate a standard 6-team round-robin (5 rounds, 3 matches per round).
  */
 function generateRoundRobinMatchups(teams) {
   const numTeams = teams.length; // 6
@@ -362,17 +297,16 @@ function generateRoundRobinMatchups(teams) {
       fixtures.push({ homeTeam: home, awayTeam: away });
     }
     rounds.push(fixtures);
-    // rotate
     list.unshift(list.pop());
   }
-  // Flatten
+
   const allFixtures = [];
   rounds.forEach((roundFixtures, roundIndex) => {
     roundFixtures.forEach((f) => {
       allFixtures.push({
         homeTeam: f.homeTeam,
         awayTeam: f.awayTeam,
-        round: roundIndex + 1, // placeholder
+        round: roundIndex + 1, // 1..5
       });
     });
   });
@@ -380,7 +314,8 @@ function generateRoundRobinMatchups(teams) {
 }
 
 /**
- * Basic random approach: shuffle fixtures, place them in 5 rounds.
+ * Assign each fixture to exactly one round (1..5), ensuring each team
+ * appears only once per round.
  */
 function assignFixturesToRoundsOptimized(fixtures, teams) {
   const totalRounds = 5;
@@ -421,18 +356,17 @@ function assignFixturesToRoundsOptimized(fixtures, teams) {
       return { scheduledFixtures: rounds.flat() };
     } else {
       resetCount++;
-      shuffleArray(all); // try again
+      shuffleArray(all);
     }
   }
-  console.warn('assignFixturesToRoundsOptimized: reached max reset attempts');
+  console.warn('assignFixturesToRoundsOptimized: max reset attempts reached');
   return { scheduledFixtures: rounds.flat() };
 }
 
 /**
- * Decide home/away with last-season alternation if found.
+ * Decide home/away with last-season alternation if found; else naive approach.
  */
 function optimizeHomeAwayAssignments(fixtures, previousFixtureMap, teams) {
-  // We'll log changes
   const matchupChanges = [];
   fixtures = shuffleArray(fixtures);
 
@@ -450,7 +384,7 @@ function optimizeHomeAwayAssignments(fixtures, previousFixtureMap, teams) {
     const aId = fix.awayTeam._id.toString();
     const key = [hId, aId].sort().join('-');
 
-    let chosen = null;
+    let chosen;
     let note = '';
     let prevDescription = 'No previous matchup';
 
@@ -471,7 +405,6 @@ function optimizeHomeAwayAssignments(fixtures, previousFixtureMap, teams) {
         note = 'Maintained (already alternated) from last year';
       }
     } else {
-      // naive approach
       chosen = decideHomeAwayNoPrevious(fix, homeCounts, awayCounts);
       note =
         chosen.homeTeam._id.toString() === fix.homeTeam._id.toString()
@@ -479,7 +412,7 @@ function optimizeHomeAwayAssignments(fixtures, previousFixtureMap, teams) {
           : 'Assigned (flipped) to manage constraints';
     }
 
-    // increment counts
+    // increment
     const hid2 = chosen.homeTeam._id.toString();
     const aid2 = chosen.awayTeam._id.toString();
     homeCounts[hid2]++;
@@ -510,8 +443,8 @@ function optimizeHomeAwayAssignments(fixtures, previousFixtureMap, teams) {
   return { optimizedFixtures: optimized, matchupChanges };
 }
 
-/**
- * If no last-season data, do naive approach with up to 3 home matches per team.
+/** 
+ * If no last-year data, naive approach => up to 3 home matches per team.
  */
 function decideHomeAwayNoPrevious(fixture, homeCounts, awayCounts) {
   const hId = fixture.homeTeam._id.toString();
@@ -520,33 +453,25 @@ function decideHomeAwayNoPrevious(fixture, homeCounts, awayCounts) {
   const homeCountA = homeCounts[aId];
 
   if (homeCountH < 3 && (homeCountA >= 3 || homeCountH <= homeCountA)) {
-    // keep
     return { homeTeam: fixture.homeTeam, awayTeam: fixture.awayTeam };
   } else {
-    // flip
     return { homeTeam: fixture.awayTeam, awayTeam: fixture.homeTeam };
   }
 }
 
 /**
- * Balancing pass ensures each team has at least 2 home / 2 away, 
+ * Balancing pass => each team has at least 2 home & 2 away, 
  * doesn't break last-year rule.
  */
-function balanceHomeAwayCounts(
-  fixtures,
-  homeCounts,
-  awayCounts,
-  teams,
-  previousFixtureMap
-) {
+function balanceHomeAwayCounts(fixtures, homeCounts, awayCounts, teams, previousFixtureMap) {
   let changed = true;
   while (changed) {
     changed = false;
-    for (let t of teams) {
+    for (const t of teams) {
       const tid = t._id.toString();
-      // if team has <2 home => find a fixture to flip
+      // if team has <2 home => try flipping
       if (homeCounts[tid] < 2) {
-        for (let fix of fixtures) {
+        for (const fix of fixtures) {
           if (fix.awayTeam._id.toString() === tid) {
             const homeId = fix.homeTeam._id.toString();
             if (homeCounts[homeId] > 2 && awayCounts[tid] > 2) {
@@ -555,12 +480,7 @@ function balanceHomeAwayCounts(
                 awayCounts[tid]--;
                 homeCounts[tid]++;
                 awayCounts[homeId]++;
-                const oldHome = fix.homeTeam;
-                fix.homeTeam = fix.awayTeam;
-                fix.awayTeam = oldHome;
-                const st = fix.homeTeam.stadium;
-                fix.stadium = st || null;
-                fix.location = st ? st.stadiumCity : 'Unknown';
+                flipFixtureHomeAway(fix);
                 changed = true;
                 break;
               }
@@ -568,10 +488,9 @@ function balanceHomeAwayCounts(
           }
         }
       }
-
-      // if team has <2 away => find a fixture to flip
+      // if team has <2 away => try flipping
       if (awayCounts[tid] < 2) {
-        for (let fix of fixtures) {
+        for (const fix of fixtures) {
           if (fix.homeTeam._id.toString() === tid) {
             const awayId = fix.awayTeam._id.toString();
             if (homeCounts[tid] > 2 && awayCounts[awayId] > 2) {
@@ -580,12 +499,7 @@ function balanceHomeAwayCounts(
                 awayCounts[awayId]--;
                 homeCounts[awayId]++;
                 awayCounts[tid]++;
-                const oldHome = fix.homeTeam;
-                fix.homeTeam = fix.awayTeam;
-                fix.awayTeam = oldHome;
-                const st = fix.homeTeam.stadium;
-                fix.stadium = st || null;
-                fix.location = st ? st.stadiumCity : 'Unknown';
+                flipFixtureHomeAway(fix);
                 changed = true;
                 break;
               }
@@ -598,28 +512,39 @@ function balanceHomeAwayCounts(
 }
 
 /**
- * Check if flipping won't violate last-year rule.
+ * Flip the fixture home/away, update stadium references.
+ */
+function flipFixtureHomeAway(fix) {
+  const oldHome = fix.homeTeam;
+  fix.homeTeam = fix.awayTeam;
+  fix.awayTeam = oldHome;
+  const st = fix.homeTeam.stadium;
+  fix.stadium = st || null;
+  fix.location = st ? st.stadiumCity : 'Unknown';
+}
+
+/**
+ * Check if flipping doesn't replicate last year's assignment.
  */
 function canFlipFixture(fix, teams, previousFixtureMap) {
   const oldHomeId = fix.homeTeam._id.toString();
   const oldAwayId = fix.awayTeam._id.toString();
   const key = [oldHomeId, oldAwayId].sort().join('-');
-  if (!previousFixtureMap || !previousFixtureMap.has(key)) {
-    return true; // no data => can flip
-  }
+  if (!previousFixtureMap || !previousFixtureMap.has(key)) return true;
+
   const prev = previousFixtureMap.get(key);
   const prevHomeId = prev.homeTeam._id.toString();
-  // after flipping => new home = old away
   if (prevHomeId === oldAwayId) {
-    // that breaks the alternation
+    // flipping would replicate last year's home
     return false;
   }
   return true;
 }
 
 /**
- * Minimal local search: swap two fixtures from different rounds to see if stdDev improves 
- * (we reuse "quickCalculateTravelByTeam" from older code but measure stdDev now).
+ * Local search => swap two fixtures between different rounds 
+ * if it lowers stdDev. 
+ * We'll revert if it breaks "once-per-round" constraints.
  */
 function localSearchRoundSwap(scheduledFixtures, teams, distances) {
   let bestArrangement = [...scheduledFixtures];
@@ -628,63 +553,89 @@ function localSearchRoundSwap(scheduledFixtures, teams, distances) {
 
   const maxSwaps = 50;
   let improved = true;
-  let attempts = 0;
+  let tries = 0;
 
-  while (improved && attempts < maxSwaps) {
+  while (improved && tries < maxSwaps) {
     improved = false;
-    attempts++;
+    tries++;
 
-    let fix1Index = Math.floor(Math.random() * bestArrangement.length);
-    let fix2Index = Math.floor(Math.random() * bestArrangement.length);
-    if (fix1Index === fix2Index) continue;
+    const i1 = Math.floor(Math.random() * bestArrangement.length);
+    const i2 = Math.floor(Math.random() * bestArrangement.length);
+    if (i1 === i2) continue;
 
-    let f1 = bestArrangement[fix1Index];
-    let f2 = bestArrangement[fix2Index];
-    if (f1.round === f2.round) continue;
+    const f1 = bestArrangement[i1];
+    const f2 = bestArrangement[i2];
+    if (f1.round === f2.round) continue; // no point swapping same-round fixtures
 
-    const oldRound1 = f1.round;
-    const oldRound2 = f2.round;
-    f1.round = oldRound2;
-    f2.round = oldRound1;
+    const oldR1 = f1.round;
+    const oldR2 = f2.round;
+    f1.round = oldR2;
+    f2.round = oldR1;
 
-    let newTravelMap = quickCalculateTravelByTeam(bestArrangement, teams, distances);
-    let newStdDev = computeStats(newTravelMap).stdDev;
+    // Check constraints => each round has each team only once
+    if (!areRoundAssignmentsValid(bestArrangement, teams)) {
+      // revert
+      f1.round = oldR1;
+      f2.round = oldR2;
+      continue;
+    }
 
+    // If valid, compute new stdDev
+    const newTravelMap = quickCalculateTravelByTeam(bestArrangement, teams, distances);
+    const newStdDev = computeStats(newTravelMap).stdDev;
     if (newStdDev < bestStdDev) {
       bestStdDev = newStdDev;
       bestTravelMap = newTravelMap;
       improved = true;
     } else {
       // revert
-      f1.round = oldRound1;
-      f2.round = oldRound2;
+      f1.round = oldR1;
+      f2.round = oldR2;
     }
   }
+
   return bestArrangement;
 }
 
+/** 
+ * Check if each round has no repeated team after a swap.
+ */
+function areRoundAssignmentsValid(arr, teams) {
+  const roundMap = {};
+  for (let fix of arr) {
+    const r = fix.round;
+    if (!roundMap[r]) roundMap[r] = new Set();
+    const hId = fix.homeTeam._id.toString();
+    const aId = fix.awayTeam._id.toString();
+    if (roundMap[r].has(hId) || roundMap[r].has(aId)) {
+      return false;
+    }
+    roundMap[r].add(hId);
+    roundMap[r].add(aId);
+  }
+  return true;
+}
+
 /**
- * Quick approximate measure ignoring exact date/time. 
- * We then measure by standard deviation in localSearchRoundSwap.
+ * Quick approximate measure ignoring actual date. 
+ * For each round, away travels to home, home returns if away, etc.
  */
 function quickCalculateTravelByTeam(fixtures, teams, distances) {
   const byRound = {};
-  fixtures.forEach((f) => {
-    if (!byRound[f.round]) byRound[f.round] = [];
-    byRound[f.round].push(f);
-  });
-  // each team starts "at home" => location = teamId
+  for (let fix of fixtures) {
+    if (!byRound[fix.round]) byRound[fix.round] = [];
+    byRound[fix.round].push(fix);
+  }
   const loc = {};
   teams.forEach((t) => {
-    loc[t._id.toString()] = t._id.toString();
+    loc[t._id.toString()] = t._id.toString(); 
   });
-
   const travelByTeam = {};
   teams.forEach((t) => {
     travelByTeam[t._id.toString()] = 0;
   });
 
-  const roundsUsed = Object.keys(byRound).map(Number).sort((a, b) => a - b);
+  const roundsUsed = Object.keys(byRound).map(Number).sort((a,b)=>a-b);
   for (let r of roundsUsed) {
     const roundFx = byRound[r];
     for (let fix of roundFx) {
@@ -695,7 +646,6 @@ function quickCalculateTravelByTeam(fixtures, teams, distances) {
       travelByTeam[awayId] += distAway;
       loc[awayId] = homeId;
 
-      // home might travel from some other location to their stadium
       if (loc[homeId] !== homeId) {
         const distHome = getDistanceFromIDs(loc[homeId], homeId, distances);
         travelByTeam[homeId] += distHome;
@@ -707,92 +657,89 @@ function quickCalculateTravelByTeam(fixtures, teams, distances) {
 }
 
 /**
- * Return the distance from ID->ID in precomputed distances.
+ * Actually assign date/time for each round, skip weekends for rest weeks, 
+ * round 5 = "Super Saturday."
  */
-function getDistanceFromIDs(idA, idB, distances) {
-  if (idA === idB) return 0;
-  const k1 = `${idA}-${idB}`;
-  const k2 = `${idB}-${idA}`;
-  return distances[k1] || distances[k2] || 0;
-}
+async function scheduleFixturesByRound(fixtures, season, distances, restWeeks) {
+  const scheduled = [];
+  const totalRounds = 5;
+  const roundDates = buildRoundDates(season, restWeeks, totalRounds);
 
-/**
- * Date/time assignment with rest weeks. 
- * For more realism, you might add Friday or Sunday. 
- */
-async function scheduleFixturesOptimized(fixtures, season, distances, restWeeks = []) {
-  const matchTimes = [{ day: 6, timeSlots: ['12:00', '14:00', '16:00'] }];
-  const roundsUsed = [...new Set(fixtures.map((f) => f.round))].sort((a, b) => a - b);
-  let scheduled = [];
-  let dateCursor = new Date(`${season}-02-01`);
+  // group by round
+  const byRound = {};
+  for (let fix of fixtures) {
+    if (!byRound[fix.round]) byRound[fix.round] = [];
+    byRound[fix.round].push(fix);
+  }
 
-  for (let r of roundsUsed) {
-    const roundFx = fixtures.filter((fx) => fx.round === r);
-    let roundCursor = new Date(dateCursor);
+  for (let r = 1; r <= totalRounds; r++) {
+    const roundFixes = byRound[r] || [];
+    if (roundFixes.length === 0) continue;
 
-    roundFx.sort((a, b) =>
-      a.awayTeam.teamName.localeCompare(b.awayTeam.teamName)
-    );
-
-    for (let fix of roundFx) {
-      let assigned = false;
-      while (!assigned) {
-        const day = roundCursor.getDay();
-        const matchDay = matchTimes.find((mt) => mt.day === day);
-        if (matchDay) {
-          for (let slot of matchDay.timeSlots) {
-            const dtStr = `${roundCursor.toISOString().split('T')[0]}T${slot}:00`;
-            const dt = new Date(dtStr);
-
-            const slotTaken = scheduled.some(
-              (sf) => sf.date.getTime() === dt.getTime()
-            );
-            const weekStart = getWeekStartDate(dt);
-            const sameWeekTeam = scheduled.some((sf) => {
-              const sfWeek = getWeekStartDate(sf.date);
-              return (
-                sfWeek.getTime() === weekStart.getTime() &&
-                (sf.homeTeam._id.toString() === fix.homeTeam._id.toString() ||
-                  sf.awayTeam._id.toString() === fix.awayTeam._id.toString())
-              );
-            });
-            if (!slotTaken && !sameWeekTeam) {
-              fix.date = dt;
-              scheduled.push(fix);
-              assigned = true;
-              break;
-            }
-          }
-        }
-        if (!assigned) {
-          roundCursor.setDate(roundCursor.getDate() + 1);
-        }
+    const baseDate = roundDates[r - 1];
+    if (!baseDate) continue; // safety
+    // Rounds 1..4 => 3 matches on a single Saturday
+    // Round 5 => "Super Saturday" also 3 matches on the same day
+    roundFixes.sort((a, b) => a.awayTeam.teamName.localeCompare(b.awayTeam.teamName));
+    const timeSlots = ['12:00','14:00','16:00'];
+    for (let i = 0; i < roundFixes.length; i++) {
+      if (i > 2) {
+        console.warn(`Round ${r} has more than 3 fixtures? Should not happen for 6 teams`);
+        break;
       }
-    }
-    // after round, increment
-    dateCursor.setDate(dateCursor.getDate() + 7);
-    if (restWeeks.includes(r)) {
-      // skip an extra week
-      dateCursor.setDate(dateCursor.getDate() + 7);
+      const fix = roundFixes[i];
+      const dtStr = `${formatDate(baseDate)}T${timeSlots[i]}:00`;
+      fix.date = new Date(dtStr);
+      scheduled.push(fix);
     }
   }
+
   scheduled.sort((a, b) => a.date - b.date);
   return scheduled;
 }
 
 /**
- * Return Sunday of the same week as 'date'.
+ * Build array of 5 weekend dates for 5 rounds, skipping an extra weekend if that round is in restWeeks.
  */
-function getWeekStartDate(date) {
-  const copy = new Date(date);
-  copy.setDate(copy.getDate() - copy.getDay());
-  copy.setHours(0, 0, 0, 0);
-  return copy;
+function buildRoundDates(season, restWeeks, totalRounds) {
+  let dateCursor = findFirstSaturdayOfFebruary(season);
+  const dates = [];
+
+  for (let r = 1; r <= totalRounds; r++) {
+    dates.push(new Date(dateCursor));
+    dateCursor.setDate(dateCursor.getDate() + 7);
+    if (restWeeks.includes(r)) {
+      // skip an extra 7 days for rest
+      dateCursor.setDate(dateCursor.getDate() + 7);
+    }
+  }
+  return dates;
+}
+
+/** 
+ * Finds the first Saturday of February in the given year.
+ */
+function findFirstSaturdayOfFebruary(season) {
+  const d = new Date(`${season}-02-01T00:00:00`);
+  while (d.getDay() !== 6) {
+    d.setDate(d.getDate() + 1);
+  }
+  return d;
 }
 
 /**
- * The main function that calculates travel distances for each fixture in chronological order,
- * forcing teams home during rest weeks & after final round.
+ * Format date => 'YYYY-MM-DD'
+ */
+function formatDate(d) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
+ * Calculate actual travel in chronological order, forcing teams home if we end a rest round,
+ * also after final round.
  */
 function calculateTeamTravelDistances(fixtures, distances, teams, restWeeks) {
   const teamTravelDistances = {};
@@ -800,13 +747,14 @@ function calculateTeamTravelDistances(fixtures, distances, teams, restWeeks) {
     teamTravelDistances[t._id.toString()] = 0;
   });
 
-  const matchTravelLog = [];
+  const matchTravelLog = {};
+  fixtures.forEach((f) => {
+    if (!matchTravelLog[f.round]) matchTravelLog[f.round] = [];
+  });
+
   const teamLocations = {};
   teams.forEach((t) => {
-    teamLocations[t._id.toString()] = {
-      lat: t.stadium.latitude,
-      lon: t.stadium.longitude,
-    };
+    teamLocations[t._id.toString()] = { lat: t.stadium.latitude, lon: t.stadium.longitude };
   });
 
   fixtures.sort((a, b) => a.date - b.date);
@@ -815,7 +763,7 @@ function calculateTeamTravelDistances(fixtures, distances, teams, restWeeks) {
   for (let i = 0; i < fixtures.length; i++) {
     const fix = fixtures[i];
     const round = fix.round;
-    // if new round
+
     if (round !== currentRound) {
       if (restWeeks.includes(currentRound)) {
         forceAllTeamsHome(
@@ -832,16 +780,13 @@ function calculateTeamTravelDistances(fixtures, distances, teams, restWeeks) {
       currentRound = round;
     }
 
-    // away team travels
+    // away travels
     const awayId = fix.awayTeam._id.toString();
     const fromLoc = { ...teamLocations[awayId] };
-    const toLoc = {
-      lat: fix.stadium.latitude,
-      lon: fix.stadium.longitude,
-    };
+    const toLoc = { lat: fix.stadium.latitude, lon: fix.stadium.longitude };
     const dist = calculateDistanceBetweenCoordinates(fromLoc, toLoc);
     teamTravelDistances[awayId] += dist;
-    matchTravelLog.push({
+    matchTravelLog[round].push({
       round,
       teamName: fix.awayTeam.teamName,
       fromTeamName: findTeamNameByLocation(teams, fromLoc),
@@ -855,17 +800,14 @@ function calculateTeamTravelDistances(fixtures, distances, teams, restWeeks) {
     });
     teamLocations[awayId] = toLoc;
 
-    // home returns from away if needed
+    // home might return from away
     const homeId = fix.homeTeam._id.toString();
     const homeLoc = { ...teamLocations[homeId] };
-    const stadiumLoc = {
-      lat: fix.stadium.latitude,
-      lon: fix.stadium.longitude,
-    };
+    const stadiumLoc = { lat: fix.stadium.latitude, lon: fix.stadium.longitude };
     if (homeLoc.lat !== stadiumLoc.lat || homeLoc.lon !== stadiumLoc.lon) {
       const distHome = calculateDistanceBetweenCoordinates(homeLoc, stadiumLoc);
       teamTravelDistances[homeId] += distHome;
-      matchTravelLog.push({
+      matchTravelLog[round].push({
         round,
         teamName: fix.homeTeam.teamName,
         fromTeamName: findTeamNameByLocation(teams, homeLoc),
@@ -881,7 +823,7 @@ function calculateTeamTravelDistances(fixtures, distances, teams, restWeeks) {
     }
   }
 
-  // after final fixture => if it was a rest round, force home
+  // after final fixture
   if (restWeeks.includes(currentRound)) {
     forceAllTeamsHome(
       teams,
@@ -894,8 +836,6 @@ function calculateTeamTravelDistances(fixtures, distances, teams, restWeeks) {
       false
     );
   }
-
-  // end-of-season => everyone home
   forceAllTeamsHome(
     teams,
     teamLocations,
@@ -907,14 +847,22 @@ function calculateTeamTravelDistances(fixtures, distances, teams, restWeeks) {
     true
   );
 
+  // Flatten logs
+  const mergedTravelLogs = [];
+  Object.keys(matchTravelLog)
+    .sort((a, b) => a - b)
+    .forEach((r) => {
+      mergedTravelLogs.push(...matchTravelLog[r]);
+    });
+
   return {
     teamTravelDistances,
-    matchTravelDistances: matchTravelLog,
+    matchTravelDistances: mergedTravelLogs,
   };
 }
 
 /**
- * Force teams home, logging the travel.
+ * Forcibly moves all teams home, logging that travel in matchTravelLog.
  */
 function forceAllTeamsHome(
   teams,
@@ -924,20 +872,17 @@ function forceAllTeamsHome(
   approxDate,
   round,
   distances,
-  endOfSeason = false
+  endOfSeason
 ) {
   for (let tm of teams) {
     const tid = tm._id.toString();
     const cur = teamLocations[tid];
-    const home = {
-      lat: tm.stadium.latitude,
-      lon: tm.stadium.longitude,
-    };
+    const home = { lat: tm.stadium.latitude, lon: tm.stadium.longitude };
     if (Math.abs(cur.lat - home.lat) > 0.001 || Math.abs(cur.lon - home.lon) > 0.001) {
-      // they're away
       const dist = calculateDistanceBetweenCoordinates(cur, home);
       teamTravelDistances[tid] += dist;
-      matchTravelLog.push({
+      if (!matchTravelLog[round]) matchTravelLog[round] = [];
+      matchTravelLog[round].push({
         round,
         teamName: tm.teamName,
         fromTeamName: findTeamNameByLocation(teams, cur),
@@ -947,9 +892,7 @@ function forceAllTeamsHome(
         opponent: 'Home',
         distance: dist,
         date: approxDate || null,
-        note: endOfSeason
-          ? 'Return home end-of-season'
-          : 'Forced home due to rest week',
+        note: endOfSeason ? 'Return home end-of-season' : 'Forced home due to rest week',
       });
       teamLocations[tid] = { ...home };
     }
@@ -957,12 +900,61 @@ function forceAllTeamsHome(
 }
 
 /**
- * Tolerance-based matching of lat/lon to a team's stadium location.
+ * Compute stats => min, max, mean, median, stdDev
+ */
+function computeStats(teamTravelDistances) {
+  const values = Object.values(teamTravelDistances);
+  values.sort((a, b) => a - b);
+
+  const count = values.length;
+  const minVal = values[0];
+  const maxVal = values[count - 1];
+  const sum = values.reduce((acc, x) => acc + x, 0);
+  const mean = sum / count;
+
+  let median;
+  if (count % 2 === 1) {
+    median = values[Math.floor(count / 2)];
+  } else {
+    median = (values[count / 2 - 1] + values[count / 2]) / 2;
+  }
+
+  let variance = 0;
+  for (const val of values) {
+    variance += (val - mean) ** 2;
+  }
+  variance /= count;
+  const stdDev = Math.sqrt(variance);
+
+  return { min: minVal, max: maxVal, mean, median, stdDev };
+}
+
+/**
+ * Check if every team is within ± threshold from the median.
+ */
+function checkWithinMedianThreshold(teamTravelDistances, median, threshold) {
+  return Object.values(teamTravelDistances).every((dist) => {
+    return dist >= median - threshold && dist <= median + threshold;
+  });
+}
+
+/**
+ * Return the distance from ID->ID in the precomputed map, or 0 if same.
+ */
+function getDistanceFromIDs(idA, idB, distances) {
+  if (idA === idB) return 0;
+  const k1 = `${idA}-${idB}`;
+  const k2 = `${idB}-${idA}`;
+  return distances[k1] || distances[k2] || 0;
+}
+
+/**
+ * Attempt to match lat/lon to a known team's stadium within tolerance
  */
 function findTeamNameByLocation(teams, loc) {
   if (!loc) return 'Unknown';
   const TOLERANCE = 0.01;
-  for (let tm of teams) {
+  for (const tm of teams) {
     if (tm.stadium) {
       const latDiff = Math.abs(tm.stadium.latitude - loc.lat);
       const lonDiff = Math.abs(tm.stadium.longitude - loc.lon);
@@ -974,8 +966,8 @@ function findTeamNameByLocation(teams, loc) {
   return 'Unknown';
 }
 
-/** 
- * Get a team's name by ID.
+/**
+ * Get team name by ID, or "Unknown Team" fallback
  */
 function getTeamNameById(teams, id) {
   const found = teams.find((t) => t._id.toString() === id.toString());
@@ -983,124 +975,37 @@ function getTeamNameById(teams, id) {
 }
 
 /**
- * Build final summary referencing the "StdDev Balanced" approach.
+ * Standard Haversine formula in km
  */
-function buildSummary(
-  teams,
-  fixtures,
-  distanceMessages,
-  teamTravelDistances,
-  matchTravelDistances,
-  matchupChanges,
-  totalTravelDistance,
-  restWeeks,
-  approachType
-) {
-  const summary = [];
-  summary.push(`=== ${approachType} Scheduler ===`);
-  summary.push('Aiming to minimize standard deviation of travel + enforce threshold near median.');
-  summary.push(
-    `Using rest weeks: ${restWeeks.length > 0 ? restWeeks.join(', ') : '(none)'}`
-  );
-  summary.push(`Total Travel Distance (All Teams Combined): ${totalTravelDistance.toFixed(2)} km\n`);
+function calculateDistanceBetweenCoordinates(coord1, coord2) {
+  const R = 6371; // Earth's radius in km
+  const lat1 = coord1.lat * (Math.PI / 180);
+  const lon1 = coord1.lon * (Math.PI / 180);
+  const lat2 = coord2.lat * (Math.PI / 180);
+  const lon2 = coord2.lon * (Math.PI / 180);
 
-  // Show stats
-  const stats = computeStats(teamTravelDistances);
-  summary.push(
-    `Distances: min=${stats.min.toFixed(2)}, max=${stats.max.toFixed(2)}, median=${stats.median.toFixed(
-      2
-    )}, mean=${stats.mean.toFixed(2)}, stdDev=${stats.stdDev.toFixed(2)}`
-  );
-  summary.push(`Threshold = ±${DISTANCE_THRESHOLD} from median => ${stats.median - DISTANCE_THRESHOLD} .. ${stats.median + DISTANCE_THRESHOLD}`);
-  summary.push('');
-
-  if (matchupChanges.length) {
-    summary.push('--- Home/Away Alternation Changes ---');
-    matchupChanges.forEach((mc) => {
-      const prev = mc.previousMatchup || 'Unknown vs Unknown';
-      const curr = mc.currentMatchup || 'Unknown vs Unknown';
-      summary.push(`  Prev: ${prev} => Now: ${curr} [${mc.note}]`);
-    });
-    summary.push('');
-  }
-
-  summary.push('--- Distances Between Teams (Precomputed) ---');
-  summary.push(...distanceMessages);
-  summary.push('');
-
-  summary.push('--- Per-Match Travel Logs ---');
-  const groupedByRound = matchTravelDistances.reduce((acc, md) => {
-    if (!acc[md.round]) acc[md.round] = [];
-    acc[md.round].push(md);
-    return acc;
-  }, {});
-
-  Object.keys(groupedByRound)
-    .sort((a, b) => a - b)
-    .forEach((round) => {
-      groupedByRound[round].forEach((md) => {
-        const dateStr = md.date ? new Date(md.date).toLocaleString() : 'Unknown';
-        const note = md.note ? `(${md.note})` : '';
-        summary.push(
-          `R${md.round} | ${md.teamName} travels from ${md.fromTeamName} ` +
-            `[${md.from.lat.toFixed(2)},${md.from.lon.toFixed(2)}] ` +
-            `to ${md.toTeamName} [${md.to.lat.toFixed(2)},${md.to.lon.toFixed(2)}] => ` +
-            `${md.distance.toFixed(2)} km ${note} @ ${dateStr}`
-        );
-      });
-      summary.push(''); // Add a blank line after each round
-    });
-  summary.push('');
-
-  summary.push('--- Total Travel Distances by Team ---');
-  teams.forEach((t) => {
-    const d = teamTravelDistances[t._id.toString()] || 0;
-    summary.push(`  ${t.teamName}: ${d.toFixed(2)} km`);
-  });
-  summary.push('');
-
-  // Per-team fixture summary
-  summary.push('');
-  summary.push('--- Per-Team Fixture Summary ---');
-  const teamMap = {};
-  teams.forEach((t) => {
-    teamMap[t._id.toString()] = { name: t.teamName, matches: [] };
-  });
-  for (let fx of fixtures) {
-    const hId = fx.homeTeam._id.toString();
-    const aId = fx.awayTeam._id.toString();
-    teamMap[hId].matches.push({
-      round: fx.round,
-      homeAway: 'Home',
-      opp: fx.awayTeam,
-      date: fx.date,
-    });
-    teamMap[aId].matches.push({
-      round: fx.round,
-      homeAway: 'Away',
-      opp: fx.homeTeam,
-      date: fx.date,
-    });
-  }
-  Object.values(teamMap).forEach((tm) => {
-    tm.matches.sort((a, b) => a.round - b.round);
-  });
-
-  Object.keys(teamMap).forEach((k) => {
-    const t = teamMap[k];
-    summary.push(`${t.name}:`);
-    const lines = t.matches.map(
-      (m) => ` R${m.round} - ${m.homeAway} vs ${m.opp.teamName} (${m.date.toDateString()});`
-    );
-    summary.push(lines.join('\n'));
-    summary.push('');
-  });
-
-  return summary;
+  const dLat = lat2 - lat1;
+  const dLon = lon2 - lon1;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 /**
- * Precompute distances for all pairs using haversine, caching them.
+ * Basic Fisher-Yates shuffle
+ */
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+/**
+ * Precompute distances for all pairs using Haversine, with caching.
  */
 async function precomputeDistances(teams) {
   console.log('Precomputing distances via Haversine + caching...');
@@ -1108,7 +1013,7 @@ async function precomputeDistances(teams) {
   const distanceMessages = [];
 
   const teamCoords = {};
-  for (let t of teams) {
+  for (const t of teams) {
     if (!t.stadium) {
       teamCoords[t._id.toString()] = { lat: 0, lon: 0 };
     } else {
@@ -1145,7 +1050,7 @@ async function precomputeDistances(teams) {
 }
 
 /**
- * Actually get distance from the cache or compute via Haversine.
+ * Actually get distance from cache or compute via Haversine
  */
 async function getDistanceBetweenLocations(origin, destination) {
   const cacheKey = `${origin.lat},${origin.lon}-${destination.lat},${destination.lon}`;
@@ -1159,35 +1064,113 @@ async function getDistanceBetweenLocations(origin, destination) {
 }
 
 /**
- * Standard Haversine formula in km
+ * Build final textual summary
  */
-function calculateDistanceBetweenCoordinates(coord1, coord2) {
-  const R = 6371; // km
-  const lat1 = coord1.lat * (Math.PI / 180);
-  const lon1 = coord1.lon * (Math.PI / 180);
-  const lat2 = coord2.lat * (Math.PI / 180);
-  const lon2 = coord2.lon * (Math.PI / 180);
+function buildSummary(
+  teams,
+  fixtures,
+  distanceMessages,
+  teamTravelDistances,
+  matchTravelDistances,
+  matchupChanges,
+  totalTravelDistance,
+  restWeeks,
+  approachType
+) {
+  const summary = [];
+  summary.push(`=== ${approachType} ===`);
+  summary.push(`Total Travel Distance: ${totalTravelDistance.toFixed(2)} km`);
+  summary.push(`Rest Weeks: ${restWeeks.join(', ')}`);
 
-  const dLat = lat2 - lat1;
-  const dLon = lon2 - lon1;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
+  const stats = computeStats(teamTravelDistances);
+  summary.push(
+    `Distances => min=${stats.min.toFixed(2)}, max=${stats.max.toFixed(2)}, median=${stats.median.toFixed(
+      2
+    )}, mean=${stats.mean.toFixed(2)}, stdDev=${stats.stdDev.toFixed(2)}`
+  );
+  summary.push(
+    `Threshold ±${DISTANCE_THRESHOLD} => ${(stats.median - DISTANCE_THRESHOLD).toFixed(2)} .. ${(stats.median + DISTANCE_THRESHOLD).toFixed(
+      2
+    )}\n`
+  );
 
-/**
- * Basic Fisher-Yates shuffle
- */
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+  if (matchupChanges.length) {
+    summary.push('--- Home/Away Alternation Changes ---');
+    matchupChanges.forEach((mc) => {
+      summary.push(`  Prev: ${mc.previousMatchup} => Now: ${mc.currentMatchup} [${mc.note}]`);
+    });
+    summary.push('');
   }
-  return array;
+
+  summary.push('--- Distances Between Teams (Precomputed) ---');
+  summary.push(...distanceMessages);
+  summary.push('');
+
+  summary.push('--- Per-Match Travel Logs ---');
+  const groupedByRound = matchTravelDistances.reduce((acc, md) => {
+    if (!acc[md.round]) acc[md.round] = [];
+    acc[md.round].push(md);
+    return acc;
+  }, {});
+  Object.keys(groupedByRound)
+    .sort((a, b) => a - b)
+    .forEach((round) => {
+      groupedByRound[round].forEach((md) => {
+        const dateStr = md.date ? new Date(md.date).toLocaleString() : 'Unknown';
+        const note = md.note ? `(${md.note})` : '';
+        summary.push(
+          `R${md.round} | ${md.teamName} from ${md.fromTeamName} ` +
+            `[${md.from.lat.toFixed(2)},${md.from.lon.toFixed(2)}] -> ${md.toTeamName} ` +
+            `[${md.to.lat.toFixed(2)},${md.to.lon.toFixed(2)}] = ${md.distance.toFixed(2)} km ${note} @ ${dateStr}`
+        );
+      });
+      summary.push('');
+    });
+
+  summary.push('--- Total Travel Distances by Team ---');
+  teams.forEach((t) => {
+    const d = teamTravelDistances[t._id.toString()] || 0;
+    summary.push(`  ${t.teamName}: ${d.toFixed(2)} km`);
+  });
+  summary.push('');
+
+  summary.push('--- Per-Team Fixture Summary ---');
+  const teamMap = {};
+  teams.forEach((t) => {
+    teamMap[t._id.toString()] = { name: t.teamName, matches: [] };
+  });
+  for (const fx of fixtures) {
+    const hId = fx.homeTeam._id.toString();
+    const aId = fx.awayTeam._id.toString();
+    teamMap[hId].matches.push({
+      round: fx.round,
+      homeAway: 'Home',
+      opp: fx.awayTeam,
+      date: fx.date,
+    });
+    teamMap[aId].matches.push({
+      round: fx.round,
+      homeAway: 'Away',
+      opp: fx.homeTeam,
+      date: fx.date,
+    });
+  }
+  Object.values(teamMap).forEach((tm) => {
+    tm.matches.sort((a, b) => a.round - b.round);
+  });
+  Object.keys(teamMap).forEach((k) => {
+    const t = teamMap[k];
+    summary.push(`${t.name}:`);
+    t.matches.forEach((m) => {
+      summary.push(`  R${m.round} - ${m.homeAway} vs ${m.opp.teamName} on ${m.date.toDateString()}`);
+    });
+    summary.push('');
+  });
+
+  return summary;
 }
 
+// Export the main function
 module.exports = {
   generateStandardDeviationBalancedFixtures
 };
