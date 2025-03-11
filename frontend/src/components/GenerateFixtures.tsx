@@ -51,6 +51,21 @@ interface Fixture {
   season: number;
 }
 
+// A simple tooltip icon, shown on hover
+const TooltipIcon: React.FC<{ text: string }> = ({ text }) => (
+  <div className="relative group inline-block ml-1 text-gray-400 cursor-pointer">
+    <FaInfoCircle className="inline-block" />
+    <div
+      className="absolute bottom-full left-1/2 transform -translate-x-1/2 
+                 mb-1 hidden group-hover:block bg-gray-700 text-white text-xs 
+                 px-2 py-1 rounded z-10 whitespace-normal max-w-xs"
+      style={{ width: '200px' }}
+    >
+      {text}
+    </div>
+  </div>
+);
+
 // Helper to color teams
 const getTeamColor = (
   teamName: string
@@ -194,7 +209,80 @@ const GenerateFixtures: React.FC = () => {
   const saveCountdownRef = useRef<NodeJS.Timeout | null>(null);
 
   // ----------------------------------------------------------------
-  // 2.3) Fetch Teams
+  // 2.3) Weighted parameters for Unified Scheduler + Local Search
+  // ----------------------------------------------------------------
+  const [runLocalSearch, setRunLocalSearch] = useState(false);
+
+  // const [unifiedWeights, setUnifiedWeights] = useState({
+  //   w1: 1.0,     // consecutiveAwayPenalty weight
+  //   w2: 0.1,     // maxTravel weight
+  //   w3: 1.0,     // competitiveness weight
+  //   wFri: 2.0,   // broadcast penalty weight
+  //   wTravelTotal: 0.05,
+  //   wTravelFair: 0.05,
+  //   wSlot: 0.5,
+  //   wShortGap: 0.5,
+  //   minGapDays: 6,
+  //   ALPHA: 1,
+  //   BETA: 2,
+  //   FRIDAY_NIGHT_LIMIT: 2,
+  //   FRIDAY_NIGHT_PENALTY: 5.0,
+  //   TOP2_MISSED_SLOT_PENALTY: 15.0
+  // });
+
+  const defaultUnifiedWeights = {
+    w1: 1.0,
+    w2: 0.1,
+    w3: 1.0,
+    wFri: 2.0,
+    wTravelTotal: 0.05,
+    wTravelFair: 0.05,
+    wSlot: 0.5,
+    wShortGap: 0.5,
+    minGapDays: 6,
+    ALPHA: 1,
+    BETA: 2,
+    FRIDAY_NIGHT_LIMIT: 2,
+    FRIDAY_NIGHT_PENALTY: 5.0,
+    TOP2_MISSED_SLOT_PENALTY: 15.0,
+  };
+
+  function getRandomInRange(min: number, max: number, step: number) {
+    const range = (max - min) / step;
+    const randomIndex = Math.floor(Math.random() * (range + 1));
+    return parseFloat((min + randomIndex * step).toFixed(3));
+  }
+
+  const [unifiedWeights, setUnifiedWeights] = useState(defaultUnifiedWeights);
+
+// Handle reset
+const resetWeights = () => {
+  setUnifiedWeights(defaultUnifiedWeights);
+};
+
+// Handle shuffle
+const shuffleWeights = () => {
+  setUnifiedWeights({
+    w1: getRandomInRange(0, 3, 0.5),
+    w2: getRandomInRange(0, 2, 0.1),
+    w3: getRandomInRange(0, 3, 0.25),
+    wFri: getRandomInRange(0, 5, 0.5),
+    wTravelTotal: getRandomInRange(0, 1, 0.05),
+    wTravelFair: getRandomInRange(0, 1, 0.05),
+    wSlot: getRandomInRange(0, 5, 0.5),
+    wShortGap: getRandomInRange(0, 3, 0.25),
+    minGapDays: Math.floor(getRandomInRange(3, 14, 1)),  // integer range
+    ALPHA: getRandomInRange(0.5, 3, 0.1),
+    BETA: getRandomInRange(0.5, 3, 0.1),
+    FRIDAY_NIGHT_LIMIT: Math.floor(getRandomInRange(0, 5, 1)),
+    FRIDAY_NIGHT_PENALTY: getRandomInRange(1, 10, 1),
+    TOP2_MISSED_SLOT_PENALTY: getRandomInRange(0, 25, 5),
+  });
+};
+
+
+  // ----------------------------------------------------------------
+  // 2.4) Fetch Teams
   // ----------------------------------------------------------------
   useEffect(() => {
     if (user && user.role === 'admin') {
@@ -212,7 +300,7 @@ const GenerateFixtures: React.FC = () => {
   }, [user]);
 
   // ----------------------------------------------------------------
-  // 2.4) Handlers
+  // 2.5) Handlers
   // ----------------------------------------------------------------
   const handleTeamSelection = (teamId: string) => {
     setErrorMessage('');
@@ -257,7 +345,7 @@ const GenerateFixtures: React.FC = () => {
   };
 
   // ----------------------------------------------------------------
-  // 2.5) Generate Fixtures
+  // 2.6) Generate Fixtures
   // ----------------------------------------------------------------
   const generateFixtures = async () => {
     if (cancelSource) {
@@ -281,11 +369,12 @@ const GenerateFixtures: React.FC = () => {
       restWeeks: Array.from(selectedRestWeeks)
     };
 
+    // If Unified Scheduler is chosen, add advanced weights & local search
     if (algorithm === 'unifiedScheduler') {
-      payload.lockedHomeAwayMap = {};
-      payload.weights = {};
-      payload.teamsReturnHome = false;
-      payload.runLocalSearch = false;
+      payload.weights = unifiedWeights;
+      payload.runLocalSearch = runLocalSearch;
+      // If you have partialLocks or previousYearHome in your UI,
+      // you can also add them here, e.g. payload.partialLocks = ...
     }
 
     const source = axios.CancelToken.source();
@@ -321,7 +410,7 @@ const GenerateFixtures: React.FC = () => {
   };
 
   // ----------------------------------------------------------------
-  // 2.6) Save Fixtures
+  // 2.7) Save Fixtures
   // ----------------------------------------------------------------
   const saveFixtures = async () => {
     setLoading(true);
@@ -371,7 +460,7 @@ const GenerateFixtures: React.FC = () => {
   }, [modalSaveState]);
 
   // ----------------------------------------------------------------
-  // 2.7) Clear All
+  // 2.8) Clear All
   // ----------------------------------------------------------------
   const handleClearAll = () => {
     setFixtures([]);
@@ -382,7 +471,7 @@ const GenerateFixtures: React.FC = () => {
   };
 
   // ----------------------------------------------------------------
-  // 2.8) Handle Date Change
+  // 2.9) Handle Date Change
   // ----------------------------------------------------------------
   const handleDateChange = (index: number, newDate: string) => {
     setFixtures((prev) => {
@@ -393,7 +482,7 @@ const GenerateFixtures: React.FC = () => {
   };
 
   // ----------------------------------------------------------------
-  // 2.9) Early Return: Unauthorized
+  // 2.10) Early Return: Unauthorized
   // ----------------------------------------------------------------
   if (!user || user.role !== 'admin') {
     return <Navigate to="/unauthorized" replace />;
@@ -532,8 +621,8 @@ const GenerateFixtures: React.FC = () => {
           <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-6 mb-8 space-y-6">
             {/* Season */}
             <div className="flex flex-col items-center">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                Season:
+              <label className="Select text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 text-center">
+                Enter Season:
               </label>
               <input
                 type="number"
@@ -545,7 +634,7 @@ const GenerateFixtures: React.FC = () => {
             </div>
 
             {/* Algorithm Dropdown */}
-            <div className="flex flex-col items-center">
+            {/* <div className="flex flex-col items-center">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                 Algorithm:
               </label>
@@ -569,39 +658,485 @@ const GenerateFixtures: React.FC = () => {
                 <option value="balancedTravel">Balanced Scheduler</option>
                 <option value="unifiedScheduler">Unified Scheduler</option>
               </select>
+            </div> */}
+
+            {/* Algorithm Buttons */}
+            <div className="flex flex-col items-center">
+              <label className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 text-center">
+                Select Algorithm:
+              </label>
+
+              <div className="inline-flex space-x-2">
+                {/* Random */}
+                <button
+                  onClick={() => {
+                    setAlgorithm('random');
+                    setErrorMessage('');
+                    setSelectedTeamIds(new Set());
+                  }}
+                  className={
+                    algorithm === 'random'
+                      ? 'px-4 py-2 bg-blue-600 text-white rounded'
+                      : 'px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded'
+                  }
+                >
+                  Random
+                </button>
+
+                {/* Round 5 Extravaganza */}
+                <button
+                  onClick={() => {
+                    setAlgorithm('round5Extravaganza');
+                    setErrorMessage('');
+                    setSelectedTeamIds(new Set());
+                  }}
+                  className={
+                    algorithm === 'round5Extravaganza'
+                      ? 'px-4 py-2 bg-blue-600 text-white rounded'
+                      : 'px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded'
+                  }
+                >
+                  Round 5 Extravaganza
+                </button>
+
+                {/* Travel Optimized */}
+                <button
+                  onClick={() => {
+                    setAlgorithm('travelOptimized');
+                    setErrorMessage('');
+                    setSelectedTeamIds(new Set());
+                  }}
+                  className={
+                    algorithm === 'travelOptimized'
+                      ? 'px-4 py-2 bg-blue-600 text-white rounded'
+                      : 'px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded'
+                  }
+                >
+                  Travel Optimized
+                </button>
+
+                {/* Balanced Scheduler */}
+                <button
+                  onClick={() => {
+                    setAlgorithm('balancedTravel');
+                    setErrorMessage('');
+                    setSelectedTeamIds(new Set());
+                  }}
+                  className={
+                    algorithm === 'balancedTravel'
+                      ? 'px-4 py-2 bg-blue-600 text-white rounded'
+                      : 'px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded'
+                  }
+                >
+                  Balanced
+                </button>
+
+                {/* Unified Scheduler */}
+                <button
+                  onClick={() => {
+                    setAlgorithm('unifiedScheduler');
+                    setErrorMessage('');
+                    setSelectedTeamIds(new Set());
+                    setShowUnifiedModal(true); // If you need that special modal
+                  }}
+                  className={
+                    algorithm === 'unifiedScheduler'
+                      ? 'px-4 py-2 bg-blue-600 text-white rounded'
+                      : 'px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded'
+                  }
+                >
+                  Unified Scheduler
+                </button>
+              </div>
             </div>
 
-            {/* Rest Weeks (non-unified) */}
-            {algorithm !== 'unifiedScheduler' && (
-              <div className="flex flex-col items-center">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                  Rest Weeks (select up to 3 rounds):
-                </label>
-                <div className="flex flex-wrap gap-4 justify-center mt-2">
-                  {[1, 2, 3, 4, 5].map((round) => (
-                    <button
-                      key={round}
-                      onClick={() => handleRestWeekSelection(round)}
-                      className={`
-                        px-4 py-2 rounded text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors
-                        ${
-                          selectedRestWeeks.has(round)
-                            ? 'bg-blue-600 text-white hover:bg-blue-700'
-                            : 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
-                        }
-                      `}
-                    >
-                      Round {round}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+
+            
+
+            {algorithm === 'unifiedScheduler' && (
+  <div className="mt-4 px-4 py-3 bg-gray-100 dark:bg-gray-800 border rounded-md shadow-sm">
+    <h3 className="text-md font-semibold text-gray-700 dark:text-gray-200 mb-4">
+      Advanced Options for Unified Scheduler
+    </h3>
+
+    {/* Define default weights here (outside or inside the component). */}
+    {/* Also define getRandomInRange (see below snippet). */}
+
+    {/* Local Search Toggle */}
+    <label className="flex items-center space-x-2 mb-4">
+      <input
+        type="checkbox"
+        checked={runLocalSearch}
+        onChange={() => setRunLocalSearch((prev) => !prev)}
+      />
+      <span className="text-gray-700 dark:text-gray-200">
+        Enable Local Search Optimization
+        <TooltipIcon text="Uses extra optimization (simulated annealing) to refine the schedule." />
+      </span>
+    </label>
+
+    {/* Buttons to reset or shuffle weights */}
+    <div className="flex space-x-4 mb-6">
+      <button
+        onClick={resetWeights}
+        className="px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600 transition-colors"
+      >
+        Reset to Default
+      </button>
+      <button
+        onClick={shuffleWeights}
+        className="px-4 py-2 rounded bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+      >
+        Shuffle Weights
+      </button>
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* w1: Consecutive Away Penalty */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          w1: Consec. Away
+          <TooltipIcon text="Penalizes back-to-back away matches. Range 0–3, step=0.5." />
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={3}
+          step={0.5}
+          value={unifiedWeights.w1}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({ ...prev, w1: parseFloat(e.target.value) }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.w1.toFixed(1)}
+        </div>
+      </div>
+
+      {/* w2: Max Travel */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          w2: Max Travel
+          <TooltipIcon text="Focuses on the single team's worst travel. Range 0–2, step=0.1." />
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={2}
+          step={0.1}
+          value={unifiedWeights.w2}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({ ...prev, w2: parseFloat(e.target.value) }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.w2.toFixed(1)}
+        </div>
+      </div>
+
+      {/* w3: Competitiveness */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          w3: Competitive
+          <TooltipIcon text="Pushes big matches later. Range 0–3, step=0.5." />
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={3}
+          step={0.5}
+          value={unifiedWeights.w3}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({ ...prev, w3: parseFloat(e.target.value) }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.w3.toFixed(1)}
+        </div>
+      </div>
+
+      {/* wFri: Friday Broadcast Penalty */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          wFri: Friday Penalty
+          <TooltipIcon text="Discourages extra Friday-night matches. Range 0–5, step=0.5." />
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={5}
+          step={0.5}
+          value={unifiedWeights.wFri}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({ ...prev, wFri: parseFloat(e.target.value) }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.wFri.toFixed(1)}
+        </div>
+      </div>
+
+      {/* wTravelTotal */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          wTravelTotal
+          <TooltipIcon text="Adds cost for overall travel. Range 0–1, step=0.05." />
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={unifiedWeights.wTravelTotal}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({
+              ...prev,
+              wTravelTotal: parseFloat(e.target.value),
+            }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.wTravelTotal.toFixed(2)}
+        </div>
+      </div>
+
+      {/* wTravelFair */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          wTravelFair
+          <TooltipIcon text="Penalizes unequal travel (std dev). Range 0–1, step=0.05." />
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={unifiedWeights.wTravelFair}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({
+              ...prev,
+              wTravelFair: parseFloat(e.target.value),
+            }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.wTravelFair.toFixed(2)}
+        </div>
+      </div>
+
+      {/* wSlot */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          wSlot
+          <TooltipIcon text="Penalizes non-prime times. Range 0–5, step=0.5." />
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={5}
+          step={0.5}
+          value={unifiedWeights.wSlot}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({
+              ...prev,
+              wSlot: parseFloat(e.target.value),
+            }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.wSlot.toFixed(1)}
+        </div>
+      </div>
+
+      {/* wShortGap */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          wShortGap
+          <TooltipIcon text="Short-gap penalty if < minGapDays. Range 0–3, step=0.5." />
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={3}
+          step={0.5}
+          value={unifiedWeights.wShortGap}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({
+              ...prev,
+              wShortGap: parseFloat(e.target.value),
+            }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.wShortGap.toFixed(1)}
+        </div>
+      </div>
+
+      {/* minGapDays */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          minGapDays
+          <TooltipIcon text="Min rest days required. Range 3–14, step=1." />
+        </label>
+        <input
+          type="range"
+          min={3}
+          max={14}
+          step={1}
+          value={unifiedWeights.minGapDays}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({
+              ...prev,
+              minGapDays: parseInt(e.target.value),
+            }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.minGapDays}
+        </div>
+      </div>
+
+      {/* ALPHA */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          ALPHA
+          <TooltipIcon text="In match interest: ALPHA*(6 - diff). Range 0.5–3, step=0.1." />
+        </label>
+        <input
+          type="range"
+          min={0.5}
+          max={3}
+          step={0.1}
+          value={unifiedWeights.ALPHA}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({
+              ...prev,
+              ALPHA: parseFloat(e.target.value),
+            }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.ALPHA.toFixed(1)}
+        </div>
+      </div>
+
+      {/* BETA */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          BETA
+          <TooltipIcon text="In match interest: BETA*(12 - sum). Range 0.5–3, step=0.1." />
+        </label>
+        <input
+          type="range"
+          min={0.5}
+          max={3}
+          step={0.1}
+          value={unifiedWeights.BETA}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({
+              ...prev,
+              BETA: parseFloat(e.target.value),
+            }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.BETA.toFixed(1)}
+        </div>
+      </div>
+
+      {/* FRIDAY_NIGHT_LIMIT */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          Friday Limit
+          <TooltipIcon text="Max # of Friday matches allowed. Range 0–5, step=1." />
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={5}
+          step={1}
+          value={unifiedWeights.FRIDAY_NIGHT_LIMIT}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({
+              ...prev,
+              FRIDAY_NIGHT_LIMIT: parseInt(e.target.value),
+            }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.FRIDAY_NIGHT_LIMIT}
+        </div>
+      </div>
+
+      {/* FRIDAY_NIGHT_PENALTY */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          Fri Penalty
+          <TooltipIcon text="Penalty if we exceed that Friday limit. Range 1–10, step=1." />
+        </label>
+        <input
+          type="range"
+          min={1}
+          max={10}
+          step={1}
+          value={unifiedWeights.FRIDAY_NIGHT_PENALTY}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({
+              ...prev,
+              FRIDAY_NIGHT_PENALTY: parseFloat(e.target.value),
+            }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.FRIDAY_NIGHT_PENALTY.toFixed(1)}
+        </div>
+      </div>
+
+      {/* TOP2_MISSED_SLOT_PENALTY */}
+      <div>
+        <label className="text-sm font-medium flex items-center mb-1 text-gray-700 dark:text-gray-200">
+          #1 vs #2 Penalty
+          <TooltipIcon text="Penalty if top-2 match not in Round 5 final slot. Range 0–25, step=5." />
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={25}
+          step={5}
+          value={unifiedWeights.TOP2_MISSED_SLOT_PENALTY}
+          onChange={(e) =>
+            setUnifiedWeights((prev) => ({
+              ...prev,
+              TOP2_MISSED_SLOT_PENALTY: parseFloat(e.target.value),
+            }))
+          }
+          className="w-full"
+        />
+        <div className="mt-1 text-center text-gray-700 dark:text-gray-200">
+          {unifiedWeights.TOP2_MISSED_SLOT_PENALTY.toFixed(0)}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
             {/* Teams */}
             <div>
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 text-center">
-                Select 6 Teams
+                Select 6 Teams:
               </h3>
               {errorMessage && (
                 <p className="text-red-600 mb-2 text-center">{errorMessage}</p>
@@ -836,63 +1371,81 @@ const GenerateFixtures: React.FC = () => {
           </div>
         )}
 
-        {/* Unified Scheduler Info */}
-        {showUnifiedModal && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-            aria-modal="true"
-            tabIndex={-1}
+{showUnifiedModal && (
+  <div
+    className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="unified-modal-title"
+    aria-describedby="unified-modal-description"
+    tabIndex={-1}
+    onClick={(e) => {
+      // (Optional) close if clicking on backdrop
+      if (e.target === e.currentTarget) {
+        setShowUnifiedModal(false);
+      }
+    }}
+  >
+    {/* Increase max-width to make the modal wider */}
+    <div className="relative w-full max-w-3xl max-h-full bg-white dark:bg-gray-700 rounded-lg shadow-sm">
+      <div className="flex items-center justify-between p-4 md:p-5 border-b border-gray-200 dark:border-gray-600 rounded-t">
+        <h3
+          id="unified-modal-title"
+          className="text-xl font-semibold text-gray-900 dark:text-white"
+        >
+          Rest Weeks Hidden
+        </h3>
+        <button
+          onClick={() => setShowUnifiedModal(false)}
+          type="button"
+          className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900
+                     rounded-lg text-sm w-8 h-8 ml-auto flex items-center
+                     justify-center dark:hover:bg-gray-600 dark:hover:text-white"
+          aria-label="Close"
+        >
+          <svg
+            className="w-3 h-3"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 14 14"
           >
-            <div className="relative p-4 w-full max-w-2xl max-h-full">
-              <div className="relative bg-white rounded-lg shadow-sm dark:bg-gray-700">
-                <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600 border-gray-200">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Rest Weeks Hidden
-                  </h3>
-                  <button
-                    onClick={() => setShowUnifiedModal(false)}
-                    type="button"
-                    className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    <svg
-                      className="w-3 h-3"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 14 14"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                      />
-                    </svg>
-                    <span className="sr-only">Close modal</span>
-                  </button>
-                </div>
-                <div className="p-4 md:p-5 space-y-4">
-                  <p className="text-base leading-relaxed text-gray-500 dark:text-gray-400">
-                    Rest weeks have been hidden because the unified scheduler places rest
-                    weeks based on a cost function and penalty system. The rest weeks have
-                    been strategically placed to alleviate travel fatigue for teams who
-                    may be consecutively traveling or having to travel long distances.
-                  </p>
-                </div>
-                <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
-                  <button
-                    onClick={() => setShowUnifiedModal(false)}
-                    type="button"
-                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-                  >
-                    I Understand
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+            <path
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Increase text size to text-lg */}
+      <div id="unified-modal-description" className="p-4 md:p-5 space-y-4 text-lg">
+        <p className="leading-relaxed text-gray-500 dark:text-gray-400">
+          Rest weeks have been hidden because the unified scheduler places rest
+          weeks based on a cost function and penalty system. The rest weeks have
+          been strategically placed to alleviate travel fatigue for teams who
+          may be consecutively traveling or traveling long distances.
+        </p>
+      </div>
+
+      {/* Move the button to the right using justify-end */}
+      <div className="flex items-center p-4 md:p-5 border-t border-gray-200 dark:border-gray-600 rounded-b justify-end">
+        <button
+          onClick={() => setShowUnifiedModal(false)}
+          type="button"
+          className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none
+                     focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5
+                     text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+        >
+          I Understand
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
         {/* Confirm Modal for saving */}
         {modalSaveState && (

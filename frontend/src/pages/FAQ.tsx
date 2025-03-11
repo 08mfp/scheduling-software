@@ -166,22 +166,27 @@ const FAQ: React.FC = () => {
           </p>
         </div>
 
-          {/* Quick Links (Interactive Tabs/Pills) */}
-          <div className="mb-8">
-            <ul className="flex flex-wrap space-x-4">
+        <br></br>
+
+            {/* Quick Links (Interactive Tabs/Pills) */}
+            <div className="mb-8">
+            <div className="flex items-center space-x-4">
+              <span className="text-blue-600 dark:text-blue-400  duration-200 font-semibold">Quick Links:</span>
+              <ul className="flex flex-wrap space-x-4">
               {quickLinks.map(link => (
                 <li key={link.id}>
-                  <a
-                    href={`#${link.id}`}
-                    onClick={(e) => handleQuickLinkClick(link.id, e)}
-                    className="text-blue-600 dark:text-blue-400 hover:underline transform hover:scale-105 transition duration-200"
-                  >
-                    {link.label}
-                  </a>
+                <a
+                  href={`#${link.id}`}
+                  onClick={(e) => handleQuickLinkClick(link.id, e)}
+                  className="text-blue-600 dark:text-blue-400 hover:underline transform hover:scale-105 transition duration-200"
+                >
+                  {link.label}
+                </a>
                 </li>
               ))}
-            </ul>
-          </div>
+              </ul>
+            </div>
+            </div>
 
           {/* Inner Content Container */}
           <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-6 mb-8 space-y-6">
@@ -193,7 +198,7 @@ const FAQ: React.FC = () => {
             >
               <p>
                 The scheduling software optimizes fixture creation by analyzing parameters such as team availability,
-                venues, and historical performance. It automates schedule generation while allowing manual adjustments.
+                venues, and historical performance. It automates schedule generation while allowing manual adjustments to dates & times. Once a schedule is generated, you cannot modify indiivdual fixtures as this could violate Six Nation Contstraints.
               </p>
             </AccordionItem>
             <AccordionItem
@@ -203,15 +208,42 @@ const FAQ: React.FC = () => {
               onToggle={() => toggleAccordion('auto-scheduler')}
             >
               <p className="mb-4">
-                The automatic schedule generator offers four distinct scheduling modes:
+                The automatic schedule generator offers five distinct scheduling modes:
               </p>
               <ul className="list-disc list-inside space-y-2">
-                <li><strong>Algorithm 1:</strong> [Description of Algorithm 1]</li>
-                <li><strong>Algorithm 2:</strong> [Description of Algorithm 2]</li>
-                <li><strong>Algorithm 3:</strong> [Description of Algorithm 3]</li>
-                <li><strong>Algorithm 4:</strong> [Description of Algorithm 4]</li>
+                <li><strong>Algorithm 1 (Random Scheduler): </strong> Generates random, constraint-respecting schedules with fair rotations.</li>
+                <li><strong>Algorithm 2 (Round 5 Extravaganza Scheduler):</strong> Places top-ranked matchups in the final rounds for maximum excitement.</li>
+                <li><strong>Algorithm 3 (Optimized Travel Scheduler):</strong> Reduces total tournament travel distance through optimization.</li>
+                <li><strong>Algorithm 4 (Balanced Travel Scheduler):</strong> Ensures equal travel distances among teams.</li>
+                <li><strong>Algorithm 5 (Unified Optimized Scheduler):</strong> Optimizes fixtures using a comprehensive cost function for fairness and excitement.</li>
               </ul>
             </AccordionItem>
+            <AccordionItem
+              id="unified-scheduler"
+              title="Unified Optimized Scheduler Explained"
+              isOpen={openAccordions['unified-scheduler']}
+              onToggle={() => toggleAccordion('unified-scheduler')}
+            >
+              <p className="mb-4">
+                The Unified Optimized Scheduler strategically assigns Six Nations rugby fixtures by minimizing a comprehensive cost function with the following weights:
+              </p>
+              {/* <p className="mb-2 font-semibold">Adjustable weights and tuning:</p> */}
+              <ul className="list-disc list-inside space-y-2">
+                <li><strong>w1 (Consecutive Away Penalty, default 1.0):</strong> Increase to strongly discourage scheduling teams for consecutive away matches.</li>
+                <li><strong>w2 (Max Travel, default 0.1):</strong> Adjust higher to avoid placing excessive travel demands on any single team.</li>
+                <li><strong>w3 (Competitiveness, default 1.0):</strong> Raise to ensure high-profile matches occur later in the tournament, maximizing excitement.</li>
+                <li><strong>wFri (Broadcast Penalty, default 2.0):</strong> Increase to limit the number of Friday-night matches, penalizing schedules exceeding the set Friday-night limit.</li>
+                <li><strong>top2missedSlotPenalty (default 15.0):</strong> Set high to strictly enforce the prime-time scheduling of the #1 vs. #2 matchup in Round 5.</li>
+                <li><strong>wTravelTotal (Overall Travel, default 0.05):</strong> Adjust higher if overall tournament travel distance should be minimized.</li>
+                <li><strong>wTravelFair (Travel Fairness, default 0.05):</strong> Increase to reduce disparities in travel distance among teams, promoting fairness.</li>
+                <li><strong>wShortGap (Short-Gap Penalty, default 0.5):</strong> Increase to penalize schedules with insufficient rest periods between matches.</li>
+                <li><strong>α & β (Competitiveness Formula, defaults 1 & 2):</strong> Determins how "big matches" are identified based on team rankings (difference vs. sum of ranks).</li>
+              </ul>
+              <p className="mt-4">
+                To tune the scheduler, run multiple scenarios with different weight combinations, review outcomes, and adjust according to your specific priorities.
+              </p>
+            </AccordionItem>
+
             <AccordionItem
               id="manual-scheduler"
               title="Manual Scheduler"
@@ -220,7 +252,8 @@ const FAQ: React.FC = () => {
             >
               <p>
                 The manual scheduler provides live trackers and checkers to build schedules from scratch,
-                giving you complete flexibility to adjust fixtures in real time.
+                giving you complete flexibility to adjust fixtures in real time. It offers the most customization in terms of creating fixtures, 
+                and allows you to determiine the order of the fixtures, the dates, and the times (as long as they follow all the rules).
               </p>
             </AccordionItem>
             <AccordionItem
@@ -230,8 +263,9 @@ const FAQ: React.FC = () => {
               onToggle={() => toggleAccordion('teams-ranking')}
             >
               <p>
-                Update the rankings of the six nations to ensure that the scheduling algorithm produces fair
-                and accurate fixtures based on current team performance.
+                The Teams ranking interface allows you to update the rankings of the six nations to ensure that the scheduling algorithm produces fair
+                and accurate fixtures based on current team performance. The team rankings are used in the Round 5 Extravaganza Scheduler to ensure that the top teams play each other in the final rounds, 
+                and is also used in the Unified Scheduler to build excitement as the tournament progresses.
               </p>
             </AccordionItem>
             <AccordionItem
@@ -241,8 +275,8 @@ const FAQ: React.FC = () => {
               onToggle={() => toggleAccordion('admin-panel')}
             >
               <p>
-                The Admin Panel grants access to all registered users, allowing you to view, edit, and manage
-                user accounts and roles efficiently.
+                The Admin Panel grants access to all registered users, managers, & admins, allowing you to view, edit, manage, and delete
+                accounts and roles effectively.
               </p>
             </AccordionItem>
             <AccordionItem
@@ -252,7 +286,9 @@ const FAQ: React.FC = () => {
               onToggle={() => toggleAccordion('troubleshooting')}
             >
               <p>
-              Lorem Ipsum Something I need to add stuff here once everything else is finished.
+              If automatic schedules fail to generate, verify that constraints and input data (teams, venues, dates) are accurate and feasible. 
+              For manual scheduling, use provided live trackers and feedback tools to identify infeasible fixture combinations, 
+              and backtrack to resolve issues. For login or permission problems, check your assigned user role and access permissions.
               </p>
             </AccordionItem>
             <AccordionItem
@@ -262,7 +298,8 @@ const FAQ: React.FC = () => {
               onToggle={() => toggleAccordion('user-management')}
             >
               <p>
-              Lorem Ipsum Something I need to add stuff here once everything else is finished.
+              Admins can run scheduling algorithms and alter any data stored in the backend. Admins can also add, edit, or remove users, assign roles, and control access permissions. 
+              Regular users can manage their profiles and preferences but have restricted system access (they can only view the schedules and other data).
               </p>
             </AccordionItem>
             <AccordionItem
@@ -272,7 +309,8 @@ const FAQ: React.FC = () => {
               onToggle={() => toggleAccordion('contact-support')}
             >
               <p>
-                Lorem Ipsum Something I need to add stuff here once everything else is finished.
+                If you run into any issues or have questions about the scheduling software, or if you notice any instance where a rule is being violated, 
+                please contact our support team using the contact form, and we will aim to reply within 24 hours 
               </p>
             </AccordionItem>
           </div>

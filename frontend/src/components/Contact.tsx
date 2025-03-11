@@ -393,10 +393,10 @@ const Contact: React.FC = () => {
                 Email
               </h3>
               <a
-                href="mailto:contact@example.com"
+                href="mailto:info@sixnations.com"
                 className="text-lg text-gray-700 dark:text-gray-300 hover:underline"
               >
-                contact@example.com
+                info@sixnations.com
               </a>
             </div>
 
@@ -410,7 +410,7 @@ const Contact: React.FC = () => {
                 href="tel:+1234567890"
                 className="text-lg text-gray-700 dark:text-gray-300 hover:underline"
               >
-                +1 (234) 567-890
+                +44 (111) 111-1111
               </a>
             </div>
 
@@ -421,14 +421,13 @@ const Contact: React.FC = () => {
                 Our Offices
               </h3>
               <a
-                href="https://goo.gl/maps/example"
+                href="https://goo.gl/maps/universityofmanchester"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-lg text-gray-700 dark:text-gray-300 hover:underline"
               >
-                1234 Main Street <br />
-                City, State, ZIP Code <br />
-                Country
+                123 Rugby Way <br></br>
+                London, UK
               </a>
             </div>
 

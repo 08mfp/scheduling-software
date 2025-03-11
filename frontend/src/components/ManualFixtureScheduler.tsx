@@ -1050,13 +1050,13 @@ function getWeekend(d: Date): string {
       <div className="max-w-7xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300">
         {/* TITLE, DESCRIPTION & SEASON PICKER */}
         <div className="text-left mb-6">
-        <h2
+        {/* <h2
           className="font-extrabold text-gray-900 dark:text-gray-100 mb-2"
           style={{ fontSize: '34px' }}
         >
           Manual Fixture Scheduler
-        </h2>
-        <p
+        </h2> */}
+        {/* <p
           className="text-gray-600 dark:text-gray-300 mb-2"
           style={{ fontSize: '16px' }}
         >
@@ -1068,7 +1068,19 @@ function getWeekend(d: Date): string {
           style={{ fontSize: '12px' }}
         >
           Note: Because scheduling is sequential, some combinations might later prove infeasible. In such cases, feedback is provided to help you backtrack and correct errors.
-        </p>
+        </p> */}
+          <h2 className="font-extrabold text-gray-900 dark:text-gray-100 mb-2 text-3xl">
+                  Manual Fixture Scheduler
+          </h2>
+          <p className="text-gray-700 dark:text-gray-300 mb-2 text-base">
+          This interface allows you to manually schedule your fixtures using an interactive interface with a live tracker that ensures every round is fully scheduled and adheres to Six Nations rules. 
+          Benefit from real-time constraint checking and handy suggestion buttons that offer valid matchups to fill any gaps in your schedule.
+          </p>
+          <br />
+          <p className="text-gray-500 dark:text-gray-400 italic text-xs">
+          Note: Because scheduling is sequential, some combinations might later prove infeasible. In such cases, feedback is provided to help you backtrack and correct errors.
+          </p>
+          <br />
 
 
       </div>

@@ -1,4 +1,3 @@
-// backend/controllers/provisionalFixtureController.js
 /**
  * @module backend/controllers/provisionalFixtureController
  * @description This file contains controller functions for managing provisional fixtures.
@@ -6,7 +5,6 @@
  * Now includes the option for rest weeks.
  * @api ManualFixture
  * @version 1.1.0
- * @authors github.com/08mfp
  */
 
 const ProvisionalFixture = require('../models/ProvisionalFixture');
@@ -18,9 +16,7 @@ const { generateRandomFixtures } = require('../algorithms/randomAlgorithm');
 const { generateRound5ExtravaganzaFixtures } = require('../algorithms/round5Extravaganza');
 const { generateTravelOptimizedFixtures } = require('../algorithms/travelOptimizedScheduler');
 const { generateStandardDeviationBalancedFixtures } = require('../algorithms/travelBalancedScheduler');
-// const { generateBalancedTravelFixtures } = require('../algorithms/balancedTravelScheduler');
 const { generateComprehensiveFairFixtures } = require('../algorithms/unifiedScheduler');
-
 
 /**
  * @desc    Generate provisional fixtures
@@ -29,13 +25,21 @@ const { generateComprehensiveFairFixtures } = require('../algorithms/unifiedSche
  */
 exports.generateProvisionalFixtures = async (req, res) => {
   try {
-    const { algorithm, season, teams: selectedTeamIds, restWeeks } = req.body;
+    const {
+      algorithm,
+      season,
+      teams: selectedTeamIds,
+      restWeeks
+    } = req.body;
 
-    // Clear existing provisional fixtures for the selected season.
+    // Clear existing provisional fixtures for the selected season
     await ProvisionalFixture.deleteMany({ season });
 
     let result;
 
+    // -------------------------------------------------------------
+    // 1) Random Algorithm
+    // -------------------------------------------------------------
     if (algorithm === 'random') {
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
@@ -44,36 +48,44 @@ exports.generateProvisionalFixtures = async (req, res) => {
       }
 
       const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
-
       if (teams.length !== 6) {
         return res
           .status(400)
-          .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
+          .json({ message: 'Some selected teams could not be found. Check team IDs.' });
       }
 
-      // Sort teams by ranking.
+      // Sort teams by ranking (lowest rank => best rank)
       teams.sort((a, b) => a.teamRanking - b.teamRanking);
 
-      // Pass restWeeks to generateRandomFixtures.
+      // Generate using your random algorithm
       result = await generateRandomFixtures(teams, season, restWeeks);
-    } else if (algorithm === 'round5Extravaganza') {
+    }
+
+    // -------------------------------------------------------------
+    // 2) Round 5 Extravaganza
+    // -------------------------------------------------------------
+    else if (algorithm === 'round5Extravaganza') {
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
           .status(400)
-          .json({ message: 'Exactly 6 teams must be selected for the Round 5 Extravaganza algorithm.' });
+          .json({ message: 'Exactly 6 teams must be selected for Round 5 Extravaganza.' });
       }
 
       const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
-
       if (teams.length !== 6) {
         return res
           .status(400)
-          .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
+          .json({ message: 'Some selected teams could not be found. Check team IDs.' });
       }
 
       teams.sort((a, b) => a.teamRanking - b.teamRanking);
       result = await generateRound5ExtravaganzaFixtures(teams, season, restWeeks);
-    } else if (algorithm === 'travelOptimized') {
+    }
+
+    // -------------------------------------------------------------
+    // 3) Travel Optimized
+    // -------------------------------------------------------------
+    else if (algorithm === 'travelOptimized') {
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
           .status(400)
@@ -81,15 +93,19 @@ exports.generateProvisionalFixtures = async (req, res) => {
       }
 
       const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
-
       if (teams.length !== 6) {
         return res
           .status(400)
-          .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
+          .json({ message: 'Some selected teams could not be found. Check team IDs.' });
       }
 
       result = await generateTravelOptimizedFixtures(teams, season, restWeeks);
-    } else if (algorithm === 'balancedTravel') {
+    }
+
+    // -------------------------------------------------------------
+    // 4) Balanced Travel (Standard Deviation Minimizer)
+    // -------------------------------------------------------------
+    else if (algorithm === 'balancedTravel') {
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
           .status(400)
@@ -97,18 +113,19 @@ exports.generateProvisionalFixtures = async (req, res) => {
       }
 
       const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
-
       if (teams.length !== 6) {
         return res
           .status(400)
-          .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
+          .json({ message: 'Some selected teams could not be found. Check team IDs.' });
       }
 
       result = await generateStandardDeviationBalancedFixtures(teams, season, restWeeks);
-    } 
-    
+    }
+
+    // -------------------------------------------------------------
+    // 5) Unified Scheduler
+    // -------------------------------------------------------------
     else if (algorithm === 'unifiedScheduler') {
-      // Validate teams for the new unified scheduler.
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
           .status(400)
@@ -116,61 +133,53 @@ exports.generateProvisionalFixtures = async (req, res) => {
       }
 
       const teams = await Team.find({ _id: { $in: selectedTeamIds } }).populate('stadium');
-
       if (teams.length !== 6) {
         return res
           .status(400)
-          .json({ message: 'Some selected teams could not be found. Please ensure all team IDs are correct.' });
+          .json({ message: 'Some selected teams could not be found. Check team IDs.' });
       }
 
       teams.sort((a, b) => a.teamRanking - b.teamRanking);
 
-      // Additional options for unified scheduler.
-      // const lockedHomeAwayMap = req.body.lockedHomeAwayMap || null;
-      // const weights = req.body.weights || {};
-      // const teamsReturnHome = req.body.teamsReturnHome || false;
-      // const runLocalSearch = req.body.runLocalSearch || false;
-
-      const weights = req.body.weights || {};  // If you want custom cost weights
-      const runLocalSearch = req.body.runLocalSearch || false;
-      const partialLocks = req.body.partialLocks || {};        // or lockedHomeAwayMap, etc.
+      // Extract additional parameters if provided
+      // (1) Weighted parameters from the client
+      const weights = req.body.weights || {};
+      // (2) Local search flag
+      const runLocalSearch = !!req.body.runLocalSearch;
+      // (3) partialLocks or previousYearHome, if used
+      const partialLocks = req.body.partialLocks || {};
       const previousYearHome = req.body.previousYearHome || {};
 
+      // Build options object
       const options = {
         partialLocks,
         previousYearHome,
-        runLocalSearch, // or any other flags
-        // Possibly userSelectedPattern or anything else
+        runLocalSearch,
       };
 
+      // Generate using the comprehensive fair scheduler
       result = await generateComprehensiveFairFixtures(
         teams,
         season,
-        restWeeks,   // This is your requestedRestCount
+        restWeeks,   // requestedRestCount from client
         weights,
-        options      // The object that includes partialLocks, previousYearHome, etc.
+        options
       );
-      
-
-      // result = await generateComprehensiveFairFixtures(
-      //   teams,
-      //   season,
-      //   restWeeks,            // requestedRestCount from client
-      //   lockedHomeAwayMap,
-      //   weights,
-      //   teamsReturnHome,
-      //   runLocalSearch
-      // );
     }
-    
+
+    // -------------------------------------------------------------
+    // If no matching algorithm
+    // -------------------------------------------------------------
     else {
-      return res.status(400).json({ message: 'Algorithm not implemented' });
+      return res.status(400).json({ message: 'Algorithm not implemented.' });
     }
 
-    // Save provisional fixtures to the database.
+    // -------------------------------------------------------------
+    // Save provisional fixtures to the DB
+    // -------------------------------------------------------------
     await ProvisionalFixture.insertMany(result.fixtures);
 
-    // Populate fixtures for response.
+    // Populate for response
     const populatedFixtures = await ProvisionalFixture.find({ season })
       .populate('homeTeam', 'teamName')
       .populate('awayTeam', 'teamName')
@@ -206,7 +215,7 @@ exports.getProvisionalFixtures = async (req, res) => {
 };
 
 /**
- * @desc    Save provisional fixtures to main fixtures collection/database
+ * @desc    Save provisional fixtures to main Fixtures collection
  * @route   POST /api/provisional-fixtures/save
  * @access  Private (Admin only)
  */
@@ -214,7 +223,7 @@ exports.saveProvisionalFixtures = async (req, res) => {
   try {
     const { season } = req.body;
 
-    // Delete existing fixtures for the season.
+    // Delete existing fixtures for that season
     await Fixture.deleteMany({ season });
 
     const provisionalFixtures = await ProvisionalFixture.find({ season });
@@ -231,7 +240,7 @@ exports.saveProvisionalFixtures = async (req, res) => {
 
     await Fixture.insertMany(fixturesData);
 
-    // Clear provisional fixtures.
+    // Clear provisional fixtures after saving
     await ProvisionalFixture.deleteMany({ season });
 
     res.status(200).json({ message: 'Fixtures saved' });
@@ -242,7 +251,7 @@ exports.saveProvisionalFixtures = async (req, res) => {
 };
 
 /**
- * @desc    Clear all provisional fixtures.
+ * @desc    Clear all provisional fixtures
  * @route   DELETE /api/provisional-fixtures
  * @access  Private (Admin only)
  */

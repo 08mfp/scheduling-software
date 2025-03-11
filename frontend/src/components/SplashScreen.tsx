@@ -61,7 +61,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
             <h2
               id="splashTitle"
               className="text-3xl md:text-4xl font-extrabold  
-                         text-black dark:text-white inline-block px-4 py-2 rounded-md shadow-lg"
+                         text-black dark:text-white inline-block px-4 py-2 rounded-md "
             >
               Generate Fixtures
             </h2>

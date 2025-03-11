@@ -220,7 +220,7 @@ const About: React.FC = () => {
                 </h2>
               </div>
               <p className="text-gray-700 dark:text-gray-300">
-                Keep track of the latest fixtures, match schedules, and real-time scores.
+                Keep track of the latest fixtures, match schedules, and past scores.
                 Never miss a moment of the action!
               </p>
             </div>
@@ -233,7 +233,7 @@ const About: React.FC = () => {
               </div>
               <p className="text-gray-700 dark:text-gray-300">
                 Dive into detailed information about all six teams, including player stats,
-                world rankings, and performance history.
+                world rankings, more!
               </p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md transition-transform transform hover:scale-105 duration-300">
@@ -244,8 +244,7 @@ const About: React.FC = () => {
                 </h2>
               </div>
               <p className="text-gray-700 dark:text-gray-300">
-                Explore the iconic stadiums hosting the games, complete with seating
-                arrangements and travel tips.
+                Explore the iconic stadiums hosting the games, complete with an interactive map.
               </p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md transition-transform transform hover:scale-105 duration-300">
@@ -257,7 +256,7 @@ const About: React.FC = () => {
               </div>
               <p className="text-gray-700 dark:text-gray-300">
                 Relive the unforgettable moments of previous tournaments with
-                comprehensive records and results.
+                past records and results.
               </p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md transition-transform transform hover:scale-105 duration-300">
@@ -268,7 +267,7 @@ const About: React.FC = () => {
                 </h2>
               </div>
               <p className="text-gray-700 dark:text-gray-300">
-                Stay updated with player profiles, career stats, and standout
+                Stay updated with player profiles, stats, and 
                 performances throughout the tournament.
               </p>
             </div>
@@ -302,7 +301,7 @@ const About: React.FC = () => {
               <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
                 Mohamed Farid
               </h3>
-              <p className="text-gray-600 dark:text-gray-300">CEO, CFO, CTO, COO</p>
+              {/* <p className="text-gray-600 dark:text-gray-300">CEO, CFO, CTO, COO</p> */}
               <p className="text-gray-700 dark:text-gray-300">
                 Computer Science student at The University of Manchester.
               </p>
