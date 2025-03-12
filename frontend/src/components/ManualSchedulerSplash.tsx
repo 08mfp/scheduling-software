@@ -10,15 +10,12 @@ interface ManualSchedulerSplashProps {
 
 const ManualSchedulerSplash: React.FC<ManualSchedulerSplashProps> = ({ show, onClose }) => {
   const modalRef = useRef<HTMLDivElement | null>(null);
-
-  // Separate tooltip states for each of the 5 features
   const [showManualTooltip, setShowManualTooltip] = useState(false);
   const [showLiveTrackerTooltip, setShowLiveTrackerTooltip] = useState(false);
   const [showTeamTrackerTooltip, setShowTeamTrackerTooltip] = useState(false);
   const [showAutoHomeTooltip, setShowAutoHomeTooltip] = useState(false);
   const [showIntelligentTooltip, setShowIntelligentTooltip] = useState(false);
 
-  // Close modal on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -27,7 +24,6 @@ const ManualSchedulerSplash: React.FC<ManualSchedulerSplashProps> = ({ show, onC
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // If not showing, don't render anything
   if (!show) return null;
 
   return createPortal(
@@ -46,7 +42,6 @@ const ManualSchedulerSplash: React.FC<ManualSchedulerSplashProps> = ({ show, onC
                      rounded-lg shadow-2xl max-w-4xl w-full p-8 transform scale-100
                      transition-transform duration-300"
         >
-          {/* Close Button */}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-gray-700 dark:text-gray-300 hover:text-red-500 
@@ -56,7 +51,6 @@ const ManualSchedulerSplash: React.FC<ManualSchedulerSplashProps> = ({ show, onC
             <FaTimes size={20} />
           </button>
 
-          {/* Title Banner */}
           <div className="text-center mb-6">
             <h2
               id="manualSplashTitle"
@@ -73,18 +67,14 @@ const ManualSchedulerSplash: React.FC<ManualSchedulerSplashProps> = ({ show, onC
             </p>
           </div>
 
-          {/* Intro Paragraph */}
           <p className="text-center text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
             This interface allows you to manually schedule rugby fixtures exactly
             how you want across all tournament rounds. Arrange matchups flexibly while ensuring
             every round meets the official Six Nations rules.
           </p>
 
-          {/* 2x2 grid for first 4 features */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Card 1 - Manual Scheduling */}
             <div className="relative bg-gray-100 dark:bg-gray-700 p-6 rounded-md shadow">
-              {/* Info Icon (top-right) */}
               <div
                 className="absolute top-3 right-3 cursor-pointer"
                 onMouseEnter={() => setShowManualTooltip(true)}
@@ -127,7 +117,6 @@ const ManualSchedulerSplash: React.FC<ManualSchedulerSplashProps> = ({ show, onC
               </p>
             </div>
 
-            {/* Card 2 - Live Constraint Trackers */}
             <div className="relative bg-gray-100 dark:bg-gray-700 p-6 rounded-md shadow">
               <div
                 className="absolute top-3 right-3 cursor-pointer"
@@ -172,7 +161,6 @@ const ManualSchedulerSplash: React.FC<ManualSchedulerSplashProps> = ({ show, onC
               </p>
             </div>
 
-            {/* Card 3 - Team and Fixture Trackers */}
             <div className="relative bg-gray-100 dark:bg-gray-700 p-6 rounded-md shadow">
               <div
                 className="absolute top-3 right-3 cursor-pointer"
@@ -217,7 +205,6 @@ const ManualSchedulerSplash: React.FC<ManualSchedulerSplashProps> = ({ show, onC
               </p>
             </div>
 
-            {/* Card 4 - Automatic Home/Away */}
             <div className="relative bg-gray-100 dark:bg-gray-700 p-6 rounded-md shadow">
               <div
                 className="absolute top-3 right-3 cursor-pointer"
@@ -263,7 +250,6 @@ const ManualSchedulerSplash: React.FC<ManualSchedulerSplashProps> = ({ show, onC
             </div>
           </div>
 
-          {/* Single wide card - Intelligent Suggestions & Backtracking */}
           <div className="relative bg-gray-100 dark:bg-gray-700 p-6 rounded-md shadow mt-6">
             <div
               className="absolute top-3 right-3 cursor-pointer"
@@ -308,7 +294,6 @@ const ManualSchedulerSplash: React.FC<ManualSchedulerSplashProps> = ({ show, onC
             </p>
           </div>
 
-          {/* Dismiss button at bottom */}
           <div className="mt-8 text-center">
             <button
               onClick={onClose}

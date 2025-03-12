@@ -23,24 +23,16 @@ const StadiumForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user } = useContext(AuthContext);
-
-  // currentAction: 'create' | 'update'
   const [currentAction, setCurrentAction] = useState<'create' | 'update' | null>(null);
-
-  // modalState: 'loading' | 'success' | 'error' | null
   const [modalState, setModalState] = useState<'loading' | 'success' | 'error' | null>(null);
-
-  // Countdown for success auto-close
   const [countdown, setCountdown] = useState<number>(3);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
-
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (user && user.role === 'admin') {
       if (id) {
-        // Update existing stadium
         setCurrentAction('update');
         axios
           .get<Stadium>(`${BACKEND_URL}/api/stadiums/${id}`)
@@ -52,7 +44,6 @@ const StadiumForm: React.FC = () => {
             setError('Failed to load stadium details. Please try again later.');
           });
       } else {
-        // Create new stadium
         setCurrentAction('create');
       }
     }
@@ -75,11 +66,9 @@ const StadiumForm: React.FC = () => {
 
     try {
       if (id) {
-        // Update existing stadium
         await axios.put(`${BACKEND_URL}/api/stadiums/${id}`, stadium);
         setModalState('success');
       } else {
-        // Create new stadium
         await axios.post(`${BACKEND_URL}/api/stadiums`, stadium);
         setModalState('success');
       }
@@ -123,7 +112,6 @@ const StadiumForm: React.FC = () => {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Determine success message based on action
   let successTitle = 'Success';
   let successMessage = 'Action completed successfully.';
   if (currentAction === 'create') {
@@ -134,10 +122,8 @@ const StadiumForm: React.FC = () => {
     successMessage = 'The stadium has been updated successfully.';
   }
 
-  // modalTitle & modalMessage based on modalState
   let modalTitle = '';
   let modalMessage = '';
-
   if (modalState === 'loading') {
     modalTitle = 'Processing...';
     modalMessage =
@@ -162,7 +148,6 @@ const StadiumForm: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8">
-        {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2 mb-6">
           <a href="/stadiums" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
             <FaHome className="mr-1" />
@@ -185,7 +170,6 @@ const StadiumForm: React.FC = () => {
           )}
         </div>
 
-        {/* Header */}
         <div className="flex flex-col items-center mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
             {id ? 'Edit Stadium' : 'Add New Stadium'}
@@ -216,7 +200,6 @@ const StadiumForm: React.FC = () => {
           )}
         </div>
 
-        {/* Form */}
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
@@ -329,7 +312,6 @@ const StadiumForm: React.FC = () => {
             </select>
           </div>
 
-          {/* Form Buttons */}
           <div className="flex items-center justify-between mt-6">
             <a href="/stadiums" className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center">
               <FaArrowLeft className="mr-1" />
@@ -388,7 +370,6 @@ const StadiumForm: React.FC = () => {
         </form>
       </div>
 
-      {/* Loading/Success/Error Modal (No Confirm Step) */}
       <ConfirmModal
         isOpen={modalState !== null}
         type={modalState || 'loading'}

@@ -12,16 +12,12 @@ const PlayerDetail: React.FC = () => {
   const [player, setPlayer] = useState<Player | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-
-  // Modal state: 'confirm' | 'loading' | 'success' | 'error' | null
   const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success' | 'error' | null>(null);
   const [countdown, setCountdown] = useState<number>(3);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
-
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' || false;
@@ -51,7 +47,6 @@ const PlayerDetail: React.FC = () => {
       const response = await axios.get<Player>(`${BACKEND_URL}/api/players/${id}`);
       setPlayer(response.data);
 
-      // Show skeleton for at least 3 seconds
       const elapsed = Date.now() - startTime;
       const remaining = 3000 - elapsed;
       if (remaining > 0) {
@@ -81,7 +76,6 @@ const PlayerDetail: React.FC = () => {
     }
   };
 
-  // Handle countdown for success modal
   useEffect(() => {
     if (modalState === 'success') {
       countdownRef.current = setInterval(() => {
@@ -124,7 +118,6 @@ const PlayerDetail: React.FC = () => {
     }, 3000);
   };
 
-  // If the user is not authenticated or doesn't have the required role, redirect
   if (!user || !['admin', 'manager', 'viewer'].includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
@@ -153,17 +146,12 @@ const PlayerDetail: React.FC = () => {
   const renderSkeleton = () => (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8 animate-pulse">
-        {/* Top bar skeleton */}
         <div className="h-6 bg-gray-300 dark:bg-gray-700 w-1/4 rounded"></div>
-        
-        {/* Player Header Skeleton */}
         <div className="flex flex-col items-center mb-8 space-y-4">
           <div className="h-48 w-48 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
           <div className="h-8 bg-gray-300 dark:bg-gray-700 w-1/2 rounded"></div>
           <div className="h-4 bg-gray-300 dark:bg-gray-700 w-1/4 rounded"></div>
         </div>
-
-        {/* Details Skeleton */}
         <div className="space-y-4 text-center">
           <div className="h-4 bg-gray-300 dark:bg-gray-700 w-1/4 mx-auto rounded"></div>
           <div className="h-4 bg-gray-300 dark:bg-gray-700 w-1/3 mx-auto rounded"></div>
@@ -214,7 +202,6 @@ const PlayerDetail: React.FC = () => {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8 transition-colors duration-300">
         
-        {/* Top bar with breadcrumb and dark mode toggle */}
         <div className="flex justify-between items-center mb-8 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
           <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
             <Link to="/players" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
@@ -247,7 +234,6 @@ const PlayerDetail: React.FC = () => {
           </button>
         </div>
 
-        {/* Player Header with subtle accent line and ring */}
         <div className="flex flex-col items-center mb-8">
           {player.image && (
             <div className="relative inline-block mb-6">
@@ -280,7 +266,6 @@ const PlayerDetail: React.FC = () => {
           />
         </div>
 
-        {/* Player Details */}
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center text-lg text-gray-600 dark:text-gray-300 mb-4">
             <svg
@@ -310,7 +295,6 @@ const PlayerDetail: React.FC = () => {
           </p>
         </div>
 
-        {/* Action Buttons */}
         <div className="flex justify-center gap-4">
           {['admin', 'manager'].includes(user.role) && (
             <Link to={`/players/edit/${player._id}`}>
@@ -333,7 +317,6 @@ const PlayerDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Confirm/Loading/Success/Error Modal */}
       <ConfirmModal
         isOpen={modalState !== null}
         type={modalState || 'confirm'}

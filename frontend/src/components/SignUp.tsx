@@ -17,12 +17,9 @@ const SignUp: React.FC = () => {
   });
 
   const [error, setError] = useState<string | null>(null);
-
   const { firstName, lastName, email, password, role, secretCode } = formData;
-
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -33,7 +30,6 @@ const SignUp: React.FC = () => {
     }
   };
 
-  // Dark mode state and toggle logic (consistent with other components)
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark';
@@ -58,7 +54,6 @@ const SignUp: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
       <div className="max-w-xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-12 text-center">
-        {/* Dark Mode Toggle */}
         <div className="flex justify-end mb-4">
           <button
             onClick={toggleDarkMode}
@@ -79,7 +74,6 @@ const SignUp: React.FC = () => {
           </button>
         </div>
 
-        {/* Logo */}
         <div className="flex justify-center mb-8">
           <svg
             className="h-20 w-20 text-blue-600 dark:text-blue-400"
@@ -95,21 +89,16 @@ const SignUp: React.FC = () => {
           </svg>
         </div>
 
-        {/* Heading */}
         <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">
           Create Your Account
         </h2>
-
-        {/* Error Message */}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
 
-        {/* Sign-Up Form */}
         <form onSubmit={onSubmit} className="space-y-6">
-          {/* First Name */}
           <div>
             <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
               First Name
@@ -141,7 +130,6 @@ const SignUp: React.FC = () => {
             </div>
           </div>
 
-          {/* Last Name */}
           <div>
             <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
               Last Name
@@ -173,7 +161,6 @@ const SignUp: React.FC = () => {
             </div>
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
               Email
@@ -199,7 +186,6 @@ const SignUp: React.FC = () => {
             </div>
           </div>
 
-          {/* Password */}
           <div>
             <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
               Password
@@ -229,7 +215,6 @@ const SignUp: React.FC = () => {
             </div>
           </div>
 
-          {/* Role */}
           <div>
             <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
               Role
@@ -261,7 +246,6 @@ const SignUp: React.FC = () => {
             </div>
           </div>
 
-          {/* Secret Code */}
           {(role === 'manager' || role === 'admin') && (
             <div>
               <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
@@ -294,7 +278,6 @@ const SignUp: React.FC = () => {
             </div>
           )}
 
-          {/* Submit Button */}
           <button
             type="submit"
             className="w-full py-3 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none transition-colors duration-200"

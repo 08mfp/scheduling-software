@@ -1,5 +1,3 @@
-// frontend/src/components/Footer.tsx
-
 import React, { useState, useEffect } from 'react';
 import {
   FaTwitter,
@@ -14,16 +12,14 @@ import logo from '../assets/Images/logo2.png';
 const Footer: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
 
-  // Toggle visibility of the Back-to-Top button based on scroll position
   const toggleVisibility = () => {
-    if (window.pageYOffset > 300) { // Show after scrolling down 300px
+    if (window.pageYOffset > 300) {
       setIsVisible(true);
     } else {
       setIsVisible(false);
     }
   };
 
-  // Scroll smoothly to the top of the page
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
@@ -31,7 +27,6 @@ const Footer: React.FC = () => {
     });
   };
 
-  // Attach scroll event listener
   useEffect(() => {
     window.addEventListener('scroll', toggleVisibility);
     return () => window.removeEventListener('scroll', toggleVisibility);
@@ -39,9 +34,7 @@ const Footer: React.FC = () => {
 
   return (
     <footer className="bg-gray-900/80 dark:bg-black py-16 px-8 md:px-16 relative animate-fadeIn">
-      {/* Footer Content */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12 text-white dark:text-gray-300">
-        {/* Column 1 - Logo / About */}
         <section>
           <Link to="/" className="flex items-center space-x-3 mb-4">
             <img
@@ -58,7 +51,6 @@ const Footer: React.FC = () => {
           </p>
         </section>
 
-        {/* Column 2 - Navigation */}
         <nav aria-label="Footer Navigation">
           <h3 className="text-xl font-bold mb-4">Navigation</h3>
           <ul className="space-y-2">
@@ -86,29 +78,9 @@ const Footer: React.FC = () => {
                 Sign Up
               </Link>
             </li>
-            {/* Additional Links
-            <li>
-              <Link to="/privacy" className="flex items-center hover:text-pink-400 transition-colors duration-300">
-                <FaChevronRight className="mr-2" />
-                Privacy Policy
-              </Link>
-            </li>
-            <li>
-              <Link to="/terms" className="flex items-center hover:text-pink-400 transition-colors duration-300">
-                <FaChevronRight className="mr-2" />
-                Terms of Service
-              </Link>
-            </li>
-            <li>
-              <Link to="/faq" className="flex items-center hover:text-pink-400 transition-colors duration-300">
-                <FaChevronRight className="mr-2" />
-                FAQs
-              </Link> */}
-            {/* </li> */}
           </ul>
         </nav>
 
-        {/* Column 3 - Contact Info */}
         <address className="not-italic">
           <h3 className="text-xl font-bold mb-4">Contact Us</h3>
           <p className="text-base">
@@ -123,7 +95,6 @@ const Footer: React.FC = () => {
           </p>
         </address>
 
-        {/* Column 4 - Newsletter */}
         <section>
           <h3 className="text-xl font-bold mb-4">Newsletter</h3>
           <p className="text-base mb-4">
@@ -148,10 +119,9 @@ const Footer: React.FC = () => {
         </section>
       </div>
 
-      {/* Social Icons */}
       <div className="mt-12 border-t border-white/20 dark:border-gray-100 pt-6 flex justify-center space-x-6">
         <a
-          href="https://twitter.com" // Replace with your actual Twitter URL
+          href="https://twitter.com"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-pink-400 dark:hover:text-pink-400 transition-colors duration-300 text-white dark:text-gray-300"
@@ -160,7 +130,7 @@ const Footer: React.FC = () => {
           <FaTwitter size={24} />
         </a>
         <a
-          href="https://facebook.com" // Replace with your actual Facebook URL
+          href="https://facebook.com"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-pink-400 dark:hover:text-pink-400 transition-colors duration-300 text-white dark:text-gray-300"
@@ -169,7 +139,7 @@ const Footer: React.FC = () => {
           <FaFacebookF size={24} />
         </a>
         <a
-          href="https://instagram.com" // Replace with your actual Instagram URL
+          href="https://instagram.com"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-pink-400 dark:hover:text-pink-400 transition-colors duration-300 text-white dark:text-gray-300"
@@ -179,12 +149,10 @@ const Footer: React.FC = () => {
         </a>
       </div>
 
-      {/* Footer Note */}
       <div className="text-center text-sm text-white/60 dark:text-gray-100 mt-6">
         © {new Date().getFullYear()} Six Nations. All rights reserved.
       </div>
 
-      {/* Back-to-Top Button */}
       {isVisible && (
         <button
           onClick={scrollToTop}

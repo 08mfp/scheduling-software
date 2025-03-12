@@ -1,4 +1,3 @@
-// backend/models/Fixture.js
 /**
  * @module backend/models/Fixture
  * @description This module is used for defining the schema for fixtures in the database. It also includes custom validation for scores based on the date of the fixture.
@@ -14,7 +13,7 @@ const FixtureSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 1,
-    max: 5, // since the six Nations has exactly 5 rounds
+    max: 5,
   },
   date: {
     type: Date,
@@ -53,13 +52,11 @@ const FixtureSchema = new mongoose.Schema({
   },
 });
 
-// validation for scores based on date
 FixtureSchema.pre('validate', function (next) {
   const now = new Date();
   const fixtureDate = new Date(this.date);
 
   if (fixtureDate < now) {
-    // If Fixture is in the past
     if (this.homeTeamScore == null || this.awayTeamScore == null) {
       //! commented this out during model setup
       //! Uncomment below lines for to enforce score requirement for past fixtures

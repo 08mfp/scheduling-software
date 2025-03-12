@@ -1,5 +1,3 @@
-// frontend/src/App.tsx
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -34,7 +32,6 @@ import Footer from './components/Footer';
 import 'flowbite'; 
 import './App.css';
 
-
 const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -42,7 +39,6 @@ const App: React.FC = () => {
         <Navbar />
         <div>
           <Routes>
-            {/* Public Routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/fixtures" element={<FixturesList />} />
             <Route path="/about" element={<About />} />
@@ -50,11 +46,7 @@ const App: React.FC = () => {
             <Route path="/signin" element={<SignIn />} />
             <Route path='/fixtures/:id' element={< FixtureDetail/>} />
             <Route path="/not-found" element={<NotFound />} />
-
-            {/* Unauthorized Page */}
             <Route path="/unauthorized" element={<Unauthorized />} />
-
-            {/* Protected Routes: Accessible to authenticated users with appropriate roles */}
             <Route element={<PrivateRoute requiredRoles={['admin', 'manager', 'viewer']} />}>
               <Route path="/teams" element={<TeamsList />} />
               <Route path="/teams/:id" element={<TeamDetail />} />
@@ -62,16 +54,12 @@ const App: React.FC = () => {
               <Route path="/stadiums/:id" element={<StadiumDetail />} />
               <Route path="/profile" element={<Profile />} />
             </Route>
-
-            {/* Manager and Admin Routes */}
             <Route element={<PrivateRoute requiredRoles={['admin', 'manager']} />}>
               <Route path="/players" element={<PlayersList />} />
               <Route path="/players/:id" element={<PlayerDetail />} />
               <Route path="/players/add" element={<PlayerForm />} />
               <Route path="/players/edit/:id" element={<PlayerForm />} />
             </Route>
-
-            {/* Admin-Only Routes */}
             <Route element={<PrivateRoute requiredRoles={['admin']} />}>
               <Route path="/teams/add" element={<TeamForm />} />
               <Route path="/teams/edit/:id" element={<TeamForm />} />
@@ -85,11 +73,7 @@ const App: React.FC = () => {
               <Route path="/admin" element={<AdminPanel />} />
               <Route path="/faq" element={<FAQ />} />
             </Route>
-
-            {/* Public Routes */}
             <Route path="/contact" element={<Contact />} />
-
-            {/* Catch-All Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />

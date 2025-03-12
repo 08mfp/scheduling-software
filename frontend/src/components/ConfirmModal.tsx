@@ -12,9 +12,8 @@ interface ConfirmModalProps {
   type: 'confirm' | 'loading' | 'success' | 'error';
   title?: string;
   message: string;
-  countdown?: number; // Optional countdown for 'success' type
+  countdown?: number;
   
-  // Optional custom button labels
   confirmText?: string;
   cancelText?: string;
   retryText?: string;
@@ -39,7 +38,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onCancel,
   onRetry,
 }) => {
-  // For confirm type, use red icon if the title indicates deletion
+
   const getConfirmIcon = () => {
     const effectiveTitle = title || getDefaultTitle();
     const iconColor = effectiveTitle.toLowerCase().includes('delete')
@@ -63,7 +62,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     }
   };
 
-  // Provide default labels if not supplied
   const defaultConfirmText = confirmText || 'Confirm';
   const defaultCancelText = cancelText || 'Cancel';
   const defaultRetryText = retryText || 'Retry';
@@ -89,7 +87,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </>
         );
       case 'loading':
-        return null; // No buttons during loading
+        return null;
       case 'success':
         return (
           <button
@@ -141,10 +139,9 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
       <Dialog
         as="div"
         className="fixed z-10 inset-0 overflow-y-auto"
-        onClose={type === 'loading' ? () => {} : onCancel || (() => {})} // Disable closing during loading
+        onClose={type === 'loading' ? () => {} : onCancel || (() => {})}
       >
         <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-          {/* Background overlay */}
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -157,12 +154,10 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <div className="fixed inset-0 bg-gray-500 transition-opacity" />
           </Transition.Child>
 
-          {/* Trick to center the modal */}
           <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
             &#8203;
           </span>
 
-          {/* Modal panel */}
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -175,11 +170,9 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left
               overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
               <div className="sm:flex sm:items-center">
-                {/* Icon */}
                 <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full">
                   {getIcon()}
                 </div>
-                {/* Title and Message */}
                 <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                   <Dialog.Title
                     as="h3"
@@ -191,7 +184,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {message}
                     </p>
-                    {/* Display countdown if provided and type is 'success' */}
                     {type === 'success' && countdown !== undefined && countdown > 0 && (
                       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                         This modal will close in {countdown} second{countdown !== 1 ? 's' : ''}.
@@ -200,7 +192,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                   </div>
                 </div>
               </div>
-              {/* Action Buttons */}
               {type !== 'loading' && (
                 <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
                   {renderButtons()}

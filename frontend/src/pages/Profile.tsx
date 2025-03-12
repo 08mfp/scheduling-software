@@ -1,5 +1,3 @@
-// frontend/src/pages/Profile.tsx
-
 import React, { useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../contexts/AuthContext';
@@ -111,7 +109,6 @@ const Profile: React.FC = () => {
         }
       );
 
-      // Refetch user data
       await fetchUserData();
 
       alert('Profile updated successfully!');
@@ -131,7 +128,6 @@ const Profile: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8">
-        {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2 mb-6">
           <a href="/" className="text-blue-600 hover:underline flex items-center">
             <FaHome className="mr-1" />
@@ -140,8 +136,6 @@ const Profile: React.FC = () => {
           <span className="text-gray-500 dark:text-gray-400">/</span>
           <span className="text-gray-700 dark:text-gray-300">Profile</span>
         </div>
-
-        {/* Header */}
         <div className="flex flex-col items-center mb-8">
           {imagePreview ? (
             <img
@@ -181,10 +175,9 @@ const Profile: React.FC = () => {
           )}
         </div>
 
-        {/* Form */}
         <form className="space-y-6" onSubmit={onSubmit} encType="multipart/form-data">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* First Name */}
+
             <div>
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 First Name<span className="text-red-500">*</span>
@@ -206,7 +199,6 @@ const Profile: React.FC = () => {
               )}
             </div>
 
-            {/* Last Name */}
             <div>
               <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Last Name<span className="text-red-500">*</span>
@@ -229,7 +221,6 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* Email */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Email<span className="text-red-500">*</span>
@@ -251,7 +242,6 @@ const Profile: React.FC = () => {
             )}
           </div>
 
-          {/* New Password */}
           {isEditing && (
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -269,7 +259,6 @@ const Profile: React.FC = () => {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Home City */}
             <div>
               <label htmlFor="homeCity" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Home City
@@ -290,7 +279,6 @@ const Profile: React.FC = () => {
               )}
             </div>
 
-            {/* Age */}
             <div>
               <label htmlFor="age" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Age
@@ -312,7 +300,6 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* Profile Image */}
           <div>
             <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Profile Image
@@ -352,7 +339,6 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* Role */}
           <div>
             <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Role
@@ -365,7 +351,6 @@ const Profile: React.FC = () => {
             </p>
           </div>
 
-          {/* Form Buttons */}
           <div className="flex items-center justify-between">
             {isEditing ? (
               <div className="flex space-x-4">

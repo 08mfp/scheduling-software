@@ -21,11 +21,9 @@ const PlayerForm: React.FC = () => {
   const [removeImage, setRemoveImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user } = useContext(AuthContext);
-
   const [currentAction, setCurrentAction] = useState<'create' | 'update' | null>(null);
   const [modalState, setModalState] = useState<'loading' | 'success' | 'error' | null>(null);
   const [countdown, setCountdown] = useState<number>(3);
@@ -107,11 +105,9 @@ const PlayerForm: React.FC = () => {
 
     try {
       if (id) {
-        // Update existing player
         await axios.put(`${BACKEND_URL}/api/players/${id}`, formData);
         setModalState('success');
       } else {
-        // Create new player
         await axios.post(`${BACKEND_URL}/api/players`, formData);
         setModalState('success');
       }
@@ -126,7 +122,6 @@ const PlayerForm: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Directly submit without confirm step
     submitFormData();
   };
 
@@ -195,7 +190,6 @@ const PlayerForm: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8">
-        {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2 mb-6">
           <a href="/players" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
             <FaHome className="mr-1" />
@@ -218,7 +212,6 @@ const PlayerForm: React.FC = () => {
           )}
         </div>
 
-        {/* Header */}
         <div className="flex flex-col items-center mb-8">
           {player.image && !removeImage ? (
             <img
@@ -260,10 +253,8 @@ const PlayerForm: React.FC = () => {
           )}
         </div>
 
-        {/* Form */}
         <form className="space-y-6" onSubmit={handleSubmit} encType="multipart/form-data">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* First Name */}
             <div>
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 First Name<span className="text-red-500">*</span>
@@ -279,7 +270,6 @@ const PlayerForm: React.FC = () => {
               />
             </div>
 
-            {/* Last Name */}
             <div>
               <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Last Name<span className="text-red-500">*</span>
@@ -296,7 +286,6 @@ const PlayerForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Image Upload */}
           <div>
             <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Player Image
@@ -340,7 +329,6 @@ const PlayerForm: React.FC = () => {
             )}
           </div>
 
-          {/* Date of Birth */}
           <div>
             <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Date of Birth<span className="text-red-500">*</span>
@@ -356,7 +344,6 @@ const PlayerForm: React.FC = () => {
             />
           </div>
 
-          {/* Team Select */}
           <div>
             <label htmlFor="team" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Team<span className="text-red-500">*</span>
@@ -378,7 +365,6 @@ const PlayerForm: React.FC = () => {
             </select>
           </div>
 
-          {/* Form Buttons */}
           <div className="flex items-center justify-between">
             <a href="/players" className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center">
               <FaArrowLeft className="mr-1" />
@@ -437,7 +423,6 @@ const PlayerForm: React.FC = () => {
         </form>
       </div>
 
-      {/* Loading/Success/Error Modal (No Confirm Step) */}
       <ConfirmModal
         isOpen={modalState !== null}
         type={modalState || 'loading'}

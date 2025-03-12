@@ -10,15 +10,12 @@ interface SplashScreenProps {
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
   const modalRef = useRef<HTMLDivElement | null>(null);
-
-  // Separate tooltip states for each card
   const [showRandomTooltip, setShowRandomTooltip] = useState(false);
   const [showRound5Tooltip, setShowRound5Tooltip] = useState(false);
   const [showBalancedTooltip, setShowBalancedTooltip] = useState(false);
   const [showOptimizedTooltip, setShowOptimizedTooltip] = useState(false);
   const [showPlaceholderTooltip, setShowPlaceholderTooltip] = useState(false);
 
-  // Close modal on "Escape" key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -27,7 +24,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // If not showing, don't render anything
   if (!show) return null;
 
   return createPortal(
@@ -46,7 +42,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
                      rounded-lg shadow-2xl max-w-4xl w-full p-8 transform scale-100
                      transition-transform duration-300"
         >
-          {/* Close Button */}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-gray-700 dark:text-gray-300 hover:text-red-500 
@@ -55,8 +50,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
           >
             <FaTimes size={20} />
           </button>
-
-          {/* Title Banner */}
           <div className="text-center mb-6">
             <h2
               id="splashTitle"
@@ -73,18 +66,14 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
             </p>
           </div>
 
-          {/* Intro Paragraph */}
           <p className="text-center text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
             Welcome to the future of tournament scheduling. Our advanced algorithms 
             offer innovative ways to create exciting, balanced, and practical fixtures 
             for the Six Nations Rugby Championship. Explore them below:
           </p>
 
-          {/* 2x2 grid for the first 4 algorithms */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Card 1 - Random Algorithm */}
             <div className="relative bg-gray-100 dark:bg-gray-700 p-6 rounded-md shadow">
-              {/* Info Icon (top-right) */}
               <div
                 className="absolute top-3 right-3 cursor-pointer"
                 onMouseEnter={() => setShowRandomTooltip(true)}
@@ -106,8 +95,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
                     clipRule="evenodd"
                   />
                 </svg>
-
-                {/* Tooltip */}
                 {showRandomTooltip && (
                   <div className="absolute bg-black text-white text-xs p-2 rounded shadow-lg top-8 right-0 w-40">
                     <p>
@@ -128,7 +115,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
               </p>
             </div>
 
-            {/* Card 2 - Round 5 Extravaganza */}
             <div className="relative bg-gray-100 dark:bg-gray-700 p-6 rounded-md shadow">
               <div
                 className="absolute top-3 right-3 cursor-pointer"
@@ -172,7 +158,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
               </p>
             </div>
 
-            {/* Card 3 - Balanced Travel */}
             <div className="relative bg-gray-100 dark:bg-gray-700 p-6 rounded-md shadow">
               <div
                 className="absolute top-3 right-3 cursor-pointer"
@@ -215,7 +200,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
               </p>
             </div>
 
-            {/* Card 4 - Optimized Travel */}
             <div className="relative bg-gray-100 dark:bg-gray-700 p-6 rounded-md shadow">
               <div
                 className="absolute top-3 right-3 cursor-pointer"
@@ -260,7 +244,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
             </div>
           </div>
 
-          {/* Single wide card below the grid (Placeholder) */}
           <div className="relative bg-gray-100 dark:bg-gray-700 p-6 rounded-md shadow mt-6">
             <div
               className="absolute top-3 right-3 cursor-pointer"
@@ -301,7 +284,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ show, onClose }) => {
             </p>
           </div>
 
-          {/* Dismiss button at bottom */}
           <div className="mt-8 text-center">
             <button
               onClick={onClose}

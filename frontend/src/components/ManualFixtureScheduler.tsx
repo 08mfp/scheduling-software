@@ -2,11 +2,9 @@ import React, { useState, useEffect, useMemo, useContext } from 'react';
 import axios from 'axios';
 import { Navigate, Link } from 'react-router-dom';
 import { FaInfoCircle, FaSun, FaMoon, FaPlus, FaMinus } from 'react-icons/fa';
-
 import { Team, Fixture } from '../interfaces/ManualFixture';
 import { AuthContext } from '../contexts/AuthContext';
 import ManualSchedulerSplash from './ManualSchedulerSplash'; 
-
 
 interface ValidationError {
   message: string;
@@ -28,9 +26,6 @@ interface ManualFixtureSchedulerProps {
   initialFixtures?: Fixture[][];
 }
 
-// --------------------------
-// 1) TEAM COLOR HELPER
-// --------------------------
 const getTeamColor = (teamName: string): { backgroundColor: string; textColor: string } => {
   switch (teamName) {
     case 'England':
@@ -51,9 +46,7 @@ const getTeamColor = (teamName: string): { backgroundColor: string; textColor: s
 };
 
 const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = () => {
-  // --------------------------
-  // 2) DARK/LIGHT MODE
-  // --------------------------
+
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' || false;
@@ -73,7 +66,6 @@ const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = () => {
 
   const [showSplash, setShowSplash] = useState(false);
 
-// Show the new splash on first visit
 useEffect(() => {
   const hasVisited = localStorage.getItem('firstTimeManualFixtures');
   if (!hasVisited) {
@@ -83,10 +75,6 @@ useEffect(() => {
 }, []);
 
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
-
-  // --------------------------
-  // 3) STATES & CONTEXT
-  // --------------------------
   const [season, setSeason] = useState<number>(new Date().getFullYear() + 1);
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
@@ -97,22 +85,14 @@ useEffect(() => {
   const [loading, setLoading] = useState<boolean>(false);
   const [step, setStep] = useState<'selectTeams' | 'input' | 'summary'>('selectTeams');
   const [errorMessage, setErrorMessage] = useState<string>('');
-
-  // Collapsible Rounds
   const [collapsedRounds, setCollapsedRounds] = useState<Set<number>>(new Set());
-  // Collapsible Fixture Cards
   const [collapsedFixtures, setCollapsedFixtures] = useState<Set<string>>(new Set());
-
-  // Authentication
   const { user, apiKey } = useContext(AuthContext);
-
-  // Trackers
   const [matchupTracker, setMatchupTracker] = useState<{ [key: string]: boolean }>({});
   const [perRoundTeamTracker, setPerRoundTeamTracker] = useState<{
     [round: number]: { [teamId: string]: boolean };
   }>({});
 
-  // Suggestions / conflicts
   const [showSuggestions, setShowSuggestions] = useState<{ [key: string]: boolean }>({});
   const [conflictingRounds, setConflictingRounds] = useState<{ round1: number; round2: number }[]>([]);
   const [conflictSuggestions, setConflictSuggestions] = useState<{ [key: string]: ConflictSuggestion[] }>({});
@@ -120,9 +100,6 @@ useEffect(() => {
     [key: string]: UnfeasibleMatchupReason[];
   }>({});
 
-  // --------------------------
-  // 4) FETCH TEAMS
-  // --------------------------
   useEffect(() => {
     if (user && user.role === 'admin') {
       const fetchTeams = async () => {
@@ -141,9 +118,6 @@ useEffect(() => {
     }
   }, [user, apiKey]);
 
-  // --------------------------
-  // 5) TEAM SELECTION
-  // --------------------------
   const toggleSelectedTeam = (teamId: string) => {
     setErrorMessage('');
     setSelectedTeamIds((prev) => {
@@ -169,9 +143,6 @@ useEffect(() => {
     return true;
   };
 
-  // --------------------------
-  // 6) INIT FIXTURES & TRACKERS
-  // --------------------------
   const initializeFixtures = (teamList: Team[]) => {
     const totalTeams = teamList.length;
     const rounds = totalTeams - 1;
@@ -259,9 +230,6 @@ useEffect(() => {
     setPerRoundTeamTracker(newPR);
   };
 
-  // --------------------------
-  // 7) HANDLERS
-  // --------------------------
   const handleTeamSelectionForFixture = async (
     roundIndex: number,
     fixtureIndex: number,
@@ -348,7 +316,6 @@ useEffect(() => {
     });
   };
 
-  // Toggle individual fixture collapse
   const toggleFixtureCollapse = (roundIndex: number, fixtureIndex: number) => {
     const key = `${roundIndex}-${fixtureIndex}`;
     setCollapsedFixtures((prev) => {
@@ -362,9 +329,6 @@ useEffect(() => {
     });
   };
 
-  // --------------------------
-  // 8) DATE/TIME + CONSTRAINTS
-  // --------------------------
   const isDateWithinAllowedRange = (ds: string) => {
     const d = new Date(ds);
     const month = d.getUTCMonth();
@@ -372,9 +336,8 @@ useEffect(() => {
     const hr = d.getUTCHours();
     const mm = d.getUTCMinutes();
 
-    // Feb or Mar
+
     if (month !== 1 && month !== 2) return false;
-    // Fri(5) after 18:00, Sat(6), Sun(0) up to 20:00
     if (dow === 5) {
       return hr >= 18;
     } else if (dow === 6) {
@@ -385,38 +348,23 @@ useEffect(() => {
     return false;
   };
 
-  /**
- * getWeekend(d: Date)
- * 
- * Anchors Friday, Saturday, and Sunday to the same "weekend" date (Saturday).
- * Returns a string "YYYY-M-D" which identifies that weekend.
- */
 function getWeekend(d: Date): string {
-  const dow = d.getUTCDay();   // Sunday=0, Monday=1, ... Saturday=6
+  const dow = d.getUTCDay();   // Sunday=0, Monday=1, ... Saturday=6 //! check later as could mess up weekends
   const dd = d.getUTCDate();
-  const mm = d.getUTCMonth();  // 0-based
+  const mm = d.getUTCMonth(); // January=0, February=1, ... December=11
   const yy = d.getUTCFullYear();
 
   let offset = 0;  
-  // If it's Friday, move forward 1 day
   if (dow === 5) {
     offset = 1;
   }
-  // If it's Sunday, move back 1 day
   else if (dow === 0) {
     offset = -1;
   }
-  // If it's Saturday, offset=0 (no change)
-  // For Monday–Thursday, we leave offset=0 by default
-  // (though typically you won't schedule Monday–Thursday for 6N).
-
-  // Create a new date anchored to that Saturday
   const anchorDate = new Date(Date.UTC(yy, mm, dd + offset));
 
-  // Return as "YYYY-M-D" 
   return `${anchorDate.getUTCFullYear()}-${anchorDate.getUTCMonth()}-${anchorDate.getUTCDate()}`;
 }
-
 
   const getPreviousWeekend = (d: Date) => {
     const dow = d.getUTCDay();
@@ -437,8 +385,6 @@ function getWeekend(d: Date): string {
     const constraints: { [key: string]: boolean } = {};
     const roundConflicts: { round1: number; round2: number }[] = [];
     const conflictMap: { [key: string]: ConflictSuggestion[] } = {};
-  
-    // 1) Gather "touched" fixtures.
     const touched: { fixture: Fixture; roundIndex: number; fixtureIndex: number }[] = [];
     for (let rI = 0; rI < fx.length; rI++) {
       for (let fI = 0; fI < fx[rI].length; fI++) {
@@ -449,7 +395,6 @@ function getWeekend(d: Date): string {
       }
     }
   
-    // If no fixtures are touched, clear everything and return.
     if (touched.length === 0) {
       setValidationErrors([]);
       setConstraintChecks({});
@@ -459,15 +404,10 @@ function getWeekend(d: Date): string {
       return;
     }
   
-    /**
-     * 2) Filter "touched" to only "fully completed" fixtures:
-     *    homeTeam, awayTeam, and date must be present.
-     */
     const completedFixtures = touched.filter(
       ({ fixture }) => fixture.homeTeam && fixture.awayTeam && fixture.date
     );
   
-    // If none are fully completed, we skip all validations and clear out errors.
     if (completedFixtures.length === 0) {
       setValidationErrors([]);
       setConstraintChecks({});
@@ -477,9 +417,6 @@ function getWeekend(d: Date): string {
       return;
     }
   
-    // ---------------------------------------------
-    // 3) Plays Once Per Round + Team Once Per Round
-    // ---------------------------------------------
     let playsOncePerRound = true;
     let teamPlaysOnlyOncePerRound = true;
   
@@ -490,12 +427,10 @@ function getWeekend(d: Date): string {
   
       for (let fI = 0; fI < roundFx.length; fI++) {
         const fix = roundFx[fI];
-        // Skip if fixture is not fully completed (missing teams or date).
         if (!fix.homeTeam || !fix.awayTeam || !fix.date) continue;
   
         roundTouched = true;
   
-        // Check if a team is scheduled multiple times within the same round
         if (fix.homeTeam) {
           if (tracker.has(fix.homeTeam._id)) {
             teamPlaysOnlyOncePerRound = false;
@@ -520,10 +455,9 @@ function getWeekend(d: Date): string {
         }
       }
   
-      // If this round had any completed fixtures, check if all teams are accounted for.
       if (roundTouched) {
         const foundTeams = tracker.size;
-        const expectedTeams = roundFx.length * 2; // 2 teams per fixture
+        const expectedTeams = roundFx.length * 2;
         if (foundTeams !== expectedTeams) {
           playsOncePerRound = false;
           errors.push({
@@ -536,21 +470,14 @@ function getWeekend(d: Date): string {
     constraints['playsOncePerRound'] = playsOncePerRound;
     constraints['teamPlaysOnlyOncePerRound'] = teamPlaysOnlyOncePerRound;
   
-    // ---------------------------------------------
-    // 4) No Self-Play + No Duplicate Matchups
-    // ---------------------------------------------
+
     let validMatchups = true;
     let noSelfPlay = true;
     const used = new Map<string, { roundIndex: number; fixtureIndex: number }>();
-  
-    // Loop only over the fully completed fixtures
     for (let item of completedFixtures) {
       const { fixture, roundIndex, fixtureIndex } = item;
-      // We already know homeTeam & awayTeam are present
       const tA = fixture.homeTeam!._id;
       const tB = fixture.awayTeam!._id;
-  
-      // No self-play
       if (tA === tB) {
         noSelfPlay = false;
         errors.push({
@@ -560,7 +487,6 @@ function getWeekend(d: Date): string {
         continue;
       }
   
-      // Duplicate matchups
       const mk = [tA, tB].sort().join('-');
       if (used.has(mk)) {
         validMatchups = false;
@@ -584,20 +510,13 @@ function getWeekend(d: Date): string {
     constraints['eachTeamPlaysEachOther'] = validMatchups;
     constraints['noSelfPlay'] = noSelfPlay;
   
-    // ---------------------------------------------
-    // 5) Date Constraints + Single Weekend per Round
-    // ---------------------------------------------
     let validDates = true;
     let datesInFebMarch = true;
     const roundDateMap = new Map<number, Date>();
   
-    // Only iterate completed fixtures
     for (let item of completedFixtures) {
       const { fixture, roundIndex, fixtureIndex } = item;
-      // date is guaranteed if it's "completed"
       const d = new Date(fixture.date!);
-  
-      // Check if date/time is within the allowed range (Fri after 18:00, Sat, Sun up to 20:00, etc.)
       if (!isDateWithinAllowedRange(fixture.date!)) {
         validDates = false;
         errors.push({
@@ -605,8 +524,6 @@ function getWeekend(d: Date): string {
           fixtureIndices: { roundIndex, fixtureIndex },
         });
       }
-  
-      // Must be in February or March
       const mo = d.getUTCMonth();
       if (mo !== 1 && mo !== 2) {
         datesInFebMarch = false;
@@ -616,7 +533,6 @@ function getWeekend(d: Date): string {
         });
       }
   
-      // Unify weekend for each round
       if (!roundDateMap.has(fixture.round)) {
         roundDateMap.set(fixture.round, d);
       } else {
@@ -633,9 +549,6 @@ function getWeekend(d: Date): string {
   
     constraints['datesWithinAllowedRange'] = validDates && datesInFebMarch;
   
-    // ---------------------------------------------
-    // 6) Detect Conflicting Rounds (same weekend)
-    // ---------------------------------------------
     const weekendToRounds = new Map<string, number[]>();
     roundDateMap.forEach((date, r) => {
       const wkd = getWeekend(date);
@@ -660,9 +573,6 @@ function getWeekend(d: Date): string {
     });
     constraints['conflictingRounds'] = roundConflicts.length === 0;
   
-    // ---------------------------------------------
-    // 7) Check Round Order
-    // ---------------------------------------------
     let roundsInOrder = true;
     for (let i = 2; i <= fx.length; i++) {
       const prev = roundDateMap.get(i - 1);
@@ -676,9 +586,6 @@ function getWeekend(d: Date): string {
     }
     constraints['roundsInOrder'] = roundsInOrder;
   
-    // ---------------------------------------------
-    // 8) Round 1 in First Week of February
-    // ---------------------------------------------
     let round1InFirstWeek = true;
     const r1Date = roundDateMap.get(1);
     if (r1Date) {
@@ -689,9 +596,6 @@ function getWeekend(d: Date): string {
     }
     constraints['round1InFirstWeek'] = round1InFirstWeek;
   
-    // ---------------------------------------------
-    // 9) No Rounds on Weekend Before Round 1
-    // ---------------------------------------------
     let noRoundsBeforeRound1 = true;
     if (r1Date) {
       const prevWkd = getPreviousWeekend(r1Date);
@@ -706,27 +610,15 @@ function getWeekend(d: Date): string {
     }
     constraints['noRoundsBeforeRound1'] = noRoundsBeforeRound1;
   
-    // ---------------------------------------------
-    // 10) All Fixtures Touched
-    //     (You can keep or remove this check — it shows whether
-    //      you have *any* untouched fixture in the entire schedule.)
-    // ---------------------------------------------
     const allTouched = fx.every((rFx) => rFx.every((f) => f.touched));
     constraints['allFixturesTouched'] = allTouched;
   
-    // ---------------------------------------------
-    // Finally, set states
-    // ---------------------------------------------
     setValidationErrors(errors);
     setConstraintChecks(constraints);
     setConflictingRounds(roundConflicts);
     setConflictSuggestions(conflictMap);
   };
   
-
-  // --------------------------
-  // 9) SAVE
-  // --------------------------
   const saveFixtures = async () => {
     setLoading(true);
     const allFx = fixtures.flat();
@@ -766,9 +658,6 @@ function getWeekend(d: Date): string {
     }
   };
 
-  // --------------------------
-  // 10) UTILS & MEMOS
-  // --------------------------
   const allConstraintsSatisfied = useMemo(() => {
     return Object.values(constraintChecks).every((val) => val !== false);
   }, [constraintChecks]);
@@ -844,7 +733,6 @@ function getWeekend(d: Date): string {
     return reasons;
   }, [fixtures, perRoundTeamTracker, selectedTeams, matchupTracker, showSuggestions]);
 
-  // A small component for constraints
   const ConstraintBadge = ({ valid }: { valid: boolean }) =>
     valid ? (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -856,7 +744,6 @@ function getWeekend(d: Date): string {
       </span>
     );
 
-  // Step 1: Team Selection with color-coded buttons
   const TeamSelection = () => (
     < div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-6 mb-8 space-y-6">
           <div className="flex flex-col items-center">
@@ -945,22 +832,16 @@ function getWeekend(d: Date): string {
     </div>
   );
 
-  // Table classes for summary table
   const tableHeaderClass =
     'border border-gray-300 dark:border-gray-600 px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100';
   const tableCellClass =
     'border border-gray-300 dark:border-gray-600 px-2 py-1 text-gray-700 dark:text-gray-200';
 
-  // Early return if unauthorized
   if (!user || !['admin', 'manager', 'viewer'].includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // --------------------------
-  // MAIN RENDER
-  // --------------------------
   return (
-
     <>
     <ManualSchedulerSplash
       show={showSplash}
@@ -972,7 +853,7 @@ function getWeekend(d: Date): string {
                  flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8
                  transition-colors duration-300"
     >
-      {/* NAVBAR (Breadcrumb + Dark Mode Toggle) */}
+
       <div className="max-w-7xl w-full mb-8">
         <div
           className="flex justify-between items-center px-4 py-2
@@ -993,7 +874,6 @@ function getWeekend(d: Date): string {
           </nav>
 
                       <div className="flex items-center space-x-4">
-                        {/* Info icon to re-open splash screen */}
                         <button
                           onClick={() => setShowSplash(true)}
                           className="flex items-center justify-center w-9 h-9 bg-gray-200 dark:bg-gray-700
@@ -1019,8 +899,7 @@ function getWeekend(d: Date): string {
                             />
                           </svg>
                         </button>
-          
-                        {/* Dark Mode Toggle */}
+
                         <button
                           onClick={toggleDarkMode}
                           className="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 
@@ -1046,29 +925,8 @@ function getWeekend(d: Date): string {
                     </div>
                   </div>
 
-      {/* MAIN CARD */}
       <div className="max-w-7xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300">
-        {/* TITLE, DESCRIPTION & SEASON PICKER */}
         <div className="text-left mb-6">
-        {/* <h2
-          className="font-extrabold text-gray-900 dark:text-gray-100 mb-2"
-          style={{ fontSize: '34px' }}
-        >
-          Manual Fixture Scheduler
-        </h2> */}
-        {/* <p
-          className="text-gray-600 dark:text-gray-300 mb-2"
-          style={{ fontSize: '16px' }}
-        >
-          This interface allows you to manually schedule your fixtures using an interactive interface with a live tracker that ensures every round is fully scheduled and adheres to Six Nations rules. Benefit from real-time constraint checking and handy suggestion buttons that offer valid matchups to fill any gaps in your schedule.
-        </p>
-        <br />
-        <p
-          className="text-sm text-gray-500 dark:text-gray-400 italic"
-          style={{ fontSize: '12px' }}
-        >
-          Note: Because scheduling is sequential, some combinations might later prove infeasible. In such cases, feedback is provided to help you backtrack and correct errors.
-        </p> */}
           <h2 className="font-extrabold text-gray-900 dark:text-gray-100 mb-2 text-3xl">
                   Manual Fixture Scheduler
           </h2>
@@ -1082,14 +940,9 @@ function getWeekend(d: Date): string {
           </p>
           <br />
 
-
       </div>
-      {/* <br/> */}
 
-
-        {/* GRID LAYOUT FOR PANELS */}
         <div className="grid grid-cols-1 lg:grid-cols-[repeat(14,minmax(0,1fr))] gap-4">
-          {/* LEFT PANEL: Constraints + Validation Errors (sticky) */}
           <div className="lg:col-span-4 sticky top-4 space-y-4">
             {(step === 'input' || step === 'summary') && (
               <div className="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
@@ -1180,7 +1033,6 @@ function getWeekend(d: Date): string {
             )}
           </div>
 
-          {/* CENTER PANEL: Steps */}
           <div className="lg:col-span-6">
             {step === 'selectTeams' && <TeamSelection />}
 
@@ -1194,7 +1046,6 @@ function getWeekend(d: Date): string {
 
                   return (
                     <div key={roundIndex} className="mb-6">
-                      {/* Round Header */}
                       <div
                         className={`
                           w-full px-4 py-2 rounded mb-2 font-bold flex items-center justify-between
@@ -1225,7 +1076,6 @@ function getWeekend(d: Date): string {
                         )}
                       </div>
 
-                      {/* Round content */}
                       {!isCollapsed && (
                         <div className="space-y-4 px-4">
                           {roundFixtures.map((fixture, fixtureIndex) => {
@@ -1237,34 +1087,20 @@ function getWeekend(d: Date): string {
                             const hasError = fixtureErrors.length > 0;
                             const key = `${roundIndex}-${fixtureIndex}`;
                             const matchups = suggestMatchups(roundIndex, fixtureIndex);
-
-                                                      // ----------------------------------
-                            // ADDED: Get roundNo, fixture object
-                            // ----------------------------------
                             const roundNo = roundIndex + 1;
                             const fix = fixtures[roundIndex][fixtureIndex];
-
-                            // ----------------------------------
-                            // ADDED: Filter out teams already used
-                            //        in this round
-                            // ----------------------------------
                             const availableTeamsForHome = selectedTeams.filter(
                               (team) =>
-                                // If not used in roundNo, or is the team already chosen as homeTeam
                                 !perRoundTeamTracker[roundNo][team._id] ||
                                 (fix.homeTeam && fix.homeTeam._id === team._id)
                             );
 
                             const availableTeamsForAway = selectedTeams.filter(
                               (team) =>
-                                // If not used in roundNo, or is the team already chosen as awayTeam
                                 !perRoundTeamTracker[roundNo][team._id] ||
                                 (fix.awayTeam && fix.awayTeam._id === team._id)
                             );
 
-
-                            // If fixture is minimized
-                            // If fixture is minimized
                             if (collapsedFixtures.has(key)) {
                               return (
                                 <div
@@ -1316,8 +1152,6 @@ function getWeekend(d: Date): string {
                               );
                             }
 
-
-                            // Full fixture card view
                             return (
                               <div
                                 key={fixtureIndex}
@@ -1343,9 +1177,7 @@ function getWeekend(d: Date): string {
                                   </button>
                                 </div>
 
-                                {/* Teams */}
                                 <div className="flex items-center space-x-4 mt-3">
-                                {/* Select for Team A */}
                                 <select
                                   value={fixture.homeTeam ? fixture.homeTeam._id : ''}
                                   onChange={(e) =>
@@ -1355,7 +1187,6 @@ function getWeekend(d: Date): string {
                                             text-gray-800 dark:text-gray-200 rounded px-2 py-1 w-40"
                                 >
                                   <option value="">Select Team A</option>
-                                  {/* ADDED: Use availableTeamsForHome instead of selectedTeams */}
                                   {availableTeamsForHome.map((t) => (
                                     <option key={t._id} value={t._id}>
                                       {t.teamName}
@@ -1365,7 +1196,6 @@ function getWeekend(d: Date): string {
 
                                 <span className="text-gray-500 dark:text-gray-400">vs</span>
 
-                                {/* Select for Team B */}
                                 <select
                                   value={fixture.awayTeam ? fixture.awayTeam._id : ''}
                                   onChange={(e) =>
@@ -1375,7 +1205,6 @@ function getWeekend(d: Date): string {
                                             text-gray-800 dark:text-gray-200 rounded px-2 py-1 w-40"
                                 >
                                   <option value="">Select Team B</option>
-                                  {/* ADDED: Use availableTeamsForAway instead of selectedTeams */}
                                   {availableTeamsForAway.map((t) => (
                                     <option key={t._id} value={t._id}>
                                       {t.teamName}
@@ -1384,7 +1213,6 @@ function getWeekend(d: Date): string {
                                 </select>
                               </div>
 
-                                {/* Date/time */}
                                 <div className="flex items-center space-x-2 mt-4">
                                   <label
                                     htmlFor={`date-${roundIndex}-${fixtureIndex}`}
@@ -1405,7 +1233,6 @@ function getWeekend(d: Date): string {
                                   />
                                 </div>
 
-                                {/* Fixture errors */}
                                 {fixtureErrors.length > 0 && (
                                   <div className="text-red-600 mt-3 space-y-1 text-sm">
                                     {fixtureErrors.map((err, eidx) => (
@@ -1414,7 +1241,6 @@ function getWeekend(d: Date): string {
                                   </div>
                                 )}
 
-                                {/* Suggestions and Reset Buttons Side by Side */}
                                 <div className="mt-4 flex justify-between">
                                   <button
                                     onClick={() => toggleSuggestions(roundIndex, fixtureIndex)}
@@ -1432,7 +1258,6 @@ function getWeekend(d: Date): string {
                                   </button>
                                 </div>
 
-                                {/* Suggestions Panel */}
                                 {showSuggestions[key] && (
                                   <div className="mt-4 border-t pt-4 border-gray-200 dark:border-gray-600">
                                     {matchups.length > 0 ? (
@@ -1504,7 +1329,6 @@ function getWeekend(d: Date): string {
                                   </div>
                                 )}
 
-                                {/* Stadium info if both teams chosen */}
                                 {fixture.homeTeam && fixture.awayTeam && fixture.stadium && (
                                   <div className="mt-4 bg-gray-50 dark:bg-gray-700 p-3 rounded">
                                     <h5 className="font-medium text-gray-700 dark:text-gray-100 mb-2">
@@ -1557,7 +1381,6 @@ function getWeekend(d: Date): string {
                   );
                 })}
 
-                {/* Next button */}
                 <button
                   onClick={() => {
                     if (allConstraintsSatisfied) {
@@ -1657,11 +1480,9 @@ function getWeekend(d: Date): string {
             )}
           </div>
 
-          {/* RIGHT PANEL: Overall + Per-Round Trackers (sticky) */}
           <div className="lg:col-span-4 sticky top-4 space-y-4">
             {(step === 'input' || step === 'summary') && (
               <>
-                {/* Overall Matchup Tracker */}
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
                     Overall Matchup Tracker
@@ -1691,7 +1512,6 @@ function getWeekend(d: Date): string {
                   </ul>
                 </div>
 
-                {/* Per-Round Team Tracker */}
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
                     Per-Round Team Tracker

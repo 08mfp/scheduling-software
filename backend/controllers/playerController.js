@@ -1,4 +1,3 @@
-// backend/controllers/playerController.js
 /**
  * @module backend/controllers/playerController
  * @description This file contains the controller functions for managing Players in the database.
@@ -6,7 +5,6 @@
  * @version 1.0.0
  * @authors github.com/08mfp
  */
-
 
 const Player = require('../models/Player');
 const upload = require('../middleware/upload');
@@ -88,7 +86,6 @@ exports.createPlayer = (req, res) => {
           image: req.file ? `/uploads/${req.file.filename}` : undefined,
         });
 
-        // Handle image removal
         if (req.body.removeImage === 'true') {
           player.image = undefined;
         }
@@ -145,15 +142,12 @@ exports.updatePlayer = (req, res) => {
           return res.status(404).json({ message: 'Player not found' });
         }
 
-        // Update fields
         player.firstName = req.body.firstName || player.firstName;
         player.lastName = req.body.lastName || player.lastName;
         player.dateOfBirth = req.body.dateOfBirth || player.dateOfBirth;
         player.team = req.body.team || player.team;
 
-        // Handle image removal or upload
         if (req.body.removeImage === 'true') {
-          // Delete old image if exists
           if (player.image) {
             const oldImagePath = '.' + player.image;
             try {
@@ -167,7 +161,6 @@ exports.updatePlayer = (req, res) => {
           }
           player.image = undefined;
         } else if (req.file) {
-          // Delete old image if exists
           if (player.image) {
             const oldImagePath = '.' + player.image;
             try {
@@ -205,7 +198,6 @@ exports.deletePlayer = async (req, res) => {
       return res.status(404).json({ message: 'Player not found' });
     }
 
-    // Delete image file if exists
     if (player.image) {
       const oldImagePath = '.' + player.image;
       try {

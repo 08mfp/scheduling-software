@@ -8,9 +8,7 @@ import { Team } from '../interfaces/Team';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
 
 const TeamsList: React.FC = () => {
-  //-----------------------
-  // 1) DARK MODE HOOKS
-  //-----------------------
+
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' || false;
@@ -29,22 +27,11 @@ const TeamsList: React.FC = () => {
   }, [isDarkMode]);
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
-
-  //-----------------------
-  // 2) AUTH & BASIC STATES
-  //-----------------------
   const { user } = useContext(AuthContext);
-
   const [teams, setTeams] = useState<Team[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  // Loading states
   const [loadingTeams, setLoadingTeams] = useState<boolean>(true);
   const [loadingDelayComplete, setLoadingDelayComplete] = useState<boolean>(false);
-
-  //-----------------------
-  // 3) SEARCH (IMMEDIATE, DEBOUNCED)
-  //-----------------------
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('');
 
@@ -56,19 +43,13 @@ const TeamsList: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  //-----------------------
-  // 4) SORT HOOKS
-  //-----------------------
   const [sortField, setSortField] = useState<'name' | 'ranking' | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  //-----------------------
-  // 5) FETCH TEAMS (2s DELAY)
-  //-----------------------
   useEffect(() => {
     const fetchTeams = async () => {
       setLoadingTeams(true);
-      const fetchStartTime = Date.now(); // Start time
+      const fetchStartTime = Date.now();
 
       try {
         const response = await axios.get<Team[]>(`${BACKEND_URL}/api/teams`);
@@ -77,7 +58,6 @@ const TeamsList: React.FC = () => {
         console.error('Error fetching teams:', err);
         setError('Failed to load teams.');
       } finally {
-        // Enforce at least 2s skeleton
         const elapsed = Date.now() - fetchStartTime;
         const remaining = 2000 - elapsed;
         if (remaining > 0) {
@@ -91,17 +71,10 @@ const TeamsList: React.FC = () => {
         }
       }
     };
-
-    // Call fetchTeams unconditionally.
-    // (We’ll handle unauthorized below, after all Hooks)
     fetchTeams();
   }, []);
 
-  //-----------------------
-  // 6) FILTER & SORT LOGIC
-  //-----------------------
   const filteredAndSortedTeams = useMemo(() => {
-    // 1) Filter by debouncedSearchQuery
     let filtered = [...teams];
     const query = debouncedSearchQuery.trim().toLowerCase();
     if (query) {
@@ -109,8 +82,6 @@ const TeamsList: React.FC = () => {
         team.teamName.toLowerCase().includes(query)
       );
     }
-
-    // 2) Sort by name or ranking if chosen
     if (sortField === 'name') {
       filtered.sort((a, b) => {
         const nameA = a.teamName.toLowerCase();
@@ -126,13 +97,10 @@ const TeamsList: React.FC = () => {
         return sortOrder === 'asc' ? rankA - rankB : rankB - rankA;
       });
     }
-
     return filtered;
   }, [teams, debouncedSearchQuery, sortField, sortOrder]);
 
-  //-----------------------
-  // 7) HELPER: TEAM COLOR
-  //-----------------------
+
   const getTeamColor = (teamName: string): { backgroundColor: string; textColor: string } => {
     switch (teamName) {
       case 'England':
@@ -152,42 +120,24 @@ const TeamsList: React.FC = () => {
     }
   };
 
-  //-----------------------
-  // 8) EARLY RETURN CHECKS
-  //-----------------------
-  // (a) Unauthorized
   if (!user || !['admin', 'manager', 'viewer'].includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Determine whether to show skeleton
   const showSkeleton = loadingTeams || !loadingDelayComplete;
-
-  //-----------------------
-  // 9) SKELETON COMPONENT
-  //-----------------------
   const renderSkeleton = () => (
     <div className="animate-pulse space-y-6">
-            {/* Header Skeleton */}
             <div className="flex flex-col items-center mt-6 space-y-4">
         <div className="h-8 w-32 bg-gray-300 dark:bg-gray-700 rounded" />
-        {/* <div className="h-8 w-40 bg-gray-300 dark:bg-gray-700 rounded" /> */}
       </div>
-      {/* Controls (Search + Sort) Skeleton */}
       <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-4 mb-6">
-        {/* Search Input */}
         <div className="h-8 w-48 bg-gray-300 dark:bg-gray-700 rounded" />
-        {/* Sort Buttons */}
         <div className="h-8 w-28 bg-gray-300 dark:bg-gray-700 rounded" />
         <div className="h-8 w-36 bg-gray-300 dark:bg-gray-700 rounded" />
       </div>
-
-      {/* Header Skeleton */}
       <div className="flex flex-col items-center mb-6 space-y-3">
         <div className="h-8 w-32 bg-gray-300 dark:bg-gray-700 rounded" />
       </div>
-
-      {/* Teams List Skeleton */}
       {[...Array(6)].map((_, i) => (
         <div
           key={i}
@@ -196,16 +146,13 @@ const TeamsList: React.FC = () => {
                      bg-gray-50 dark:bg-gray-700 transition-colors duration-300 mb-2"
         >
           <div className="flex items-center space-x-4">
-            {/* Team Logo Placeholder */}
             <div className="h-16 w-16 bg-gray-300 dark:bg-gray-600 rounded-full" />
-            {/* Team Details Placeholders */}
             <div className="flex-1 space-y-2">
               <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
               <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/3"></div>
               <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
             </div>
           </div>
-          {/* View Details Button Placeholder */}
           <div className="mt-4 sm:mt-0">
             <div className="h-8 w-24 bg-gray-300 dark:bg-gray-600 rounded"></div>
           </div>
@@ -214,16 +161,12 @@ const TeamsList: React.FC = () => {
     </div>
   );
 
-  //-----------------------
-  // 10) FINAL RETURN
-  //-----------------------
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 
                     flex items-start justify-center py-12 px-4 
                     sm:px-6 lg:px-8 transition-colors duration-300"
     >
       <div className="max-w-6xl w-full">
-        {/* Navbar (Breadcrumb + Dark Mode) */}
         <div className="flex justify-between items-center mb-8 px-4 py-2 
                         bg-gray-100 dark:bg-gray-800 rounded-md"
         >
@@ -258,7 +201,6 @@ const TeamsList: React.FC = () => {
           </button>
         </div>
 
-        {/* Main Card */}
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 space-y-8 transition-colors duration-300">
           {showSkeleton ? (
             renderSkeleton()
@@ -288,9 +230,7 @@ const TeamsList: React.FC = () => {
           </p>
           <br/>
         </div>
-              {/* Search & Sort Controls */}
               <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                {/* Immediate Search Input */}
                 <div className="flex items-center relative">
                   <label className="mr-2 font-semibold flex items-center space-x-2 text-gray-800 dark:text-gray-200">
                     <svg
@@ -342,7 +282,6 @@ const TeamsList: React.FC = () => {
                   )}
                 </div>
 
-                {/* Sort by Name Button */}
                 <div>
                   <button
                     onClick={() => {
@@ -389,7 +328,6 @@ const TeamsList: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Sort by Ranking Button */}
                 <div>
                   <button
                     onClick={() => {
@@ -437,7 +375,6 @@ const TeamsList: React.FC = () => {
                 </div>
               </div>
 
-              {/* Header: Title and Add Button */}
               <div className="flex flex-col items-center mt-6">
                 {user.role === 'admin' && (
                   <Link to="/teams/add" className="mt-4">
@@ -453,7 +390,6 @@ const TeamsList: React.FC = () => {
                 )}
               </div>
 
-              {/* Teams List */}
               <div className="space-y-6">
                 {filteredAndSortedTeams.map((team) => {
                   const teamColor = getTeamColor(team.teamName);
@@ -470,14 +406,12 @@ const TeamsList: React.FC = () => {
                       }}
                     >
                       <div className="flex items-center space-x-4">
-                        {/* Team Logo */}
                         <img
                           src={`${BACKEND_URL}${team.image}`}
                           alt={`${team.teamName} Logo`}
                           className="w-16 h-16 object-contain rounded-full"
                           loading="lazy"
                         />
-                        {/* Team Details */}
                         <div>
                           <Link to={`/teams/${team._id}`}>
                             <h3 className="text-xl font-semibold hover:underline">
@@ -492,13 +426,11 @@ const TeamsList: React.FC = () => {
                           </p>
                         </div>
                       </div>
-                      {/* View Details Button */}
                       <div className="mt-4 sm:mt-0">
                         <Link to={`/teams/${team._id}`}>
                           <button
                             className="px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-opacity-50"
                             style={{
-                              // Use textColor as button background & backgroundColor as text
                               backgroundColor: teamColor.textColor,
                               color: teamColor.backgroundColor,
                               border: `2px solid ${teamColor.backgroundColor}`,
@@ -512,7 +444,6 @@ const TeamsList: React.FC = () => {
                   );
                 })}
 
-                {/* No teams found */}
                 {filteredAndSortedTeams.length === 0 && (
                   <div className="text-center text-gray-500 dark:text-gray-400">
                     No teams found. Please add a new team.

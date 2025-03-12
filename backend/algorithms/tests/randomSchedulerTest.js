@@ -1,5 +1,3 @@
-// algorithms/tests/randomSchedulerTest.js
-
 let expect, sinon, generateRandomFixtures, Fixture, Stadium;
 
 describe('Random Fixture Scheduling Algorithm', function() {

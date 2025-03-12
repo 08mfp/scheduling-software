@@ -1,4 +1,3 @@
-// backend/routes/schedulerRoutes.js
 /**
  * @module backend/routes/schedulerRoutes
  * @description This module is used for defining scheduler routes for the application.
@@ -12,10 +11,8 @@ const router = express.Router();
 const schedulerController = require('../controllers/schedulerController');
 const { authenticate, authorize } = require('../middleware/auth');
 
-
-// // Route to run the scheduler
 // router.post('/run', schedulerController.runScheduler);
-// Admin-only can run scheduler
+// Admin-only access
 router.post('/run', authenticate, authorize('admin'), schedulerController.runScheduler);
 
 module.exports = router;

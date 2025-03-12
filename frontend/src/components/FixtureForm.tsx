@@ -8,7 +8,7 @@ import { FaArrowLeft, FaHome, FaTimes } from 'react-icons/fa';
 interface Fixture {
   _id?: string;
   round: number;
-  date: string; // Date and time in ISO format
+  date: string;
   homeTeam: string;
   awayTeam: string;
   stadium: string;
@@ -46,19 +46,11 @@ const FixtureForm: React.FC = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-
   const hasFetched = useRef(false);
-
-  // currentAction: 'create' | 'update'
   const [currentAction, setCurrentAction] = useState<'create' | 'update' | null>(null);
-
-  // modalState: 'loading' | 'success' | 'error' | null
   const [modalState, setModalState] = useState<'loading' | 'success' | 'error' | null>(null);
-
-  // Countdown for success auto-close
   const [countdown, setCountdown] = useState<number>(3);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
-
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -67,7 +59,6 @@ const FixtureForm: React.FC = () => {
     if (user && user.role === 'admin') {
       fetchTeams();
       fetchStadiums();
-
       if (id) {
         setCurrentAction('update');
         fetchFixture(id);
@@ -86,7 +77,7 @@ const FixtureForm: React.FC = () => {
         const data = response.data;
         setFixture({
           round: data.round,
-          date: data.date.substring(0, 16), // datetime-local compatible
+          date: data.date.substring(0, 16),
           homeTeam: data.homeTeam._id,
           awayTeam: data.awayTeam._id,
           stadium: data.stadium._id,
@@ -138,11 +129,9 @@ const FixtureForm: React.FC = () => {
 
     try {
       if (id) {
-        // Update existing fixture
         await axios.put(`${BACKEND_URL}/api/fixtures/${id}`, fixture);
         setModalState('success');
       } else {
-        // Create new fixture
         await axios.post(`${BACKEND_URL}/api/fixtures`, fixture);
         setModalState('success');
       }
@@ -180,19 +169,16 @@ const FixtureForm: React.FC = () => {
     };
   }, [modalState, navigate]);
 
-  // Check if the date is in the past to determine if we show scores
   const isPastDate = () => {
     const fixtureDate = new Date(fixture.date);
     const now = new Date();
     return fixtureDate < now;
   };
 
-  // If not admin, redirect
   if (!user || user.role !== 'admin') {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Determine success message based on action
   let successTitle = 'Success';
   let successMessage = 'Action completed successfully.';
   if (currentAction === 'create') {
@@ -227,7 +213,6 @@ const FixtureForm: React.FC = () => {
   const retryText = modalState === 'error' ? 'Retry' : undefined;
   const okText = modalState === 'success' ? 'OK' : undefined;
 
-  // Utility to get the team name by ID
   const getTeamName = (teamId: string) => {
     const team = teams.find((t) => t._id === teamId);
     return team ? team.teamName : 'Unknown Team';
@@ -236,7 +221,6 @@ const FixtureForm: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl w-full bg-white shadow-lg rounded-lg p-10 space-y-8">
-        {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2 mb-6">
           <a href="/fixtures" className="text-blue-600 hover:underline flex items-center">
             <FaHome className="mr-1" />
@@ -255,7 +239,6 @@ const FixtureForm: React.FC = () => {
           )}
         </div>
 
-        {/* Header */}
         <div className="flex flex-col items-center mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900 mb-4">
             {id ? 'Edit Fixture' : 'Add New Fixture'}
@@ -286,16 +269,13 @@ const FixtureForm: React.FC = () => {
           )}
         </div>
 
-        {/* Form */}
         <form className="space-y-6" onSubmit={handleSubmit}>
 
-          {/* Round - Not Editable */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Round:</label>
             <p className="mt-1 text-lg text-gray-900 font-semibold">{fixture.round}</p>
           </div>
 
-          {/* Date and Time Input */}
           <div>
             <label htmlFor="date" className="block text-sm font-medium text-gray-700">
               Date and Time<span className="text-red-500">*</span>
@@ -311,13 +291,11 @@ const FixtureForm: React.FC = () => {
             />
           </div>
 
-          {/* Season - Not Editable */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Season:</label>
             <p className="mt-1 text-lg text-gray-900 font-semibold">{fixture.season}</p>
           </div>
 
-          {/* Home Team - Not Editable */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Home Team:</label>
             <p className="mt-1 text-lg text-gray-900 font-semibold">
@@ -325,7 +303,6 @@ const FixtureForm: React.FC = () => {
             </p>
           </div>
 
-          {/* Away Team - Not Editable */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Away Team:</label>
             <p className="mt-1 text-lg text-gray-900 font-semibold">
@@ -333,7 +310,6 @@ const FixtureForm: React.FC = () => {
             </p>
           </div>
 
-          {/* Stadium Select */}
           <div>
             <label htmlFor="stadium" className="block text-sm font-medium text-gray-700">
               Stadium<span className="text-red-500">*</span>
@@ -355,7 +331,6 @@ const FixtureForm: React.FC = () => {
             </select>
           </div>
 
-          {/* Location Input */}
           <div>
             <label htmlFor="location" className="block text-sm font-medium text-gray-700">
               Location<span className="text-red-500">*</span>
@@ -371,7 +346,6 @@ const FixtureForm: React.FC = () => {
             />
           </div>
 
-          {/* Scores if Date is in the Past */}
           {(() => {
             const fixtureDate = new Date(fixture.date);
             const now = new Date();
@@ -415,7 +389,6 @@ const FixtureForm: React.FC = () => {
             }
           })()}
 
-          {/* Form Buttons */}
           <div className="flex items-center justify-between mt-6">
             <a href="/fixtures" className="text-sm text-blue-600 hover:underline flex items-center">
               <FaArrowLeft className="mr-1" />
@@ -473,14 +446,12 @@ const FixtureForm: React.FC = () => {
           </div>
         </form>
 
-        {/* Disclaimer */}
         <div className="mt-6 text-sm text-red-700">
           Note: Round, Season, Home & Away Team fields cannot be modified as they would
           violate Six Nations rules and constraints.
         </div>
       </div>
 
-      {/* Loading/Success/Error Modal (No Confirm Step) */}
       <ConfirmModal
         isOpen={modalState !== null}
         type={modalState || 'loading'}

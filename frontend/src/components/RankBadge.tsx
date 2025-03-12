@@ -1,5 +1,3 @@
-// frontend/src/components/RankBadge.tsx
-
 import React from 'react';
 
 interface RankBadgeProps {
@@ -8,8 +6,6 @@ interface RankBadgeProps {
 
 const RankBadge: React.FC<RankBadgeProps> = ({ rank }) => {
   let bgColor = 'bg-yellow-500';
-
-  // Example: Different colors for top 3 ranks
   if (rank === 1) bgColor = 'bg-yellow-500';
   else if (rank === 2) bgColor = 'bg-gray-600';
   else if (rank === 3) bgColor = 'bg-yellow-700';

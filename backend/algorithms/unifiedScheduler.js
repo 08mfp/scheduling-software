@@ -1,19 +1,19 @@
-/***************************************************
- * SIX NATIONS SCHEDULER - ADVANCED COMPREHENSIVE VERSION
- *
- * Features:
+/**
+ * @module backend/algorithms/unifiedScheduler
+ * @description
+Features:
  *  - Standard constraints (no 3 away in a row, 2–3 home distribution, flips from last year)
  *  - Additional cost terms (travel, fairness, timeslot, short-gap)
  *  - Competitiveness formula (interest = ALPHA*(6 - diff) + BETA*(12 - sum))
  *  - Broadcast constraints (Fri limit, R5 super saturday, #1 vs #2 final slot)
  *  - Pruning & memoization in backtracking
- *  - Hybrid local search with bigger “jump” (reassign round) + adaptive temperature
+ *  - Hybrid local search with bigger “jump” (reassign round) + adaptive
  *  - Multiple permutations in round assignment (desc, asc, random)
  *  - Multi-run function for large repeated attempts
  *  - Fully expanded buildFinalSummary with user-facing logs
- ***************************************************/
+ * @version 3.4.0
+ */
 
-// --------------- ID HELPER ---------------
 function getIdString(docId) {
     if (!docId) return "";
     if (typeof docId === "object" && docId.buffer instanceof Uint8Array) {
@@ -25,7 +25,6 @@ function getIdString(docId) {
     return docId.toString();
   }
   
-  // --------------- RANK HELPER ---------------
   function getRankDiff(m) {
     return Math.abs(m.teamA.teamRanking - m.teamB.teamRanking);
   }
@@ -34,9 +33,8 @@ function getIdString(docId) {
     return m.teamA.teamRanking + m.teamB.teamRanking;
   }
   
-  // --------------- HAVERSINE ---------------
   function calculateDistance(coord1, coord2) {
-    const R = 6371; // Earth radius in km
+    const R = 6371;
     const lat1 = (coord1.latitude * Math.PI) / 180;
     const lat2 = (coord2.latitude * Math.PI) / 180;
     const dLat = lat2 - lat1;
@@ -48,7 +46,6 @@ function getIdString(docId) {
     return R * c;
   }
   
-  // --------------- SHUFFLE ---------------
   function shuffleArray(arr) {
     const a = arr.slice();
     for (let i = a.length - 1; i > 0; i--) {
@@ -58,7 +55,6 @@ function getIdString(docId) {
     return a;
   }
   
-  // --------------- MATCH INTEREST ---------------
   /**
    * Given a match (with teamA/teamB) and alpha/beta, compute
    * interest = alpha*(6 - diff) + beta*(12 - sum).
@@ -69,11 +65,6 @@ function getIdString(docId) {
     return alpha * (6 - diff) + beta * (12 - sum);
   }
   
-  // --------------- GENERATE MATCHUPS ---------------
-  /**
-   * Generate all 15 pairwise matchups among 6 teams,
-   * storing competitiveness using user-provided alpha/beta.
-   */
   function generateAllMatchups(teams, alpha = 1, beta = 2) {
     const matchups = [];
     for (let i = 0; i < teams.length; i++) {
@@ -86,14 +77,13 @@ function getIdString(docId) {
         matchups.push({
           teamA: teams[i],
           teamB: teams[j],
-          competitiveness: interest, // store interest
+          competitiveness: interest,
         });
       }
     }
     return matchups;
   }
   
-  // --------------- PRECOMPUTE DISTANCES ---------------
   function precomputeTeamDistances(teams) {
     const distances = {};
     const messages = [];
@@ -121,7 +111,6 @@ function getIdString(docId) {
     return { distances, messages };
   }
   
-  // --------------- REST WEEK PATTERNS ---------------
   function generateRestWeekPatterns(matchWeeks = 5, totalSlots = 8) {
     const patterns = [];
     function backtrack(idx, used, current) {
@@ -129,13 +118,11 @@ function getIdString(docId) {
         if (used === matchWeeks) patterns.push(current.slice());
         return;
       }
-      // choose true
       if (used < matchWeeks) {
         current.push(true);
         backtrack(idx + 1, used + 1, current);
         current.pop();
       }
-      // choose false
       current.push(false);
       backtrack(idx + 1, used, current);
       current.pop();
@@ -144,7 +131,6 @@ function getIdString(docId) {
     return patterns;
   }
   
-  // --------------- FLATTEN ROUNDS ---------------
   function flattenRounds(rounds) {
     const fixtures = [];
     for (let r = 0; r < rounds.length; r++) {
@@ -155,7 +141,6 @@ function getIdString(docId) {
     return fixtures;
   }
   
-  // --------------- UNIFY FIXTURE TEAMS ---------------
   function unifyFixtureTeams(fixtures, teams) {
     const teamMap = {};
     teams.forEach((t) => {
@@ -167,7 +152,6 @@ function getIdString(docId) {
     });
   }
   
-  // --------------- 3-AWAY CHECK ---------------
   function hasThreeAwayInARowConsideringRest(fixtures, teams) {
     const awaySlots = {};
     teams.forEach((t) => {
@@ -201,7 +185,6 @@ function getIdString(docId) {
     return false;
   }
   
-  // --------------- FEASIBILITY CHECK ---------------
   function isFeasible(fixtures, teams, partialLocks = {}, lastYearMap = {}) {
     // 1) 5 rounds x 3 fixtures
     const roundMap = {};
@@ -270,7 +253,7 @@ function getIdString(docId) {
     });
     for (const tid in homeCount) {
       const h = homeCount[tid];
-      // must be exactly 2 or 3 => if it's 4,5,0,1 => fail
+      // must be exactly 2 or 3 => if it's 4,5,0,1 then fail this solition
       if (h === 4 || h === 5 || h === 0 || h === 1) {
         return false;
       }
@@ -279,7 +262,6 @@ function getIdString(docId) {
     return true;
   }
   
-  // --------------- SHORT GAP PENALTY ---------------
   function computeShortGapPenalty(fixtures, teams, minGapDays) {
     const teamFixtures = {};
     teams.forEach((t) => {
@@ -313,15 +295,13 @@ function getIdString(docId) {
     return penalty;
   }
   
-  // --------------- TIMESLOT SCORING ---------------
+
   function getTimeslotScore(date, competitiveness) {
     if (!date) return 0;
-    const day = date.getDay(); // 0=Sun,1=Mon,...,5=Fri,6=Sat
+    const day = date.getDay(); // 0=Sun,1=Mon,...,,6=Sat
     const hour = date.getHours();
     let score = 0;
   
-    // Example scoring
-    // Friday 20:00 => penalty
     if (day === 5 && hour === 20) {
       score += 3;
     }
@@ -337,18 +317,14 @@ function getIdString(docId) {
     return score;
   }
   
-  // --------------- MAIN COST BREAKDOWN ---------------
+
   function computeCostBreakdown(fixtures, teams, distances, weights = {}) {
-    // ----------------------------------------------------------------
-    // 1) Rehydrate date fields so we don't crash on date.getDay()
-    // ----------------------------------------------------------------
     for (const fx of fixtures) {
       if (fx.date && typeof fx.date === "string") {
         fx.date = new Date(fx.date);
       }
     }
   
-    // Then proceed with the cost logic:
     let {
       w1 = 1.0, // consecutive away penalty
       w2 = 0.1, // max travel
@@ -360,7 +336,6 @@ function getIdString(docId) {
       wShortGap = 0.5,
       minGapDays = 6,
   
-      // Additional user-supplied constants (with defaults)
       ALPHA = 1,
       BETA = 2,
       FRIDAY_NIGHT_LIMIT = 2,
@@ -375,7 +350,6 @@ function getIdString(docId) {
     let top2missedSlotPenalty = 0;
     let timeslotPenalty = 0;
   
-    // track travel
     const travelDist = {};
     teams.forEach((t) => {
       travelDist[getIdString(t._id)] = 0;
@@ -386,7 +360,6 @@ function getIdString(docId) {
     const topTeamId = getIdString(sortedByRank[0]._id);
     const secondTeamId = getIdString(sortedByRank[1]._id);
   
-    // store round usage for consecutive away check
     const roundsRecord = {};
     teams.forEach((t) => {
       roundsRecord[getIdString(t._id)] = [];
@@ -409,10 +382,10 @@ function getIdString(docId) {
         roundsRecord[idA].push({ roundIndex, isAway: true });
       }
   
-      // competitiveness penalty => bigger match earlier => compPenalty += competitiveness * (4 - roundIndex)
+      // competitiveness penalty => if bigger matches are  earlier => compPenalty += competitiveness * (4 - roundIndex)
       compPenalty += competitiveness * (4 - roundIndex);
   
-      // top2 => if not R5 at 18:00 => penalty
+      // top2 => if not Round5 at 18:00 then penalty
       const isTop2 =
         (idA === topTeamId && idB === secondTeamId) ||
         (idB === topTeamId && idA === secondTeamId);
@@ -423,7 +396,7 @@ function getIdString(docId) {
         }
       }
   
-      // broadcast penalty => Fri 20:00 => count them
+      // broadcast penalty => Fri 20:00
       if (date && date.getDay() === 5 && date.getHours() === 20) {
         fridayNightCount++;
       }
@@ -454,14 +427,14 @@ function getIdString(docId) {
       if (val > maxTravel) maxTravel = val;
     }
   
-    // broadcast penalty => if exceed FRIDAY_NIGHT_LIMIT
+    // broadcast penalty => if it exceed FRIDAY_NIGHT_LIMIT amount
     let broadcastPenalty = 0;
     if (fridayNightCount > FRIDAY_NIGHT_LIMIT) {
       broadcastPenalty =
         (fridayNightCount - FRIDAY_NIGHT_LIMIT) * FRIDAY_NIGHT_PENALTY;
     }
   
-    // travel fairness => std dev
+    // travel fairness => std dev from mean //! or median?
     const meanTravel = totalTravel / teams.length;
     let variance = 0;
     travelVals.forEach((v) => {
@@ -470,10 +443,8 @@ function getIdString(docId) {
     variance /= teams.length;
     const travelStdDev = Math.sqrt(variance);
   
-    // short-gap penalty
     const shortGapPenalty = computeShortGapPenalty(fixtures, teams, minGapDays);
   
-    // sum cost
     const baseCost =
       w1 * consecutiveAwayPenalty +
       w2 * maxTravel +
@@ -504,12 +475,10 @@ function getIdString(docId) {
     };
   }
   
-  // --------------- QUICK COST ---------------
   function computeHomeAwayCost(fixtures, teams, distances, weights) {
     return computeCostBreakdown(fixtures, teams, distances, weights).totalCost;
   }
   
-  // --------------- ROUND ASSIGNMENT (BACKTRACK) ---------------
   function backtrackingAssignRoundsWithPattern(
     teams,
     matchups,
@@ -518,13 +487,10 @@ function getIdString(docId) {
   ) {
     let sorted = [];
     if (orderStrategy === "desc") {
-      // highest competitiveness first
       sorted = matchups.slice().sort((a, b) => b.competitiveness - a.competitiveness);
     } else if (orderStrategy === "asc") {
-      // lowest competitiveness first
       sorted = matchups.slice().sort((a, b) => a.competitiveness - b.competitiveness);
     } else {
-      // random
       sorted = shuffleArray(matchups);
     }
   
@@ -542,25 +508,22 @@ function getIdString(docId) {
       teamRounds[getIdString(t._id)] = new Set();
     });
   
-    // memo for partial states
     const memo = new Map();
   
     function getStateKey(idx) {
-      // store idx + how many in each round
       const counts = roundFixtures.map((rf) => rf.length).join(",");
       return `idx=${idx}|counts=${counts}`;
     }
   
     function backtrack(idx) {
       if (idx === sorted.length) {
-        // must fill 5 rounds x 3 each => total 15
         for (let r = 0; r < 5; r++) {
           if (roundFixtures[r].length !== 3) return false;
         }
         return true;
       }
   
-      // prune if any round > 3
+      // prune if any round > 3 matcjes
       for (let r = 0; r < 5; r++) {
         if (roundFixtures[r].length > 3) return false;
       }
@@ -598,7 +561,6 @@ function getIdString(docId) {
           return true;
         }
   
-        // revert
         roundFixtures[r].pop();
         teamRounds[idA].delete(r);
         teamRounds[idB].delete(r);
@@ -612,7 +574,6 @@ function getIdString(docId) {
     return { feasible, rounds: roundFixtures, matchSlotIndices };
   }
   
-  // --------------- ASSIGN HOME/AWAY ---------------
   function assignHomeAway(
     teams,
     fixtures,
@@ -621,7 +582,7 @@ function getIdString(docId) {
     partialLocks,
     lastYearMap
   ) {
-    // 1) init random assignment (respect partial locks)
+
     for (let fx of fixtures) {
       const r = fx.roundIndex + 1;
       const idA = getIdString(fx.teamA._id);
@@ -649,7 +610,6 @@ function getIdString(docId) {
       }
     }
   
-    // 2) enforce last-year flips repeatedly
     let changed = true;
     let passCount = 0;
     const maxPasses = fixtures.length * 2;
@@ -670,7 +630,6 @@ function getIdString(docId) {
           continue;
         }
         if (lastYearMap[idA] && lastYearMap[idA][idB]) {
-          // must be assignment=0
           if (oldAssign !== 0) {
             fx.homeAssignment = 0;
             if (!isFeasible(fixtures, teams, partialLocks, lastYearMap)) {
@@ -680,7 +639,6 @@ function getIdString(docId) {
             }
           }
         } else if (lastYearMap[idB] && lastYearMap[idB][idA]) {
-          // must be assignment=1
           if (oldAssign !== 1) {
             fx.homeAssignment = 1;
             if (!isFeasible(fixtures, teams, partialLocks, lastYearMap)) {
@@ -693,12 +651,10 @@ function getIdString(docId) {
       }
     }
   
-    // final feasibility check
     if (!isFeasible(fixtures, teams, partialLocks, lastYearMap)) {
       return { fixtures, cost: Infinity };
     }
   
-    // 3) local flipping => try to reduce cost
     let currentCost = computeHomeAwayCost(fixtures, teams, distances, weights);
     let improved = true;
     let iteration = 0;
@@ -737,7 +693,6 @@ function getIdString(docId) {
     return { fixtures, cost: currentCost };
   }
   
-  // --------------- SCHEDULE DATES ---------------
   function scheduleDates(fixtures, pattern, season, teams) {
     const matchSlots = [];
     for (let i = 0; i < pattern.length; i++) {
@@ -745,7 +700,6 @@ function getIdString(docId) {
     }
     if (matchSlots.length !== 5) return null;
   
-    // find first Friday in Feb of given season
     const baseDate = new Date(`${season}-02-01T00:00:00`);
     while (baseDate.getDay() !== 5) {
       baseDate.setDate(baseDate.getDate() + 1);
@@ -764,7 +718,7 @@ function getIdString(docId) {
     }
   
     function buildRound5Dates(weekendStart) {
-      // super sat => Sat14, Sat16, Sat18
+      // super sat on Sat14, Sat16, Sat18
       const dayStart = new Date(weekendStart);
       while (dayStart.getDay() !== 6) {
         dayStart.setDate(dayStart.getDate() + 1);
@@ -812,7 +766,6 @@ function getIdString(docId) {
       "England~Wales",
     ]);
   
-    // schedule R1..R4
     for (let r = 1; r <= 4; r++) {
       const arr = roundMap[r] || [];
       if (arr.length !== 3) return null;
@@ -832,11 +785,11 @@ function getIdString(docId) {
   
       let usedSlots = new Set();
       if (primeCandidates.length > 0) {
-        // first prime => Sat20
+        // first prime on Sat20
         const primeFx = primeCandidates.shift();
         primeFx.date = dateChoices[2];
         usedSlots.add(2);
-        // second => Sun14
+        // second on Sun14
         if (primeCandidates.length > 0) {
           const primeFx2 = primeCandidates.shift();
           primeFx2.date = dateChoices[3];
@@ -858,12 +811,12 @@ function getIdString(docId) {
       }
     }
   
-    // round 5 => super saturday
+    // round 5 on super saturday
     const arr5 = roundMap[5] || [];
     if (arr5.length !== 3) return null;
     const superSatSlots = roundsDateMap[5];
   
-    // place #1 vs #2 in final 18:00 if found
+    // place #1 vs #2 in final 18:00 if found/allowed
     const sortedByRank = teams.slice().sort((a, b) => a.teamRanking - b.teamRanking);
     const topTeam = sortedByRank[0];
     const secondTeam = sortedByRank[1];
@@ -900,13 +853,12 @@ function getIdString(docId) {
     return fixtures;
   }
   
-  // --------------- LOCAL SEARCH NEIGHBOR ---------------
+
   function makeNeighbor(schedule, teams, distances, weights, partialLocks, lastYearMap) {
     const newSched = JSON.parse(JSON.stringify(schedule));
     const fixtures = newSched.fixtures;
     if (fixtures.length < 2) return null;
   
-    // Optionally re-hydrate here, too, to ensure no string Dates:
     for (const fx of fixtures) {
       if (fx.date && typeof fx.date === "string") {
         fx.date = new Date(fx.date);
@@ -953,14 +905,14 @@ function getIdString(docId) {
       f1.weekSlotIndex = f2.weekSlotIndex;
       f2.weekSlotIndex = tmpSlot;
     } else if (moveType === "reassignRound") {
-      // bigger jump => pick entire round => reassign each fixture to new random round
+
       const rPick = Math.floor(Math.random() * 5);
       const roundFixtures = fixtures.filter((x) => x.roundIndex === rPick);
       if (roundFixtures.length !== 3) return null;
       for (let i = 0; i < roundFixtures.length; i++) {
         const newR = Math.floor(Math.random() * 5);
         roundFixtures[i].roundIndex = newR;
-        roundFixtures[i].weekSlotIndex = newR; // simplistic
+        roundFixtures[i].weekSlotIndex = newR;
       }
     }
   
@@ -971,11 +923,10 @@ function getIdString(docId) {
     return newSched;
   }
   
-  // --------------- RUN LOCAL SEARCH ---------------
+
   function runLocalSearch(schedule, teams, distances, weights, partialLocks, lastYearMap) {
     let current = JSON.parse(JSON.stringify(schedule));
   
-    // re-hydrate
     current.fixtures.forEach((f) => {
       if (f.date && typeof f.date === "string") {
         f.date = new Date(f.date);
@@ -1001,13 +952,11 @@ function getIdString(docId) {
         temperature *= coolingRate;
         iterationsSinceImprovement++;
         if (iterationsSinceImprovement > 50) {
-          // degrade temperature faster if stuck
           temperature *= 0.9;
         }
         continue;
       }
-  
-      // re-hydrate neighbor
+
       neighbor.fixtures.forEach((f) => {
         if (f.date && typeof f.date === "string") {
           f.date = new Date(f.date);
@@ -1027,7 +976,6 @@ function getIdString(docId) {
           iterationsSinceImprovement = 0;
         }
       }
-      // adaptive
       if (iterationsSinceImprovement > 20) {
         temperature *= 0.9;
         iterationsSinceImprovement = 0;
@@ -1040,12 +988,11 @@ function getIdString(docId) {
     return current;
   }
   
-  // --------------- BUILD FINAL SUMMARY ---------------
+
   function buildFinalSummary(schedule, teams) {
     console.log("[buildFinalSummary] Building final summary info...");
     const summary = [];
   
-    // define a rivalry set for prime-time checks
     const rivalrySet = new Set([
       "Scotland~England",
       "England~Scotland",
@@ -1060,7 +1007,6 @@ function getIdString(docId) {
     ]);
   
     const { fixtures, totalCost, distances } = schedule;
-    // get full breakdown with default weights (just for summary)
     const breakdown = computeCostBreakdown(fixtures, teams, distances, {});
     const chrono = fixtures.slice().sort((a, b) => (a.date || 0) - (b.date || 0));
     const {
@@ -1076,11 +1022,9 @@ function getIdString(docId) {
       shortGapPenalty,
     } = breakdown;
   
-    // 1) Intro
     summary.push("=== Final Comprehensive Schedule Summary ===");
     summary.push("");
   
-    // 9) Final Cost Breakdown
     summary.push(`Best schedule found with total cost: ${totalCost.toFixed(2)}`);
     summary.push("Cost breakdown:");
     summary.push(
@@ -1131,7 +1075,6 @@ function getIdString(docId) {
     summary.push(`  => Weighted total:          ${totalCost.toFixed(2)}`);
     summary.push("");
   
-    // 8) Round Start Dates
     summary.push(`Round Start Dates:`);
     for (let r = 1; r <= 5; r++) {
       const roundFixtures = chrono.filter((x) => x.roundIndex + 1 === r);
@@ -1145,7 +1088,6 @@ function getIdString(docId) {
     }
     summary.push("");
   
-    // 6) Team Rankings
     summary.push(`Team Rankings:`);
     const sortedByRank = teams.slice().sort((a, b) => a.teamRanking - b.teamRanking);
     for (let i = 0; i < sortedByRank.length; i++) {
@@ -1155,14 +1097,13 @@ function getIdString(docId) {
     }
     summary.push("");
   
-    // 7) Match “Interest” Rankings
     summary.push(`Match “Interest” Rankings (highest first):`);
     const allPairs = [];
     for (let i = 0; i < teams.length; i++) {
       for (let j = i + 1; j < teams.length; j++) {
         const diff = getRankDiff({ teamA: teams[i], teamB: teams[j] });
         const sum = getRankSum({ teamA: teams[i], teamB: teams[j] });
-        // default alpha=1,beta=2 in summary
+        // default alpha=1,beta=2 in summary //! MAYBE NEED TO UPDATE THIS TO BE DYNAMIC IN SUMMARY
         const interest = 1 * (6 - diff) + 2 * (12 - sum);
         allPairs.push({
           teamA: teams[i],
@@ -1183,7 +1124,6 @@ function getIdString(docId) {
     }
     summary.push("");
   
-    // 10) Prime-Time Matches
     summary.push(`Prime-Time Matches (Sat 20:00 or Sun 18:00) for Rivalries:`);
     const primeTimeMatches = chrono.filter((fx) => {
       if (!fx.date) return false;
@@ -1211,7 +1151,6 @@ function getIdString(docId) {
     }
     summary.push("");
   
-    // 2) Distances Between Teams
     summary.push(`--- Distances Between Teams (Precomputed) ---`);
     const displayedPairs = new Set();
     for (let key in distances) {
@@ -1229,7 +1168,6 @@ function getIdString(docId) {
     }
     summary.push("");
   
-    // 4) Total Travel Distances by Team
     summary.push(`--- Total Travel Distances by Team ---`);
     teams.forEach((t) => {
       const tid = getIdString(t._id);
@@ -1238,7 +1176,6 @@ function getIdString(docId) {
     });
     summary.push("");
   
-    // 3) Per-Match Travel Logs
     summary.push(`--- Per-Match Travel Logs ---`);
     for (let fx of chrono) {
       const homeIsA = fx.homeAssignment === 1;
@@ -1263,7 +1200,6 @@ function getIdString(docId) {
     }
     summary.push("");
   
-    // 5) Per-Team Fixture Summary
     summary.push(`--- Per-Team Fixture Summary ---`);
     const teamFixtures = {};
     teams.forEach((t) => {
@@ -1302,7 +1238,6 @@ function getIdString(docId) {
     return summary;
   }
   
-  // --------------- MAIN EXPORTS ---------------
   async function generateComprehensiveFairFixtures(
     teams,
     season,
@@ -1314,35 +1249,28 @@ function getIdString(docId) {
       `\n=== generateComprehensiveFairFixtures ===\nSeason=${season}, requestedRestCount=${requestedRestCount}`
     );
   
-    // convert from mongoose docs if needed
     teams = teams.map((t) => (t.toObject ? t.toObject() : t));
     if (teams.length !== 6) {
       throw new Error("Exactly 6 teams are required for the Six Nations.");
     }
   
-    // parse additional options
     const partialLocks = options.partialLocks || {};
     const lastYearHome = options.previousYearHome || {};
     const runLocalSearchFlag = !!options.runLocalSearch;
   
-    // Precompute distances
     console.log("[Scheduler] Precomputing distances...");
     const { distances, messages } = precomputeTeamDistances(teams);
   
-    // read alpha/beta from weights
     const alpha = weights.ALPHA || 1;
     const beta = weights.BETA || 2;
   
-    // Generate all matchups with that alpha/beta
     console.log("[Scheduler] Generating matchups...");
     const matchups = generateAllMatchups(teams, alpha, beta);
   
-    // Build rest patterns
     console.log("[Scheduler] Building rest patterns...");
     const allPatterns = generateRestWeekPatterns(5, 8);
     let patterns = [];
     if (typeof requestedRestCount === "number") {
-      // If user specified "Number of non-match weeks"
       patterns = allPatterns.filter(
         (p) => p.filter((x) => !x).length === requestedRestCount
       );
@@ -1354,14 +1282,12 @@ function getIdString(docId) {
     let bestSchedule = null;
     let bestCost = Infinity;
   
-    // multiple permutations => desc, asc, random
     const orderStrategies = ["desc", "asc", "random"];
   
     for (let pIndex = 0; pIndex < patterns.length; pIndex++) {
       const pattern = patterns[pIndex];
   
       for (let strategy of orderStrategies) {
-        // 1) round assignment
         const roundRes = backtrackingAssignRoundsWithPattern(
           teams,
           matchups,
@@ -1372,11 +1298,9 @@ function getIdString(docId) {
           continue;
         }
   
-        // 2) flatten
         let fixtures = flattenRounds(roundRes.rounds);
         unifyFixtureTeams(fixtures, teams);
   
-        // 3) home/away assignment
         const haResult = assignHomeAway(
           teams,
           fixtures,
@@ -1389,14 +1313,12 @@ function getIdString(docId) {
         if (!isFinite(haResult.cost)) {
           continue;
         }
-  
-        // 4) date/time assignment
+
         const scheduled = scheduleDates(fixtures, pattern, season, teams);
         if (!scheduled || scheduled.length !== 15) {
           continue;
         }
   
-        // 5) compute cost
         const costVal = computeHomeAwayCost(scheduled, teams, distances, weights);
         if (!isFinite(costVal)) {
           continue;
@@ -1411,7 +1333,6 @@ function getIdString(docId) {
           lastYearMap: lastYearHome,
         };
   
-        // 6) local search if user flagged it
         if (runLocalSearchFlag) {
           const refined = runLocalSearch(
             candidate,
@@ -1426,7 +1347,6 @@ function getIdString(docId) {
           }
         }
   
-        // keep best
         if (candidate.totalCost < bestCost) {
           bestCost = candidate.totalCost;
           bestSchedule = candidate;
@@ -1449,10 +1369,9 @@ function getIdString(docId) {
       )} => building summary...\n`
     );
   
-    // build final summary (with default weighting in the summary, or you can pass `weights`)
+    // build final summary (with default weighting in the summary) //! IS THERE A NEED TO UPDATE SUMMARY TO SHOW THE ACTUAL WEIGHTS USED?
     const summary = buildFinalSummary(bestSchedule, teams);
   
-    // format final for output
     const formatted = bestSchedule.fixtures.map((fx) => ({
       round: fx.roundIndex + 1,
       date: fx.date,
@@ -1475,8 +1394,7 @@ function getIdString(docId) {
       bestCost: bestSchedule.totalCost,
     };
   }
-  
-  // --------------- MULTI-RUN (OPTIONAL) ---------------
+
   async function generateComprehensiveFairFixturesWithRetries(
     teams,
     season,
@@ -1526,4 +1444,3 @@ function getIdString(docId) {
     generateComprehensiveFairFixtures,
     generateComprehensiveFairFixturesWithRetries,
   };
-  

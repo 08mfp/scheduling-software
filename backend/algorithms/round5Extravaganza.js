@@ -1,5 +1,3 @@
-// backend/algorithms/round5Extravaganza.js
-
 /**
  * @module backend/algorithms/round5Extravaganza
  * @description
@@ -17,11 +15,11 @@ const Stadium = require('../models/Stadium');
 const Fixture = require('../models/Fixture');
 
 /** Weights for the interest formula */
-const ALPHA = 1;  // how much we value closeness (difference)
-const BETA = 2;   // how much we value top-tier sum
+const ALPHA = 1;  // how much to value closeness (difference)
+const BETA = 2;   // how much to value top-tier sum
 
 /**
- * Shuffles array in-place using Fisher-Yates.
+ * Fisher-Yates Shuffle.
  */
 function shuffleArray(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -31,9 +29,6 @@ function shuffleArray(arr) {
   return arr;
 }
 
-/**
- * Generate all 15 matchups from a list of 6 teams
- */
 function generateAllMatchups(teams) {
   const all = [];
   for (let i = 0; i < teams.length; i++) {
@@ -47,40 +42,29 @@ function generateAllMatchups(teams) {
   return all;
 }
 
-/**
- * Basic sum-of-ranks, e.g. #1 vs #2 => sum=3
- */
 function getRankSum(m) {
   return m.teamA.teamRanking + m.teamB.teamRanking;
 }
 
-/**
- * Rank difference, e.g. #1 vs #2 => diff=1
- */
 function getRankDiff(m) {
   return Math.abs(m.teamA.teamRanking - m.teamB.teamRanking);
 }
 
 /**
- * The new "interest" formula, e.g. interest = ALPHA*(6 - diff) + BETA*(12 - sum).
- * - We do (6 - diff) because we want bigger is better (close rank => bigger).
- * - We do (12 - sum) because we want bigger is better (top-tier => smaller sum).
+ *  "interest" formula, interest = ALPHA*(6 - diff) + BETA*(12 - sum).
+ * - (6 - diff) because bigger is better (close rank => bigger).
+ * - (12 - sum) because bigger is better (top-tier => smaller sum).
  * 
- * You can adjust 6,12 if you have a different number of teams or prefer other offsets.
+ * can adjust 6,12 for different number of teams or other offsets.
  */
 function getMatchInterest(m) {
-  const d = getRankDiff(m);   // difference
-  const s = getRankSum(m);    // sum
+  const d = getRankDiff(m);
+  const s = getRankSum(m);
   const interest = ALPHA * (6 - d) + BETA * (12 - s);
   return interest;
 }
 
-/**
- * Build a final "interest" listing for all 15 matches, sorted by descending interest.
- * Tie-break by sum-of-ranks ascending.
- */
 function buildInterestList(allMatches) {
-  // map each match => { teamA, teamB, diff, sum, interest }
   const combos = allMatches.map((m) => {
     const diff = getRankDiff(m);
     const sum = getRankSum(m);
@@ -94,18 +78,15 @@ function buildInterestList(allMatches) {
     };
   });
 
-  // sort descending by interest; tie-break by sum ascending
   combos.sort((a, b) => {
     if (b.interest !== a.interest) return b.interest - a.interest;
-    return a.sum - b.sum; // tie-break => smaller sum is "better"
+    return a.sum - b.sum; // tie-break is smaller sum is "better"
   });
 
-  // give each an index rank from 1..15 in sorted order
   combos.forEach((c, idx) => {
-    c.competRank = idx + 1; // 1 = highest interest
+    c.competRank = idx + 1;
   });
 
-  // build a lookup map by ID-IDs so we can find interest quickly
   const map = {};
   for (const c of combos) {
     const aId = c.teamA._id.toString();
@@ -117,9 +98,6 @@ function buildInterestList(allMatches) {
   return { combos, map };
 }
 
-/**
- * Validate we have 15 unique fixtures
- */
 function validateUniqueFixtures(schedule) {
   const setOfPairs = new Set();
   for (let fx of schedule) {
@@ -140,24 +118,16 @@ function validateUniqueFixtures(schedule) {
   }
 }
 
-/**
- * Backtracking approach: we have 5 sub-arrays => rounds[0..4].
- * Round 5 (index=4) already has #1 vs #2, #3 vs #4 forced.
- * We place leftover (13 matches) from index=0..12 in reverse round order (5->1).
- */
 function backtrackingFillRounds(leftover, index, rounds) {
   if (index === leftover.length) {
-    return true; // success
+    return true;
   }
-
   const match = leftover[index];
   const tA = match.teamA._id.toString();
   const tB = match.teamB._id.toString();
 
-  // Try R5..R1 => indexes [4..0]
   for (let r = 4; r >= 0; r--) {
     if (rounds[r].length < 3) {
-      // conflict check
       const conflict = rounds[r].some((fx) => {
         const fxA = fx.teamA._id.toString();
         const fxB = fx.teamB._id.toString();
@@ -180,9 +150,6 @@ function backtrackingFillRounds(leftover, index, rounds) {
   return false;
 }
 
-/** 
- * Minimal home/away flipping tracking 
- */
 function markFlipped(fixture, flippedSet) {
   const a = fixture.teamA._id.toString();
   const b = fixture.teamB._id.toString();
@@ -201,9 +168,6 @@ function flipFixture(fixture, homeCount, awayCount) {
   awayCount[fixture.awayTeam._id.toString()]++;
 }
 
-/**
- * Assign home/away based on last season, then a minimal balancing pass
- */
 async function assignHomeAway(fixtures, season, teams) {
   const changes = [];
   const homeCount = {};
@@ -223,7 +187,6 @@ async function assignHomeAway(fixtures, season, teams) {
     });
     if (prev) {
       if (prev.homeTeam.equals(fx.teamA._id)) {
-        // last year A was home => flip => B is home now
         fx.homeTeam = fx.teamB;
         fx.awayTeam = fx.teamA;
         changes.push(
@@ -237,7 +200,6 @@ async function assignHomeAway(fixtures, season, teams) {
         );
       }
     } else {
-      // default
       fx.homeTeam = fx.teamA;
       fx.awayTeam = fx.teamB;
       changes.push(
@@ -248,7 +210,6 @@ async function assignHomeAway(fixtures, season, teams) {
     awayCount[fx.awayTeam._id.toString()]++;
   }
 
-  // minimal balancing
   const flippedFixtures = new Set();
   let done = false;
   while (!done) {
@@ -292,7 +253,6 @@ async function assignHomeAway(fixtures, season, teams) {
     }
   }
 
-  // final checks
   for (let t of teams) {
     const tid = t._id.toString();
     if (homeCount[tid] < 2) {
@@ -303,7 +263,6 @@ async function assignHomeAway(fixtures, season, teams) {
     }
   }
 
-  // attach stadium
   for (let fx of fixtures) {
     const st = await Stadium.findById(fx.homeTeam.stadium);
     fx.stadium = st || null;
@@ -313,9 +272,6 @@ async function assignHomeAway(fixtures, season, teams) {
   return changes;
 }
 
-/**
- * Return next day-of-week on or after 'startDate', e.g. 0=Sun,...,6=Sat
- */
 function nextDayOfWeek(startDate, targetDOW) {
   const d = new Date(startDate);
   while (d.getDay() !== targetDOW) {
@@ -324,11 +280,6 @@ function nextDayOfWeek(startDate, targetDOW) {
   return d;
 }
 
-/**
- * Round 5 => #1 vs #2 final (18:00), #3 vs #4 second-last (16:00), leftover => 14:00
- * Rounds 1..4 => Fri(20:00), Sat(14:00), Sat(16:00)
- * Respect rest weeks (defaults to [2,4]).
- */
 async function scheduleFixtures(fixtures, season, userRestWeeks, forcedMatches) {
   const restWeeks = userRestWeeks && userRestWeeks.length ? userRestWeeks : [2, 4];
   const rounds = [...new Set(fixtures.map((f) => f.round))].sort((a, b) => a - b);
@@ -340,14 +291,12 @@ async function scheduleFixtures(fixtures, season, userRestWeeks, forcedMatches) 
     const roundFx = fixtures.filter((fx) => fx.round === r);
 
     if (r === 5) {
-      // super saturday
       const saturday = nextDayOfWeek(dateCursor, 6);
       const slots = [
         new Date(saturday.toISOString().split('T')[0] + 'T14:00:00'),
         new Date(saturday.toISOString().split('T')[0] + 'T16:00:00'),
         new Date(saturday.toISOString().split('T')[0] + 'T18:00:00'),
       ];
-      // find forced #1v2, #3v4 by ID
       const match1v2Index = roundFx.findIndex((fx) =>
         isSamePair(fx, forcedMatches.match1v2)
       );
@@ -370,7 +319,6 @@ async function scheduleFixtures(fixtures, season, userRestWeeks, forcedMatches) 
       match1v2.date = slots[2];
       scheduled.push(leftover[0], match3v4, match1v2);
     } else {
-      // Rounds 1..4
       const fri = nextDayOfWeek(dateCursor, 5);
       const sat = nextDayOfWeek(dateCursor, 6);
       const slotTimes = [
@@ -400,16 +348,6 @@ function isSamePair(fx, forced) {
   return (fxA === fA && fxB === fB) || (fxA === fB && fxB === fA);
 }
 
-/**
- * Build summary text, showing:
- *  - forced matches in Round 5
- *  - team ranks
- *  - leftover interest ranking
- *  - home/away changes
- *  - rounds, rest weeks
- *  - **per-team fixture summary** with new lines
- *  - **final match order with interest** + "[Ranking : #X]"
- */
 function buildSummary({
   teams,
   scheduledFixtures,
@@ -428,18 +366,16 @@ function buildSummary({
   summaryLines.push(`Using rest weeks: ${restWeeks.join(', ')}`);
   summaryLines.push('');
 
-  // 1) Team Rankings
   summaryLines.push('Team Rankings:');
   for (let t of teams) {
     summaryLines.push(` - ${t.teamName} (rank ${t.teamRanking})`);
   }
 
-  // 2) Show competitiveness ranking for all 15 matches
   let combos = allMatches.map((m) => {
     const aId = m.teamA._id.toString();
     const bId = m.teamB._id.toString();
     const key = [aId, bId].sort().join('-');
-    const rec = interestMap[key]; // has { interest, sum, diff, competRank }
+    const rec = interestMap[key];
     return {
       ...rec,
       teamA: m.teamA,
@@ -447,7 +383,6 @@ function buildSummary({
     };
   });
 
-  // Sort combos by interest desc, tie-break sum asc
   combos.sort((a, b) => {
     if (b.interest !== a.interest) return b.interest - a.interest;
     return a.sum - b.sum;
@@ -463,14 +398,12 @@ function buildSummary({
     );
   });
 
-  // 3) Home/Away changes
   if (homeAwayChanges.length) {
     summaryLines.push('');
     summaryLines.push('Home/Away Changes vs Last Season:');
     homeAwayChanges.forEach((line) => summaryLines.push(` - ${line}`));
   }
 
-  // 4) Rounds overview
   const roundsUsed = [...new Set(scheduledFixtures.map((fx) => fx.round))].sort((a, b) => a - b);
   for (let r of roundsUsed) {
     const rFx = scheduledFixtures.filter((fx) => fx.round === r);
@@ -482,7 +415,6 @@ function buildSummary({
     }
   }
 
-  // 5) Per-team summary (NEW LINE FORMAT)
   summaryLines.push('');
   summaryLines.push('--- Per-Team Fixture Summary ---');
   const teamMap = {};
@@ -505,12 +437,10 @@ function buildSummary({
       date: fx.date,
     });
   }
-  // sort each team's matches
   Object.values(teamMap).forEach((tm) => {
     tm.matches.sort((a, b) => a.round - b.round);
   });
 
-  // Print in the new multi-line format:
   Object.keys(teamMap).forEach((k) => {
     const t = teamMap[k];
     summaryLines.push(`${t.name}:`);
@@ -518,12 +448,10 @@ function buildSummary({
       (m) =>
         ` R${m.round} - ${m.homeAway} vs ${m.opp.teamName} (${m.date.toDateString()});`
     );
-    // Join them by newline, so each fixture is on a new line:
     summaryLines.push(lines.join('\n'));
-    summaryLines.push(''); // add a blank line after each team
+    summaryLines.push('');
   });
 
-  // 6) Round-by-round match order with interest, plus “[Ranking : #X]”
   summaryLines.push('--- Match Order with interest ---\n');
   roundsUsed.forEach((r) => {
     summaryLines.push(`Round ${r}:`);
@@ -535,7 +463,7 @@ function buildSummary({
       const aId = fx.homeTeam._id.toString();
       const bId = fx.awayTeam._id.toString();
       const key = [aId, bId].sort().join('-');
-      const rec = interestMap[key]; // { interest, sum, diff, competRank }
+      const rec = interestMap[key];
       summaryLines.push(
         `Match ${idx + 1} - ${fx.homeTeam.teamName} (rank ${fx.homeTeam.teamRanking}) vs ` +
         `${fx.awayTeam.teamName} (rank ${fx.awayTeam.teamRanking}) => ` +
@@ -544,33 +472,25 @@ function buildSummary({
       );
     });
 
-    summaryLines.push(''); // blank line after each round
+    summaryLines.push('');
   });
 
   return summaryLines;
 }
 
-/**
- * Main export
- */
 async function generateRound5ExtravaganzaFixtures(teams, season, userRestWeeks = []) {
   if (teams.length !== 6) {
     throw new Error('Requires exactly 6 teams for Round5Extravaganza algorithm.');
   }
-  // sort => [rank1, rank2, rank3, rank4, rank5, rank6]
   teams.sort((a, b) => a.teamRanking - b.teamRanking);
 
-  // forced pairs => #1 vs #2, #3 vs #4
   const match1v2 = { teamA: teams[0], teamB: teams[1] };
   const match3v4 = { teamA: teams[2], teamB: teams[3] };
 
-  // All 15
   const allMatches = generateAllMatchups(teams);
 
-  // Build interest map for summary
   const { combos: fullInterestList, map: interestMap } = buildInterestList(allMatches);
 
-  // leftover => remove forced pairs by ID
   function isSamePair(m, forced) {
     const a = m.teamA._id.toString();
     const b = m.teamB._id.toString();
@@ -580,44 +500,35 @@ async function generateRound5ExtravaganzaFixtures(teams, season, userRestWeeks =
   }
   const leftover = allMatches.filter(
     (m) => !isSamePair(m, match1v2) && !isSamePair(m, match3v4)
-  ); // 13 matches
+  );
 
-  // We'll do multiple attempts
   const maxAttempts = 1000000;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      // We want to place big matches (high interest) last => 
-      // so we sort leftover by descending interest => leftover[0] = highest interest
+      // sort leftover by descending interest. leftover[0] = highest interest
       leftover.sort((m1, m2) => {
         const i1 = getMatchInterest(m1);
         const i2 = getMatchInterest(m2);
         if (i2 !== i1) return i2 - i1; 
-        // tie break => smaller sum is bigger match
+        // tie break is smaller sum is bigger match
         return getRankSum(m1) - getRankSum(m2);
       });
-      // shuffle a bit for variety
       shuffleArray(leftover);
 
-      // Fill 5 sub-arrays
       const rounds = [[], [], [], [], []];
       // Force #1 vs #2, #3 vs #4 in round 5
       rounds[4].push({ round: 5, teamA: match1v2.teamA, teamB: match1v2.teamB });
       rounds[4].push({ round: 5, teamA: match3v4.teamA, teamB: match3v4.teamB });
 
-      // backtracking
       const success = backtrackingFillRounds(leftover, 0, rounds);
       if (!success) throw new Error('Backtracking fill failed');
 
-      // Flatten
       const schedule = rounds.flat();
 
-      // 15 unique check
       validateUniqueFixtures(schedule);
 
-      // home/away
       const homeAwayChanges = await assignHomeAway(schedule, season, teams);
 
-      // schedule => forced matches
       const forcedMatches = { match1v2, match3v4 };
       const scheduled = await scheduleFixtures(
         schedule,
@@ -626,7 +537,6 @@ async function generateRound5ExtravaganzaFixtures(teams, season, userRestWeeks =
         forcedMatches
       );
 
-      // final DB objects
       const finalFixtures = scheduled.map((fx) => ({
         round: fx.round,
         date: fx.date,
@@ -637,7 +547,6 @@ async function generateRound5ExtravaganzaFixtures(teams, season, userRestWeeks =
         season,
       }));
 
-      // build summary
       const summary = buildSummary({
         teams,
         scheduledFixtures: scheduled,
@@ -659,6 +568,3 @@ async function generateRound5ExtravaganzaFixtures(teams, season, userRestWeeks =
 module.exports = {
   generateRound5ExtravaganzaFixtures,
 };
-
-
-// pretty good, doesnt force thinsg in roynd 4, but does in round 5

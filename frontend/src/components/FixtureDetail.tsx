@@ -1,5 +1,3 @@
-// frontend/src/components/FixtureDetail.tsx
-
 import React, {
   useEffect,
   useState,
@@ -22,7 +20,6 @@ import {
 import ConfirmModal from './ConfirmModal'; 
 import RankBadge from './RankBadge';
 import StadiumMap, { StadiumMapRef } from './StadiumMap';
-
 import { Fixture } from '../interfaces/Fixture';
 import { Team } from '../interfaces/Team';
 
@@ -35,7 +32,6 @@ const FixtureDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
-
   const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success' | 'error' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number>(5);
@@ -369,8 +365,6 @@ const FixtureDetail: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8 transition-colors duration-300">
-        
-        {/* Breadcrumb and Dark Mode Toggle */}
         <div className="flex justify-between items-center mb-8 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
           <nav
             className="flex items-center space-x-2"
@@ -410,7 +404,6 @@ const FixtureDetail: React.FC = () => {
           </button>
         </div>
 
-        {/* Date Information */}
         <div className="flex flex-col items-center mb-8">
           <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md w-full max-w-3xl">
             <div className="flex flex-col items-center space-y-1">
@@ -430,11 +423,8 @@ const FixtureDetail: React.FC = () => {
           </div>
         </div>
 
-        
-        {/* Team Cards */}
         <div className="flex flex-col items-center mb-4">
           <div className="flex items-center space-x-6">
-            {/* Home Team Card */}
             <Link
               to={`/teams/${homeTeam?._id}`}
               className="flex flex-col items-center bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow-md w-80 transform hover:scale-105 transition-transform duration-200 relative"
@@ -464,16 +454,11 @@ const FixtureDetail: React.FC = () => {
               <span className="font-semibold text-lg">
                 {homeTeam ? homeTeam.teamName : fixture.homeTeam.teamName}
               </span>
-              {/* RankBadge */}
               <RankBadge rank={homeTeam ? homeTeam.teamRanking : 'N/A'} />
             </Link>
-
-            {/* VS Symbol */}
             <span className="text-2xl font-bold text-gray-800 dark:text-gray-200">
               vs
             </span>
-
-            {/* Away Team Card */}
             <Link
               to={`/teams/${awayTeam?._id}`}
               className="flex flex-col items-center bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow-md w-80 transform hover:scale-105 transition-transform duration-200 relative"
@@ -503,14 +488,11 @@ const FixtureDetail: React.FC = () => {
               <span className="font-semibold text-lg">
                 {awayTeam ? awayTeam.teamName : fixture.awayTeam.teamName}
               </span>
-              {/* RankBadge */}
               <RankBadge rank={awayTeam ? awayTeam.teamRanking : 'N/A'} />
             </Link>
           </div>
         </div>
 
-
-        {/* Score */}
         <div className="flex flex-col items-center mb-8 space-y-4">
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Score</h2>
           <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md w-full max-w-3xl flex flex-col items-center">
@@ -526,7 +508,6 @@ const FixtureDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Season, Round, Location, Stadium Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md">
             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2 text-center">
@@ -570,7 +551,6 @@ const FixtureDetail: React.FC = () => {
           )}
         </div>
 
-        {/* Map or Invalid Coordinates */}
         <div className="mt-8">
           <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">
             Home Stadium Location
@@ -595,7 +575,6 @@ const FixtureDetail: React.FC = () => {
                 customMarkerUrl=""
               />
 
-              {/* Control Toolbar for StadiumMap */}
               <div className="flex justify-center space-x-4 mt-4">
                 <button
                   onClick={recenterMap}

@@ -6,12 +6,9 @@ import { FaSun, FaMoon } from 'react-icons/fa';
 const SignIn: React.FC = () => {
   const { signIn } = useContext(AuthContext);
   const navigate = useNavigate();
-
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
-
   const { email, password } = formData;
-
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -25,7 +22,6 @@ const SignIn: React.FC = () => {
     }
   };
 
-  // Dark mode state and toggle logic (as seen in your other components)
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark';
@@ -50,7 +46,6 @@ const SignIn: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-12 text-center transition-colors duration-300">
-        {/* Dark Mode Toggle */}
         <div className="flex justify-end mb-4">
           <button
             onClick={toggleDarkMode}
@@ -71,7 +66,6 @@ const SignIn: React.FC = () => {
           </button>
         </div>
 
-        {/* Logo */}
         <div className="flex justify-center mb-8">
           <svg
             className="h-20 w-20 text-blue-600 dark:text-blue-400"
@@ -86,24 +80,17 @@ const SignIn: React.FC = () => {
           </svg>
         </div>
 
-
-        
-
-        {/* Welcome Message */}
         <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">
           Welcome Back!
         </h2>
 
-        {/* Error Message */}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
 
-        {/* Sign-In Form */}
         <form onSubmit={onSubmit} className="space-y-6">
-          {/* Email Field */}
           <div>
             <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
               Your email
@@ -136,7 +123,6 @@ const SignIn: React.FC = () => {
             </div>
           </div>
 
-          {/* Password Field */}
           <div>
             <label className="block text-left text-gray-700 dark:text-gray-200 font-medium mb-2">
               Your password
@@ -169,7 +155,6 @@ const SignIn: React.FC = () => {
             </div>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             className="w-full py-3 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none transition-colors duration-200"
@@ -178,7 +163,6 @@ const SignIn: React.FC = () => {
           </button>
         </form>
 
-        {/* Footer Links */}
         <div className="mt-8 flex justify-between text-sm">
           <a href="/signup" className="text-blue-600 dark:text-blue-400 hover:underline">
             Don't have an account?

@@ -1,4 +1,3 @@
-//backend/controllers/userController.js
 /**
  * @module backend/controllers/userController
  * @description This module is used for defining the User controller functions, e.g. registerUser, loginUser, generateApiKey, queryUser, etc. 
@@ -7,14 +6,11 @@
  * @authors github.com/08mfp
  */
 
-
-
 const User = require('../models/User');
 const crypto = require('crypto');
 const logger = require('../middleware/logger');
 const upload = require('../middleware/upload');
 const fs = require('fs');
-
 
 /**
  * @desc    Register a new user
@@ -25,22 +21,19 @@ exports.registerUser = async (req, res) => {
     try {
       const { firstName, lastName, email, password, role } = req.body;
   
-      // Check if the user already exists
       let user = await User.findOne({ email });
       if (user) {
         logger.warn(`Attempt to register with existing email: ${email}`);
         return res.status(400).json({ message: 'User already exists' });
       }
   
-      // Create new user
       user = new User({
         name: { firstName, lastName },
         email,
         password,
-        role: role || 'guest', // Default role is 'guest'
+        role: role || 'guest',
       });
   
-      // Generate API key
       user.generateApiKey();
   
       await user.save();
@@ -66,21 +59,18 @@ exports.loginUser = async (req, res) => {
     try {
       const { email, password } = req.body;
   
-      // Find user by email
       const user = await User.findOne({ email });
       if (!user) {
         logger.warn(`Failed login attempt for non-existent email: ${email}`);
         return res.status(400).json({ message: 'Invalid credentials' });
       }
   
-      // Compare password
       const isMatch = await user.comparePassword(password);
       if (!isMatch) {
         logger.warn(`Failed login attempt for email: ${email}`);
         return res.status(400).json({ message: 'Invalid credentials' });
       }
   
-      // Generate a new API key
       user.generateApiKey();
       user.requestCount = 0;
       user.requestResetTime = Date.now();
@@ -98,7 +88,6 @@ exports.loginUser = async (req, res) => {
     }
   };
 
-
 /**
  * @desc    Get User details
  * @route   GET /api/users/me 
@@ -106,7 +95,7 @@ exports.loginUser = async (req, res) => {
  */
 exports.getCurrentUser = async (req, res) => {
     try {
-      const user = req.user; // The authenticated user from the middleware
+      const user = req.user;
   
       if (!user) {
         return res.status(401).json({ message: 'User not authenticated' });
@@ -128,14 +117,11 @@ exports.getCurrentUser = async (req, res) => {
     }
   };
 
-
-// Update User Profile
 /**
  * @desc    Update User Profile
  * @route   PUT /api/users/me
  * @access  Private
  */
-
 exports.updateUserProfile = (req, res) => {
   upload(req, res, async (err) => {
     if (err) {
@@ -143,27 +129,23 @@ exports.updateUserProfile = (req, res) => {
       return res.status(400).json({ message: err });
     } else {
       try {
-        const user = req.user; // Retrieved from authentication middleware
+        const user = req.user;
 
         if (!user) {
           return res.status(401).json({ message: 'User not authenticated' });
         }
 
-        // Update fields
         user.name.firstName = req.body.firstName || user.name.firstName;
         user.name.lastName = req.body.lastName || user.name.lastName;
         user.email = req.body.email || user.email;
         user.homeCity = req.body.homeCity || user.homeCity;
         user.age = req.body.age || user.age;
 
-        // Handle password change
         if (req.body.password) {
           user.password = req.body.password;
         }
 
-        // Handle image removal or upload
         if (req.body.removeImage === 'true') {
-          // Delete old image if exists
           if (user.image) {
             const oldImagePath = '.' + user.image;
             try {
@@ -177,7 +159,6 @@ exports.updateUserProfile = (req, res) => {
           }
           user.image = undefined;
         } else if (req.file) {
-          // Delete old image if exists
           if (user.image) {
             const oldImagePath = '.' + user.image;
             try {
@@ -225,19 +206,15 @@ exports.updateUserProfile = (req, res) => {
  */
 exports.deleteUserProfile = async (req, res) => {
   try {
-      const user = req.user; // Retrieved from authentication middleware
+      const user = req.user;
 
       if (!user) {
           logger.warn('Attempt to delete profile without authentication.');
           return res.status(401).json({ message: 'User not authenticated.' });
       }
 
-      // Prevent user from deleting themselves if necessary (optional)
-      // For example, if you have a super-admin role that shouldn't be deleted
-
-      // Handle image deletion if the user has an associated image
       if (user.image) {
-          const imagePath = '.' + user.image; // Assuming image path is stored relative to the project root
+          const imagePath = '.' + user.image;
           try {
               await fs.promises.unlink(imagePath);
               logger.info(`Deleted user image: ${imagePath}`);
@@ -249,7 +226,6 @@ exports.deleteUserProfile = async (req, res) => {
           }
       }
 
-      // Delete the user from the database
       await User.findByIdAndDelete(user._id);
       logger.info(`User deleted: ${user.email}`);
 

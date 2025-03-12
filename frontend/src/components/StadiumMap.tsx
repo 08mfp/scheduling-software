@@ -1,4 +1,3 @@
-// src/components/StadiumMap.tsx
 import React, {
     useEffect,
     useState,
@@ -48,8 +47,6 @@ import React, {
     ) => {
       const mapRef = useRef<any>(null);
       const [showPopup, setShowPopup] = useState<boolean>(false);
-  
-      // Initialize map view state
       const initialViewState = {
         longitude: stadium.longitude,
         latitude: stadium.latitude,
@@ -58,17 +55,13 @@ import React, {
         bearing: is3D ? 60 : 0,
       };
   
-      // Handler for map movements with debouncing
       const handleMoveEnd = useCallback(
         debounce((event: any) => {
           const { viewState } = event;
-          // Handle any logic needed after movement ends
-          // Currently, no state updates are performed to prevent re-renders
         }, 300),
         []
       );
   
-      // Expose the recenterMap method to parent via ref
       useImperativeHandle(ref, () => ({
         recenterMap: () => {
           if (mapRef.current) {
@@ -77,20 +70,19 @@ import React, {
               zoom: 15.5,
               pitch: is3D ? 65 : 0,
               bearing: is3D ? 60 : 0,
-              speed: 1.2, // Fly speed
-              essential: true, // this animation is considered essential with respect to prefers-reduced-motion
+              speed: 1.2,
+              essential: true,
             });
           }
         },
       }));
   
-      // Update map's pitch and bearing when is3D changes
       useEffect(() => {
         if (mapRef.current) {
           mapRef.current.flyTo({
             pitch: is3D ? 65 : 0,
             bearing: is3D ? 60 : 0,
-            speed: 1.2, // Fly speed
+            speed: 1.2,
             essential: true,
           });
         }
@@ -122,7 +114,6 @@ import React, {
                   className="h-8 w-8"
                 />
               ) : (
-                // Default marker (a simple red pin)
                 <svg
                   height="24"
                   width="24"

@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useContext, useRef } from 'react';
 import axios from 'axios';
 import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
-import StadiumMap, { StadiumMapRef } from './StadiumMap'; // Import StadiumMap and its ref interface
-import ConfirmModal from './ConfirmModal'; // Import the enhanced ConfirmModal
+import StadiumMap, { StadiumMapRef } from './StadiumMap';
+import ConfirmModal from './ConfirmModal';
 import { Stadium } from '../interfaces/Stadium';
 import { AuthContext } from '../contexts/AuthContext';
 import {
@@ -16,7 +16,7 @@ import {
 } from 'react-icons/fa';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
-const CUSTOM_MARKER_URL = '/stadium-marker.svg'; // Path to your custom marker
+const CUSTOM_MARKER_URL = '/stadium-marker.svg';
 
 const StadiumDetail: React.FC = () => {
   const [stadium, setStadium] = useState<Stadium | null>(null);
@@ -25,18 +25,12 @@ const StadiumDetail: React.FC = () => {
   const { user } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mapStyle, setMapStyle] = useState<string>('mapbox://styles/08mfp/cm48iyqv8019l01r2da9o4fi3'); // Default custom style
+  const [mapStyle, setMapStyle] = useState<string>('mapbox://styles/08mfp/cm48iyqv8019l01r2da9o4fi3');
   const [is3D, setIs3D] = useState<boolean>(false);
   const [isCustomMarkerAvailable, setIsCustomMarkerAvailable] = useState<boolean>(false);
-
-  // Modal state: 'confirm' | 'loading' | 'success' | 'error' | null
   const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success' | 'error' | null>(null);
-
-  // Countdown state for success modal
   const [countdown, setCountdown] = useState<number>(10);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Create a ref to access StadiumMap's recenterMap method
   const stadiumMapRef = useRef<StadiumMapRef>(null);
 
   useEffect(() => {
@@ -66,9 +60,8 @@ const StadiumDetail: React.FC = () => {
 
     try {
       await axios.delete(`${BACKEND_URL}/api/stadiums/${id}`);
-      // After successful deletion, show success modal and start countdown
       setModalState('success');
-      setCountdown(10); // Initialize countdown to 10 seconds
+      setCountdown(10);
     } catch (err) {
       console.error('Error deleting stadium:', err);
       setModalState('error');
@@ -93,7 +86,6 @@ const StadiumDetail: React.FC = () => {
     }
   };
 
-  // Preload custom marker to check if it exists
   useEffect(() => {
     const img = new Image();
     img.src = CUSTOM_MARKER_URL;
@@ -101,17 +93,15 @@ const StadiumDetail: React.FC = () => {
     img.onerror = () => setIsCustomMarkerAvailable(false);
   }, []);
 
-  // Handle countdown for success modal
   useEffect(() => {
     if (modalState === 'success') {
-      // Start countdown
       countdownRef.current = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
             if (countdownRef.current) {
               clearInterval(countdownRef.current);
             }
-            setModalState(null); // Close the modal
+            setModalState(null);
             return 0;
           }
           return prev - 1;
@@ -119,7 +109,6 @@ const StadiumDetail: React.FC = () => {
       }, 1000);
     }
 
-    // Cleanup on unmount or when modalState changes
     return () => {
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
@@ -127,16 +116,14 @@ const StadiumDetail: React.FC = () => {
     };
   }, [modalState]);
 
-  // Handlers for modal actions
   const openConfirmModal = () => setModalState('confirm');
   const closeModal = () => {
     setModalState(null);
-    setCountdown(10); // Reset countdown
+    setCountdown(10);
   };
 
   const handleConfirmDelete = () => {
     setModalState('loading');
-    // Ensure loading lasts at least 3 seconds
     setTimeout(() => {
       deleteStadium();
     }, 3000);
@@ -144,15 +131,12 @@ const StadiumDetail: React.FC = () => {
 
   const handleRetry = () => {
     setModalState('loading');
-    // Ensure loading lasts at least 3 seconds
     setTimeout(() => {
       deleteStadium();
     }, 3000);
   };
 
-  // Validation Function for Coordinates
   const isValidCoordinates = (latitude: number, longitude: number): boolean => {
-    // Check if both are numbers and within valid ranges
     if (
       typeof latitude !== 'number' ||
       typeof longitude !== 'number' ||
@@ -163,7 +147,6 @@ const StadiumDetail: React.FC = () => {
     ) {
       return false;
     }
-    // Optionally, treat (0,0) as invalid if it's a placeholder
     if (latitude === 0 && longitude === 0) return false;
     return true;
   };
@@ -211,13 +194,11 @@ const StadiumDetail: React.FC = () => {
     );
   }
 
-  // Determine if coordinates are valid
   const coordinatesValid = isValidCoordinates(stadium.latitude, stadium.longitude);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8">
-        {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2">
           <Link to="/stadiums" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
             <FaHome className="mr-1" />
@@ -227,7 +208,6 @@ const StadiumDetail: React.FC = () => {
           <span className="text-gray-700 dark:text-gray-300">{stadium.stadiumName}</span>
         </div>
 
-        {/* Stadium Header */}
         <div className="flex flex-col items-center mb-8">
           <h2 className="text-5xl font-extrabold text-gray-900 dark:text-gray-100 mb-4 text-center">
             {stadium.stadiumName}
@@ -237,7 +217,6 @@ const StadiumDetail: React.FC = () => {
           </p>
         </div>
 
-        {/* Stadium Features (Optional) */}
         {stadium.stadiumCapacity && (
           <div className="mt-6 flex justify-center flex-wrap gap-2">
             <span className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300 text-sm rounded-full">
@@ -246,7 +225,6 @@ const StadiumDetail: React.FC = () => {
           </div>
         )}
 
-        {/* Stadium Details */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
           <div className="p-6 bg-gray-50 dark:bg-gray-700 rounded-lg shadow">
             <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200">PlaceHolder</h3>
@@ -258,7 +236,6 @@ const StadiumDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Stadium Map or Invalid Coordinates Message */}
         <div className="mt-8">
           {coordinatesValid ? (
             <StadiumMap
@@ -280,7 +257,6 @@ const StadiumDetail: React.FC = () => {
           )}
         </div>
 
-        {/* Control Toolbar */}
         <div className="mt-4 flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 justify-center">
           <button
             onClick={recenterMap}
@@ -313,7 +289,6 @@ const StadiumDetail: React.FC = () => {
           </button>
         </div>
 
-        {/* Action Buttons */}
         <div className="mt-8 flex justify-center gap-4">
           <Link to="/stadiums">
             <button
@@ -347,7 +322,6 @@ const StadiumDetail: React.FC = () => {
           )}
         </div>
 
-        {/* Confirm/Loading/Success/Error Modal */}
         <ConfirmModal
           isOpen={modalState !== null}
           type={modalState || 'confirm'}

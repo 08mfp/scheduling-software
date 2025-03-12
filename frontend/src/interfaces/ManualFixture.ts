@@ -17,7 +17,7 @@ export interface Team {
 export interface Fixture {
     _id?: string;
     round: number;
-    date: string; // ISO string
+    date: string;
     homeTeam: Team | null;
     awayTeam: Team | null;
     stadium: { _id: string; stadiumName: string } | null;

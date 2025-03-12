@@ -22,11 +22,9 @@ const TeamDetail: React.FC = () => {
   const [visiblePlayers, setVisiblePlayers] = useState(3);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-
   const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success' | 'error' | null>(null);
   const [countdown, setCountdown] = useState<number>(10);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
@@ -161,17 +159,13 @@ const TeamDetail: React.FC = () => {
   const renderSkeleton = () => (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8 animate-pulse">
-        {/* Top bar skeleton */}
         <div className="h-6 bg-gray-300 dark:bg-gray-700 w-1/4 rounded"></div>
-
-        {/* Team Header Skeleton */}
         <div className="flex flex-col items-center mb-8 space-y-4">
           <div className="h-48 w-48 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
           <div className="h-8 bg-gray-300 dark:bg-gray-700 w-1/2 rounded"></div>
           <div className="h-4 bg-gray-300 dark:bg-gray-700 w-1/4 rounded"></div>
         </div>
 
-        {/* Cards Skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md space-y-2">
             <div className="h-4 bg-gray-300 dark:bg-gray-600 w-24 rounded"></div>
@@ -190,8 +184,6 @@ const TeamDetail: React.FC = () => {
             <div className="h-6 bg-gray-300 dark:bg-gray-600 w-32 rounded"></div>
           </div>
         </div>
-
-        {/* Players Section Skeleton */}
         <div className="h-6 bg-gray-300 dark:bg-gray-700 w-40 mb-4 rounded"></div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-gray-300 dark:bg-gray-700 h-56 rounded"></div>
@@ -254,7 +246,6 @@ const TeamDetail: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8 transition-colors duration-300">
-        {/* Top bar with breadcrumb and dark mode toggle */}
         <div className="flex justify-between items-center mb-8 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
           <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
             <Link to="/teams" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
@@ -287,7 +278,6 @@ const TeamDetail: React.FC = () => {
           </button>
         </div>
 
-        {/* Team Header with subtle accent line and ring */}
         <div className="flex flex-col items-center mb-8">
           {team.image && (
             <div className="relative inline-block mb-6">
@@ -299,7 +289,6 @@ const TeamDetail: React.FC = () => {
                   e.currentTarget.src = '/images/default-team-logo.png';
                 }}
               />
-              {/* A subtle ring around the image using team's color */}
               <div
                 className="pointer-events-none absolute inset-0 rounded-full"
                 style={{
@@ -321,9 +310,7 @@ const TeamDetail: React.FC = () => {
           />
         </div>
 
-        {/* Cards for Rank, Coach, Location, Home Stadium */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Rank Card */}
           <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md flex flex-col items-center">
             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2 text-center">
               Rank
@@ -333,7 +320,6 @@ const TeamDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* Coach Card */}
           <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md flex flex-col items-center">
             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2 text-center">
               Coach
@@ -343,7 +329,6 @@ const TeamDetail: React.FC = () => {
             </p>
           </div>
 
-          {/* Location Card */}
           <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md flex flex-col items-center">
             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2 text-center">
               Location
@@ -353,7 +338,6 @@ const TeamDetail: React.FC = () => {
             </p>
           </div>
 
-          {/* Home Stadium Card */}
           <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-md flex flex-col items-center">
             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2 text-center">
               Home Stadium
@@ -367,7 +351,6 @@ const TeamDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Players Section */}
         <div className="mt-8">
           <h3 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-gray-100">
             Players
@@ -400,7 +383,6 @@ const TeamDetail: React.FC = () => {
             <p className="text-gray-500 dark:text-gray-400 text-center">No players found for this team.</p>
           )}
 
-          {/* See More / See Less Buttons */}
           <div className="mt-6 flex justify-center gap-4">
             {visiblePlayers < players.length && (
               <button
@@ -421,7 +403,6 @@ const TeamDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Buttons */}
         {user.role === 'admin' && (
           <div className="mt-10 flex justify-center gap-4">
             <Link to={`/teams/edit/${team._id}`}>
@@ -441,7 +422,6 @@ const TeamDetail: React.FC = () => {
           </div>
         )}
 
-        {/* Confirm/Loading/Success/Error Modal */}
         <ConfirmModal
           isOpen={modalState !== null}
           type={modalState || 'confirm'}

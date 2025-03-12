@@ -20,9 +20,6 @@ import { Link } from 'react-router-dom';
 import emailjs from '@emailjs/browser';
 
 const Contact: React.FC = () => {
-  // ----------------------------------------------------------------
-  // Dark Mode
-  // ----------------------------------------------------------------
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return typeof window !== 'undefined'
       ? localStorage.getItem('theme') === 'dark'
@@ -40,10 +37,6 @@ const Contact: React.FC = () => {
   }, [isDarkMode]);
 
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
-
-  // ----------------------------------------------------------------
-  // EmailJS Form State & Validation
-  // ----------------------------------------------------------------
   const formRef = useRef<HTMLFormElement>(null);
   const [form, setForm] = useState({
     name: '',
@@ -54,19 +47,14 @@ const Contact: React.FC = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loadingEmail, setLoadingEmail] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState('');
-
-  // Regex Patterns
-  const nameRegEx = /^[a-zA-Z]+ [a-zA-Z]+$/; // "John Doe"
-  const emailRegEx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // basic pattern
-
-  // Handle input changes & inline validation
+  const nameRegEx = /^[a-zA-Z]+ [a-zA-Z]+$/;
+  const emailRegEx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
 
-    // Inline validation
     switch (name) {
       case 'name':
         setErrors((prev) => ({
@@ -110,33 +98,28 @@ const Contact: React.FC = () => {
     }
   };
 
-  // Final validation & sending
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setConfirmationMessage('');
 
     const newErrors: { [key: string]: string } = {};
 
-    // Name
     if (!form.name) {
       newErrors.name = 'This field is required';
     } else if (!nameRegEx.test(form.name)) {
       newErrors.name = 'Please enter your first and last name';
     }
 
-    // Email
     if (!form.email) {
       newErrors.email = 'This field is required';
     } else if (!emailRegEx.test(form.email)) {
       newErrors.email = 'Please enter a valid email';
     }
 
-    // Subject
     if (!form.subject) {
       newErrors.subject = 'Please choose a subject';
     }
 
-    // Message
     if (!form.message) {
       newErrors.message = 'This field is required';
     } else {
@@ -146,13 +129,11 @@ const Contact: React.FC = () => {
       }
     }
 
-    // If any error, set them and stop
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    // Send with EmailJS
     setLoadingEmail(true);
     emailjs
       .send(
@@ -160,7 +141,7 @@ const Contact: React.FC = () => {
         process.env.REACT_APP_EMAILJS_TEMPLATE_ID || '',
         {
           to_name: form.name,
-          from_name: 'Your Name', // E.g. "Mohamed Farid"
+          from_name: 'Your Name',
           from_email: form.email,
           to_email: 'mohfarid1webdev@gmail.com',
           subject: form.subject,
@@ -172,7 +153,6 @@ const Contact: React.FC = () => {
         () => {
           setLoadingEmail(false);
           setConfirmationMessage('Your email has been sent successfully!');
-          // Reset form
           setForm({ name: '', email: '', subject: '', message: '' });
           setErrors({});
         },
@@ -184,20 +164,15 @@ const Contact: React.FC = () => {
       );
   };
 
-  // Clear button
   const handleClear = () => {
     setForm({ name: '', email: '', subject: '', message: '' });
     setErrors({});
     setConfirmationMessage('');
   };
 
-  // ----------------------------------------------------------------
-  // Final Render (Skeleton Removed)
-  // ----------------------------------------------------------------
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
       <div className="max-w-6xl w-full">
-        {/* NAVBAR */}
         <div className="flex justify-between items-center mb-8 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
           <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
             <Link
@@ -235,9 +210,7 @@ const Contact: React.FC = () => {
           </button>
         </div>
 
-        {/* MAIN CONTENT */}
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 space-y-12 transition-colors duration-300">
-          {/* Contact Us Title & Subtext */}
           <div className="text-center">
             <h1 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">
               Contact Us
@@ -247,13 +220,11 @@ const Contact: React.FC = () => {
             </p>
           </div>
 
-          {/* CONTACT FORM */}
           <form
             ref={formRef}
             onSubmit={handleSubmit}
             className="max-w-2xl mx-auto space-y-6"
           >
-            {/* Name */}
             <div className="flex flex-col text-left">
               <label className="text-gray-800 dark:text-gray-200 mb-1 font-medium">
                 Your Name
@@ -275,7 +246,6 @@ const Contact: React.FC = () => {
               )}
             </div>
 
-            {/* Email */}
             <div className="flex flex-col text-left">
               <label className="text-gray-800 dark:text-gray-200 mb-1 font-medium">
                 Your Email
@@ -297,7 +267,6 @@ const Contact: React.FC = () => {
               )}
             </div>
 
-            {/* Subject (Dropdown) */}
             <div className="flex flex-col text-left">
               <label className="text-gray-800 dark:text-gray-200 mb-1 font-medium">
                 Subject
@@ -327,7 +296,6 @@ const Contact: React.FC = () => {
               )}
             </div>
 
-            {/* Message */}
             <div className="flex flex-col text-left">
               <label className="text-gray-800 dark:text-gray-200 mb-1 font-medium">
                 Your Message
@@ -348,15 +316,11 @@ const Contact: React.FC = () => {
                 <span className="text-red-500 text-sm mt-1">{errors.message}</span>
               )}
             </div>
-
-            {/* Confirmation Message */}
             {confirmationMessage && (
               <div className="text-center text-green-600 font-semibold">
                 {confirmationMessage}
               </div>
             )}
-
-            {/* Buttons: Clear + Submit */}
             <div className="flex items-center justify-center space-x-4 mt-6">
               <button
                 type="button"
@@ -376,96 +340,7 @@ const Contact: React.FC = () => {
               </button>
             </div>
           </form>
-
-          {/* Our Links Title */}
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Our Links
-            </h2>
           </div>
-
-          {/* Bento Boxes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-            {/* Email Box */}
-            <div className="flex flex-col items-center p-6 space-y-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md">
-              <FaEnvelope className="text-5xl text-blue-600 dark:text-blue-400" />
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-                Email
-              </h3>
-              <a
-                href="mailto:info@sixnations.com"
-                className="text-lg text-gray-700 dark:text-gray-300 hover:underline"
-              >
-                info@sixnations.com
-              </a>
-            </div>
-
-            {/* Phone Box */}
-            <div className="flex flex-col items-center p-6 space-y-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md">
-              <FaPhone className="text-5xl text-green-600 dark:text-green-400" />
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-                Call
-              </h3>
-              <a
-                href="tel:+1234567890"
-                className="text-lg text-gray-700 dark:text-gray-300 hover:underline"
-              >
-                +44 (111) 111-1111
-              </a>
-            </div>
-
-            {/* Address Box */}
-            <div className="flex flex-col items-center p-6 space-y-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md">
-              <FaMapMarkerAlt className="text-5xl text-red-600 dark:text-red-400" />
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-                Our Offices
-              </h3>
-              <a
-                href="https://goo.gl/maps/universityofmanchester"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-lg text-gray-700 dark:text-gray-300 hover:underline"
-              >
-                123 Rugby Way <br></br>
-                London, UK
-              </a>
-            </div>
-
-            {/* Social Media Box */}
-            <div className="flex flex-col items-center p-6 space-y-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md">
-              <FaInfoCircle className="text-5xl text-purple-600 dark:text-purple-400" />
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-                Social Media
-              </h3>
-              <div className="flex space-x-4 text-3xl">
-                <a
-                  href="https://twitter.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-500 transition-colors duration-200"
-                >
-                  <FaTwitter />
-                </a>
-                <a
-                  href="https://linkedin.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-700 dark:text-blue-500 hover:text-blue-800 dark:hover:text-blue-600 transition-colors duration-200"
-                >
-                  <FaLinkedin />
-                </a>
-                <a
-                  href="https://facebook.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-500 transition-colors duration-200"
-                >
-                  <FaFacebook />
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

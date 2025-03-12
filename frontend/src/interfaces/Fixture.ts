@@ -1,9 +1,7 @@
-// frontend/src/interfaces/Fixture.ts
-
 export interface Fixture {
     _id: string;
     round: number;
-    date: string; // ISO string
+    date: string;
     homeTeam: {
       _id: string;
       teamName: string;

@@ -1,5 +1,3 @@
-// frontend/src/interfaces/Stadium.ts
-
 export interface Stadium {
     _id: string;
     stadiumName: string;

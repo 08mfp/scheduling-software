@@ -4,15 +4,12 @@ import axios from 'axios';
 import { FaInfoCircle, FaSun, FaMoon } from 'react-icons/fa';
 import { AuthContext } from '../contexts/AuthContext';
 import { Stadium } from '../interfaces/Stadium';
-import ConfirmModal from './ConfirmModal'; // Import the ConfirmModal
+import ConfirmModal from './ConfirmModal';
 
-// Adjust if needed
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
-
 const StadiumList: React.FC = () => {
-  //----------------------------
-  // 1) DARK MODE
-  //----------------------------
+
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark';
@@ -34,26 +31,15 @@ const StadiumList: React.FC = () => {
     setIsDarkMode((prev) => !prev);
   };
 
-  //----------------------------
-  // 2) AUTH & DATA
-  //----------------------------
+
   const { user } = useContext(AuthContext);
   const [stadiums, setStadiums] = useState<Stadium[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  //----------------------------
-  // 3) LOADING
-  //----------------------------
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingDelayComplete, setLoadingDelayComplete] = useState<boolean>(false);
-
-  //----------------------------
-  // 4) SEARCH
-  //----------------------------
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('');
 
-  // Debounce effect for immediate but controlled search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
@@ -61,14 +47,10 @@ const StadiumList: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  //----------------------------
-  // 5) FETCH STADIUMS (2s MIN)
-  //----------------------------
   useEffect(() => {
     const fetchStadiums = async () => {
       const startTime = Date.now();
       setLoading(true);
-
       try {
         const response = await axios.get<Stadium[]>(`${BACKEND_URL}/api/stadiums`);
         setStadiums(response.data);
@@ -89,53 +71,39 @@ const StadiumList: React.FC = () => {
         }
       }
     };
-
-    // Call unconditionally. The user’s role check is below.
     fetchStadiums();
   }, []);
 
-  //----------------------------
-  // 6) useMemo FILTER
-  //----------------------------
   const filteredStadiums = useMemo(() => {
     const q = debouncedSearchQuery.toLowerCase().trim();
     if (!q) return stadiums;
-
     return stadiums.filter((stadium) => {
       const name = stadium.stadiumName.toLowerCase();
       const city = stadium.stadiumCity?.toLowerCase() || '';
       const country = stadium.stadiumCountry?.toLowerCase() || '';
-
       return name.includes(q) || city.includes(q) || country.includes(q);
     });
   }, [stadiums, debouncedSearchQuery]);
 
-  //----------------------------
-  // 7) DELETE HANDLER USING CONFIRM MODAL
-  //----------------------------
-  // New state variables to support modal-based deletion
+
   const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success' | 'error' | null>(null);
   const [stadiumToDelete, setStadiumToDelete] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number>(10);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Instead of using window.confirm, open the modal
   const openConfirmModal = (stadiumId: string) => {
     setStadiumToDelete(stadiumId);
     setModalState('confirm');
   };
 
-  // Called when the modal "Confirm" button is clicked
   const handleConfirmDelete = () => {
     if (!stadiumToDelete) return;
     setModalState('loading');
 
-    // Simulate a delay (or remove setTimeout if not needed)
     setTimeout(() => {
       axios
         .delete(`${BACKEND_URL}/api/stadiums/${stadiumToDelete}`)
         .then(() => {
-          // Remove stadium from local state
           setStadiums((prev) => prev.filter((s) => s._id !== stadiumToDelete));
           setModalState('success');
         })
@@ -156,11 +124,9 @@ const StadiumList: React.FC = () => {
   };
 
   const handleRetry = () => {
-    // Retry deletion if it failed
     handleConfirmDelete();
   };
 
-  // If modal state is success, start a countdown to auto-close the modal
   useEffect(() => {
     if (modalState === 'success') {
       countdownRef.current = setInterval(() => {
@@ -181,37 +147,23 @@ const StadiumList: React.FC = () => {
     };
   }, [modalState]);
 
-  //----------------------------
-  // 8) EARLY RETURN: UNAUTHORIZED
-  //----------------------------
-  // Important: We do this AFTER all Hooks (including useMemo) are declared
   if (!user || !['admin', 'manager', 'viewer'].includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  //----------------------------
-  // 9) LOADING SKELETON
-  //----------------------------
   const showSkeleton = loading || !loadingDelayComplete;
 
   const renderSkeleton = () => (
     <div className="animate-pulse space-y-6">
-      {/* Header Skeleton: Stadium header on left, search and add button on right */}
       <div className="flex justify-between items-center mb-6">
-        {/* Stadium Header Skeleton */}
         <div className="h-8 w-32 bg-gray-300 dark:bg-gray-700 rounded"></div>
-        
-        {/* Right Side Skeleton: Search Input & Add Button */}
         <div className="flex items-center space-x-4">
-          {/* Search Input Skeleton */}
           <div className="h-8 w-48 bg-gray-300 dark:bg-gray-700 rounded"></div>
-          {/* Add New Stadium Button Skeleton */}
           <div className="h-8 w-36 bg-gray-300 dark:bg-gray-700 rounded"></div>
         </div>
       </div>
   
-      {/* Stadiums List Skeleton */}
-      {[...Array(5)].map((_, i) => (
+      {[...Array(7)].map((_, i) => (
         <div
           key={i}
           className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700 transition-colors duration-300 mb-2"
@@ -224,14 +176,10 @@ const StadiumList: React.FC = () => {
     </div>
   );
 
-  //----------------------------
-  // 10) ERROR / SKELETON / RENDER
-  //----------------------------
   if (showSkeleton) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
         <div className="max-w-6xl w-full">
-          {/* Navbar */}
           <div className="flex justify-between items-center mb-8 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
             <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
               <Link to="/" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
@@ -260,8 +208,6 @@ const StadiumList: React.FC = () => {
               )}
             </button>
           </div>
-
-          {/* Main Card + Skeleton */}
           <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 space-y-8 transition-colors duration-300">
             {renderSkeleton()}
           </div>
@@ -274,7 +220,6 @@ const StadiumList: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
         <div className="max-w-6xl w-full">
-          {/* Navbar */}
           <div className="flex justify-between items-center mb-8 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
             <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
               <Link to="/" className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
@@ -304,8 +249,6 @@ const StadiumList: React.FC = () => {
               )}
             </button>
           </div>
-
-          {/* Error Card */}
           <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 space-y-8 transition-colors duration-300">
             <div className="text-center text-red-500 py-10">{error}</div>
           </div>
@@ -314,16 +257,12 @@ const StadiumList: React.FC = () => {
     );
   }
 
-  //----------------------------
-  // 11) FINAL RENDER: Stadium List with ConfirmModal
-  //----------------------------
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 
                     flex items-start justify-center py-12 px-4 
                     sm:px-6 lg:px-8 transition-colors duration-300"
     >
       <div className="max-w-6xl w-full">
-        {/* Navbar */}
         <div className="flex justify-between items-center mb-8 px-4 py-2 
                         bg-gray-100 dark:bg-gray-800 rounded-md"
         >
@@ -357,18 +296,13 @@ const StadiumList: React.FC = () => {
           </button>
         </div>
 
-        {/* Main Card */}
         <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 space-y-8 transition-colors duration-300">
-          {/* Header with Search & Add New Stadium */}
           <div className="flex justify-between items-center mb-6">
-            {/* Stadium Header */}
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
               Stadiums
             </h2>
 
-            {/* Right Side: Search and Add Button */}
             <div className="flex items-center space-x-4">
-              {/* Search */}
               <div className="relative flex items-center">
                 <label className="mr-2 font-semibold flex items-center space-x-2 text-gray-800 dark:text-gray-200">
                   <svg
@@ -416,7 +350,6 @@ const StadiumList: React.FC = () => {
                 )}
               </div>
 
-              {/* Add New Stadium Button */}
               {user.role === 'admin' && (
                 <Link to="/stadiums/add">
                   <button className="px-6 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600">
@@ -444,7 +377,6 @@ const StadiumList: React.FC = () => {
             <br/>
           </div>
 
-          {/* Stadium List */}
           <div className="space-y-6">
             {filteredStadiums.map((stadium) => (
               <div
@@ -473,7 +405,6 @@ const StadiumList: React.FC = () => {
                       </button>
                     </Link>
                     <button
-                      // Instead of calling window.confirm, open the modal
                       onClick={() => openConfirmModal(stadium._id)}
                       className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
@@ -493,7 +424,6 @@ const StadiumList: React.FC = () => {
         </div>
       </div>
 
-      {/* Confirm/Loading/Success/Error Modal */}
       <ConfirmModal
         isOpen={modalState !== null}
         type={modalState || 'confirm'}

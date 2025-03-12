@@ -10,8 +10,6 @@
 const ProvisionalFixture = require('../models/ProvisionalFixture');
 const Fixture = require('../models/Fixture');
 const Team = require('../models/Team');
-
-// Import algorithms.
 const { generateRandomFixtures } = require('../algorithms/randomAlgorithm');
 const { generateRound5ExtravaganzaFixtures } = require('../algorithms/round5Extravaganza');
 const { generateTravelOptimizedFixtures } = require('../algorithms/travelOptimizedScheduler');
@@ -32,14 +30,10 @@ exports.generateProvisionalFixtures = async (req, res) => {
       restWeeks
     } = req.body;
 
-    // Clear existing provisional fixtures for the selected season
     await ProvisionalFixture.deleteMany({ season });
 
     let result;
 
-    // -------------------------------------------------------------
-    // 1) Random Algorithm
-    // -------------------------------------------------------------
     if (algorithm === 'random') {
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
@@ -54,16 +48,10 @@ exports.generateProvisionalFixtures = async (req, res) => {
           .json({ message: 'Some selected teams could not be found. Check team IDs.' });
       }
 
-      // Sort teams by ranking (lowest rank => best rank)
       teams.sort((a, b) => a.teamRanking - b.teamRanking);
-
-      // Generate using your random algorithm
       result = await generateRandomFixtures(teams, season, restWeeks);
     }
 
-    // -------------------------------------------------------------
-    // 2) Round 5 Extravaganza
-    // -------------------------------------------------------------
     else if (algorithm === 'round5Extravaganza') {
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
@@ -82,9 +70,7 @@ exports.generateProvisionalFixtures = async (req, res) => {
       result = await generateRound5ExtravaganzaFixtures(teams, season, restWeeks);
     }
 
-    // -------------------------------------------------------------
-    // 3) Travel Optimized
-    // -------------------------------------------------------------
+
     else if (algorithm === 'travelOptimized') {
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
@@ -102,9 +88,6 @@ exports.generateProvisionalFixtures = async (req, res) => {
       result = await generateTravelOptimizedFixtures(teams, season, restWeeks);
     }
 
-    // -------------------------------------------------------------
-    // 4) Balanced Travel (Standard Deviation Minimizer)
-    // -------------------------------------------------------------
     else if (algorithm === 'balancedTravel') {
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
@@ -122,9 +105,6 @@ exports.generateProvisionalFixtures = async (req, res) => {
       result = await generateStandardDeviationBalancedFixtures(teams, season, restWeeks);
     }
 
-    // -------------------------------------------------------------
-    // 5) Unified Scheduler
-    // -------------------------------------------------------------
     else if (algorithm === 'unifiedScheduler') {
       if (!selectedTeamIds || !Array.isArray(selectedTeamIds) || selectedTeamIds.length !== 6) {
         return res
@@ -141,45 +121,35 @@ exports.generateProvisionalFixtures = async (req, res) => {
 
       teams.sort((a, b) => a.teamRanking - b.teamRanking);
 
-      // Extract additional parameters if provided
-      // (1) Weighted parameters from the client
+      // (1) Weighted parameters from the user
       const weights = req.body.weights || {};
-      // (2) Local search flag
+      // (2) Local search optimzation flag
       const runLocalSearch = !!req.body.runLocalSearch;
-      // (3) partialLocks or previousYearHome, if used
+      // (3) partialLocks or previousYearHome
       const partialLocks = req.body.partialLocks || {};
       const previousYearHome = req.body.previousYearHome || {};
 
-      // Build options object
       const options = {
         partialLocks,
         previousYearHome,
         runLocalSearch,
       };
 
-      // Generate using the comprehensive fair scheduler
       result = await generateComprehensiveFairFixtures(
         teams,
         season,
-        restWeeks,   // requestedRestCount from client
+        restWeeks,
         weights,
         options
       );
     }
 
-    // -------------------------------------------------------------
-    // If no matching algorithm
-    // -------------------------------------------------------------
     else {
-      return res.status(400).json({ message: 'Algorithm not implemented.' });
+      return res.status(400).json({ message: 'Algorithm not implemented. Please select an algorithm again.' });
     }
 
-    // -------------------------------------------------------------
-    // Save provisional fixtures to the DB
-    // -------------------------------------------------------------
     await ProvisionalFixture.insertMany(result.fixtures);
 
-    // Populate for response
     const populatedFixtures = await ProvisionalFixture.find({ season })
       .populate('homeTeam', 'teamName')
       .populate('awayTeam', 'teamName')
@@ -223,7 +193,6 @@ exports.saveProvisionalFixtures = async (req, res) => {
   try {
     const { season } = req.body;
 
-    // Delete existing fixtures for that season
     await Fixture.deleteMany({ season });
 
     const provisionalFixtures = await ProvisionalFixture.find({ season });
@@ -240,7 +209,6 @@ exports.saveProvisionalFixtures = async (req, res) => {
 
     await Fixture.insertMany(fixturesData);
 
-    // Clear provisional fixtures after saving
     await ProvisionalFixture.deleteMany({ season });
 
     res.status(200).json({ message: 'Fixtures saved' });

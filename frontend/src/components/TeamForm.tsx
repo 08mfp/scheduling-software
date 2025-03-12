@@ -34,15 +34,10 @@ const TeamForm: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [usedRankings, setUsedRankings] = useState<{ ranking: number; teamName: string }[]>([]);
   const [rankError, setRankError] = useState<string | null>(null);
-
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user } = useContext(AuthContext);
-
-  // New state to track the current action: 'create', 'update', or 'delete'
   const [currentAction, setCurrentAction] = useState<'create' | 'update' | 'delete' | null>(null);
-
-  // Modal state
   const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success' | 'error' | null>(null);
   const [countdown, setCountdown] = useState<number>(10);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
@@ -51,7 +46,6 @@ const TeamForm: React.FC = () => {
     if (user && user.role === 'admin') {
       const fetchData = async () => {
         if (id) {
-          // Edit mode, so the intended action is likely 'update' unless we trigger delete later
           setCurrentAction('update');
           try {
             const teamResponse = await axios.get<Team>(`${BACKEND_URL}/api/teams/${id}`);
@@ -72,7 +66,6 @@ const TeamForm: React.FC = () => {
             setError('Failed to load team details. Please try again later.');
           }
         } else {
-          // Add mode: current action is 'create'
           setCurrentAction('create');
           try {
             const teamsResponse = await axios.get<Team[]>(`${BACKEND_URL}/api/teams`);
@@ -86,7 +79,6 @@ const TeamForm: React.FC = () => {
             setError('Failed to load team rankings. Please try again later.');
           }
         }
-
         try {
           const stadiumsResponse = await axios.get<Stadium[]>(`${BACKEND_URL}/api/stadiums`);
           setStadiums(stadiumsResponse.data);
@@ -161,7 +153,6 @@ const TeamForm: React.FC = () => {
 
     try {
       if (id) {
-        // Update existing team
         setCurrentAction('update');
         await axios.put(`${BACKEND_URL}/api/teams/${id}`, formData, {
           headers: {
@@ -170,7 +161,6 @@ const TeamForm: React.FC = () => {
         });
         setModalState('success');
       } else {
-        // Create new team
         setCurrentAction('create');
         await axios.post(`${BACKEND_URL}/api/teams`, formData, {
           headers: {
@@ -214,11 +204,11 @@ const TeamForm: React.FC = () => {
 
   const openConfirmModal = () => {
     setModalState('confirm');
-    setCurrentAction('delete'); // User clicked delete, so action is delete
+    setCurrentAction('delete');
   };
   const closeModal = () => {
     setModalState(null);
-    setCountdown(10); // Reset countdown
+    setCountdown(10);
   };
   const handleConfirmDelete = () => {
     setModalState('loading');
@@ -254,7 +244,6 @@ const TeamForm: React.FC = () => {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Determine the success message based on currentAction
   let successTitle = 'Success';
   let successMessage = 'Action completed successfully.';
   if (currentAction === 'create') {
@@ -268,7 +257,6 @@ const TeamForm: React.FC = () => {
     successMessage = 'The team has been deleted successfully.';
   }
 
-  // Determine the title and message based on modalState and currentAction
   const modalTitle =
     modalState === 'confirm'
       ? 'Confirm Action'
@@ -299,7 +287,6 @@ const TeamForm: React.FC = () => {
       ? 'Failed to create the team. Please try again.'
       : 'Failed to update the team. Please try again.';
 
-  // Determine button texts based on the action and state
   const confirmText =
     modalState === 'confirm'
       ? currentAction === 'delete'
@@ -318,7 +305,6 @@ const TeamForm: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8">
-        {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-2 mb-6">
           <Link to="/teams" className="text-blue-600 hover:underline flex items-center">
             <FaHome className="mr-1" />
@@ -341,7 +327,6 @@ const TeamForm: React.FC = () => {
           )}
         </div>
 
-        {/* Image Display */}
         <div className="flex flex-col items-center">
           {id && team.image ? (
             <img
@@ -383,7 +368,6 @@ const TeamForm: React.FC = () => {
           )}
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>

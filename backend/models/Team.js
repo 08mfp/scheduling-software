@@ -1,4 +1,3 @@
-// backend/models/Team.js
 /**
  * @module backend/models/Team
  * @description This module is used for defining the schema for teams in the database. Stadium is a required field for a team, will give options from list of available stadiums.

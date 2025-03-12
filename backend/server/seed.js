@@ -19,7 +19,6 @@ require('dotenv').config();
 
 const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/sixnations';
 
-// Connect to MongoDB without deprecated options
 mongoose
   .connect(mongoURI)
   .then(() => {
@@ -32,14 +31,11 @@ mongoose
 
 async function seedData() {
   try {
-    // 1. Clear existing data so that can start from scratch
     await Fixture.deleteMany({});
     await Player.deleteMany({});
     await Team.deleteMany({});
     await Stadium.deleteMany({});
     console.log('Cleared existing data 🗑️ ');
-
-    // 2. Create Stadiums
     const stadiumsData = [
       {
         stadiumName: 'Wembley', // change to twickenham later
@@ -100,7 +96,6 @@ async function seedData() {
     const stadiums = await Stadium.insertMany(stadiumsData);
     console.log('🏟️ Stadiums added');
 
-    // 3. Create Teams
     const teamsData = [
       {
         teamName: 'England',
@@ -146,13 +141,12 @@ async function seedData() {
       },
     ];
 
-    // Link teams to stadiums
     const updatedTeamsData = teamsData.map((team) => {
-      const stadium = stadiums.find((s) => s.stadiumName === team.stadiumName); // find the stadium that matches the team's stadiumName
+      const stadium = stadiums.find((s) => s.stadiumName === team.stadiumName);
       if (stadium) {
         return {
-          ...team, // spread the team object
-          stadium: stadium._id, // add the stadium ID to the team object
+          ...team,
+          stadium: stadium._id,
         };
       } else {
         console.log(`Stadium not found for team ${team.teamName} ❌ `);
@@ -163,7 +157,6 @@ async function seedData() {
     const teams = await Team.insertMany(updatedTeamsData);
     console.log(' ALL Teams added 🏴 ');
 
-    // 4. Create Players
     const playersData = [
       { firstName: 'Player', lastName: 'A', dateOfBirth: randomDOB(), teamName: 'England' }, //! ADDD REAL PLAYERS LATER
       { firstName: 'Player', lastName: 'B', dateOfBirth: randomDOB(), teamName: 'England' },
@@ -184,13 +177,12 @@ async function seedData() {
       { firstName: 'Player', lastName: 'Q', dateOfBirth: randomDOB(), teamName: 'Wales' },
     ];
 
-    // Link players to teams
     const updatedPlayersData = playersData.map((player) => {
-      const team = teams.find((t) => t.teamName === player.teamName); // find the team that matches the player's teamName
+      const team = teams.find((t) => t.teamName === player.teamName);
       if (team) {
         return {
           ...player, 
-          team: team._id, // add the team ID to the player object
+          team: team._id,
         };
       } else {
         console.log(`Team not found for player ${player.firstName} ${player.lastName} ❌ `);
@@ -201,7 +193,6 @@ async function seedData() {
     const players = await Player.insertMany(updatedPlayersData);
     console.log('Players added 👥 ');
 
-    // 5. Create Fixtures for 2021 Season
     const fixturesData2021 = [
       {
         round: 1,
@@ -370,7 +361,6 @@ async function seedData() {
       },
     ];
 
-    // 6. Create Fixtures for 2022 Season
     const fixturesData2022 = [
       {
         round: 1,
@@ -539,7 +529,6 @@ async function seedData() {
       },
     ];
 
-    // 7. Create Fixtures for 2023 Season
     const fixturesData2023 = [
       {
         round: 1,
@@ -708,7 +697,6 @@ async function seedData() {
       },
     ];
 
-    // 8. Create Fixtures for 2024 Season
     const fixturesData2024 = [
       {
         round: 1,
@@ -877,19 +865,17 @@ async function seedData() {
       },
     ];
 
-    // Helper Function to Add Time to Date
     const addTimeToDate = (dateString, time = '14:00') => { //currenly this sets the time to 14:00 for all fixtures
-      return new Date(`${dateString}T${time}:00`); // Adds time to date
+      return new Date(`${dateString}T${time}:00`);
     };
 
-    // 11. Insert Fixtures for 2021 Season
-    // Process fixturesData2021 and insert into the database
+
     const fixturesToInsert2021 = fixturesData2021.map((fixture) => {
-      const homeTeam = teams.find((t) => t.teamName === fixture.homeTeam); // find the team that matches the fixture's homeTeam
-      const awayTeam = teams.find((t) => t.teamName === fixture.awayTeam); // find the team that matches the fixture's awayTeam
+      const homeTeam = teams.find((t) => t.teamName === fixture.homeTeam);
+      const awayTeam = teams.find((t) => t.teamName === fixture.awayTeam);
       if (!homeTeam) {
         console.log(` Home team not found: ${fixture.homeTeam} ❌`);
-        return null; // return null if home team not found
+        return null;
       }
       if (!awayTeam) {
         console.log(`Away team not found: ${fixture.awayTeam} ❌`);
@@ -902,26 +888,24 @@ async function seedData() {
 
       return {
         round: fixture.round,
-        date: addTimeToDate(fixture.date), // Adds 14:00 time
+        date: addTimeToDate(fixture.date),
         homeTeam: homeTeam._id,
         awayTeam: awayTeam._id,
-        stadium: homeTeam.stadium, // use the stadium from the home team
-        location: homeTeam.teamLocation, // City name as location
+        stadium: homeTeam.stadium,
+        location: homeTeam.teamLocation,
         homeTeamScore: fixture.homeTeamScore, 
         awayTeamScore: fixture.awayTeamScore,
         season: fixture.season, 
       };
-    }).filter(fixture => fixture !== null); // Remove null entries
+    }).filter(fixture => fixture !== null);
 
-    if (fixturesToInsert2021.length !== fixturesData2021.length) { // Check if all fixtures were inserted
+    if (fixturesToInsert2021.length !== fixturesData2021.length) {
       console.log('Some 2021 fixtures were not inserted due to missing data. ❌');
     }
 
     await Fixture.insertMany(fixturesToInsert2021);
     console.log('2021 Fixtures added 📅✅ '); 
 
-    // 12. Insert Fixtures for 2022 Season
-    //same logic as above
     const fixturesToInsert2022 = fixturesData2022.map((fixture) => {
       const homeTeam = teams.find((t) => t.teamName === fixture.homeTeam);
       const awayTeam = teams.find((t) => t.teamName === fixture.awayTeam);
@@ -958,8 +942,6 @@ async function seedData() {
     await Fixture.insertMany(fixturesToInsert2022);
     console.log('2022 Fixtures added 📅✅ ');
 
-    // 13. Insert Fixtures for 2023 Season
-    // same logic as above
     const fixturesToInsert2023 = fixturesData2023.map((fixture) => {
       const homeTeam = teams.find((t) => t.teamName === fixture.homeTeam);
       const awayTeam = teams.find((t) => t.teamName === fixture.awayTeam);
@@ -996,8 +978,6 @@ async function seedData() {
     await Fixture.insertMany(fixturesToInsert2023);
     console.log('2023 Fixtures added 📅✅ ');
 
-    // 14. Insert Fixtures for 2024 Season
-    // same logic as above
     const fixturesToInsert2024 = fixturesData2024.map((fixture) => {
       const homeTeam = teams.find((t) => t.teamName === fixture.homeTeam);
       const awayTeam = teams.find((t) => t.teamName === fixture.awayTeam);
@@ -1034,7 +1014,6 @@ async function seedData() {
     await Fixture.insertMany(fixturesToInsert2024);
     console.log('2024 Fixtures added 📅✅ ');
 
-    // 15. Close connection
     mongoose.connection.close();
     console.log('🔌 Database seeding completed. ✅✅ ');
   } catch (err) {
@@ -1043,7 +1022,6 @@ async function seedData() {
   }
 }
 
-// generate a random date of birth between 1985 and 2000 for players
 function randomDOB() {
   const start = new Date(1985, 0, 1);
   const end = new Date(2000, 0, 1);

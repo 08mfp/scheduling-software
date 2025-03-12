@@ -1,4 +1,3 @@
-// backend/models/ProvisionalFixture.js
 /**
  * @module backend/models/ProvisionalFixture
  * @description This module is used for defining provisioanl fixtures in the database. used by scheduling algorithm before we post thefixture list to the main database.

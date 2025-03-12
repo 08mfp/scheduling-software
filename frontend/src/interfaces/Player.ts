@@ -1,5 +1,3 @@
-// frontend/src/interfaces/Player.ts
-
 export interface Player {
     _id: string;
     firstName: string;

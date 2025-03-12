@@ -1,5 +1,3 @@
-// frontend/src/components/CopyButton.tsx
-
 import React, { useState } from 'react';
 import { FaRegCopy, FaCheck } from 'react-icons/fa';
 
@@ -20,7 +18,7 @@ const CopyButton: React.FC<CopyButtonProps> = ({
     try {
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy!', err);
     }
@@ -39,7 +37,6 @@ const CopyButton: React.FC<CopyButtonProps> = ({
           <FaRegCopy className="w-3.5 h-3.5" />
         )}
       </button>
-      {/* Tooltip */}
       <div
         role="tooltip"
         className={`absolute z-10 px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-sm transition-opacity duration-300 ${

@@ -1,5 +1,3 @@
-// frontend/src/pages/FAQ.tsx
-
 import React, { useContext, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { FaInfoCircle, FaSun, FaMoon } from 'react-icons/fa';
@@ -45,7 +43,6 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ id, title, isOpen, onTogg
 const FAQ: React.FC = () => {
   const { user } = useContext(AuthContext);
 
-  // Dark mode hooks
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' || false;
@@ -65,7 +62,6 @@ const FAQ: React.FC = () => {
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
 
-  // Manage open state for each accordion section
   const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>({
     'scheduling-software': false,
     'auto-scheduler': false,
@@ -85,7 +81,6 @@ const FAQ: React.FC = () => {
     setOpenAccordions(prev => ({ ...prev, [id]: true }));
   };
 
-  // Quick links data
   const quickLinks = [
     // { id: 'scheduling-software', label: 'Scheduling Software' },
     { id: 'auto-scheduler', label: 'Automatic Scheduler' },
@@ -97,7 +92,6 @@ const FAQ: React.FC = () => {
     // { id: 'contact-support', label: 'Contact & Support' },
   ];
 
-  // Handle quick link click: open the accordion and scroll smoothly
   const handleQuickLinkClick = (id: string, e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     openAccordion(id);
@@ -107,7 +101,6 @@ const FAQ: React.FC = () => {
     }
   };
 
-  // Early return check is now placed after all hooks have been declared
   if (!user || !['admin', 'manager', 'viewer'].includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
@@ -115,7 +108,7 @@ const FAQ: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
       <div className="max-w-7xl w-full">
-        {/* Navigation Menu */}
+
         <div className="flex justify-between items-center mb-8 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
           <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
             <Link
@@ -147,9 +140,7 @@ const FAQ: React.FC = () => {
           </button>
         </div>
 
-        {/* Main Card */}
         <div className="max-w-7xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300">
-          {/* Title & Short Description */}
           <div className="text-left">
           <h1
             className="font-extrabold text-gray-900 dark:text-gray-100 mb-2"
@@ -165,10 +156,7 @@ const FAQ: React.FC = () => {
             including its various modes, teams ranking, troubleshooting tips, and admin panel functions.
           </p>
         </div>
-
         <br></br>
-
-            {/* Quick Links (Interactive Tabs/Pills) */}
             <div className="mb-8">
             <div className="flex items-center space-x-4">
               <span className="text-blue-600 dark:text-blue-400  duration-200 font-semibold">Quick Links:</span>
@@ -188,7 +176,6 @@ const FAQ: React.FC = () => {
             </div>
             </div>
 
-          {/* Inner Content Container */}
           <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-6 mb-8 space-y-6">
             <AccordionItem
               id="scheduling-software"

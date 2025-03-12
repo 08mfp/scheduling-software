@@ -2,13 +2,13 @@
 module.exports = {
   darkMode: 'class', 
   content: [
-      "./src/**/*.{js,jsx,ts,tsx}", // Your app's components
-      "./node_modules/flowbite/**/*.js" // Include flowbite JS
+      "./src/**/*.{js,jsx,ts,tsx}",
+      "./node_modules/flowbite/**/*.js"
   ],
   theme: {
       extend: {}
   },
   plugins: [
-      require("flowbite/plugin") // Include Flowbite plugin
+      require("flowbite/plugin")
   ]
 };

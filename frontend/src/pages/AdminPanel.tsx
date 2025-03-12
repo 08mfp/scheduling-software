@@ -18,9 +18,7 @@ interface User {
 interface UserEditFormData extends Partial<User> {}
 
 const AdminPanel: React.FC = () => {
-  //-----------------------
-  // 1) DARK MODE HOOKS
-  //-----------------------
+
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' || false;
@@ -39,10 +37,6 @@ const AdminPanel: React.FC = () => {
   }, [isDarkMode]);
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
-
-  //-----------------------
-  // 2) AUTH & BASIC STATES
-  //-----------------------
   const { user, apiKey } = useContext(AuthContext);
   const [users, setUsers] = useState<User[]>([]);
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
@@ -50,7 +44,6 @@ const AdminPanel: React.FC = () => {
   const [editFormData, setEditFormData] = useState<UserEditFormData>({});
   const [error, setError] = useState<string | null>(null);
   const [adminSecretKey, setAdminSecretKey] = useState<string>('');
-
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5003';
 
   useEffect(() => {
@@ -59,7 +52,6 @@ const AdminPanel: React.FC = () => {
         setError('No API key provided. Please log in with the correct role.');
         return;
       }
-
       try {
         const response = await axios.get(`${API_BASE_URL}/api/admin/users`, {
           headers: { 'x-api-key': apiKey },
@@ -74,35 +66,21 @@ const AdminPanel: React.FC = () => {
     fetchUsers();
   }, [user, apiKey, API_BASE_URL]);
 
-  //-----------------------
-  // 3) SEARCH, FILTER, SORT
-  //-----------------------
-  // (a) Search by firstName
+
   const [searchQuery, setSearchQuery] = useState<string>('');
-
-  // (b) Role filter
   const [roleFilter, setRoleFilter] = useState<'all' | 'guest' | 'viewer' | 'manager' | 'admin'>('all');
-
-  // (c) Sort by firstName toggles
   const [sortByFirstName, setSortByFirstName] = useState<boolean>(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Memoize the filtered & sorted array
   const filteredAndSortedUsers = useMemo(() => {
     let result = [...users];
-
-    // 1) Filter by role
     if (roleFilter !== 'all') {
       result = result.filter(u => u.role === roleFilter);
     }
-
-    // 2) Search by firstName
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(u => u.firstName.toLowerCase().includes(q));
     }
-
-    // 3) Sort by firstName if toggled
     if (sortByFirstName) {
       result.sort((a, b) => {
         const nameA = a.firstName.toLowerCase();
@@ -112,13 +90,9 @@ const AdminPanel: React.FC = () => {
         return 0;
       });
     }
-
     return result;
   }, [users, roleFilter, searchQuery, sortByFirstName, sortOrder]);
 
-  //-----------------------
-  // 4) HANDLERS
-  //-----------------------
   const toggleExpand = (userId: string) => {
     setExpandedUserIds(prev =>
       prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
@@ -159,8 +133,6 @@ const AdminPanel: React.FC = () => {
         setError('User not found.');
         return;
       }
-
-      // Check if role is being changed
       const isRoleChanged = editFormData.role && editFormData.role !== userToEdit.role;
       if (isRoleChanged && !adminSecretKey) {
         setError('Please enter the admin secret key to change roles.');
@@ -184,7 +156,6 @@ const AdminPanel: React.FC = () => {
         age: editFormData.age !== undefined ? editFormData.age : null,
       };
 
-      // Include secret key if role is being changed
       if (isRoleChanged) {
         data.secretCode = adminSecretKey;
       }
@@ -196,9 +167,7 @@ const AdminPanel: React.FC = () => {
         },
       });
 
-      // Update the users state
       setUsers(prev => prev.map(u => (u._id === userId ? response.data.user : u)));
-
       setEditingUserId(null);
       setEditFormData({});
       setAdminSecretKey('');
@@ -215,14 +184,12 @@ const AdminPanel: React.FC = () => {
       'Are you sure you want to delete this user? This action cannot be undone.'
     );
     if (!confirmDelete) return;
-
     try {
       const response = await axios.delete(`${API_BASE_URL}/api/admin/users/${userId}`, {
         headers: {
           'x-api-key': apiKey || '',
         },
       });
-
       if (response.status === 200) {
         setUsers(prev => prev.filter(u => u._id !== userId));
         setError(null);
@@ -243,16 +210,10 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  //-----------------------
-  // 5) EARLY RETURN CHECK
-  //-----------------------
   if (!user || !['admin', 'manager', 'viewer'].includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  //-----------------------
-  // 6) RENDER
-  //-----------------------
   return (
     <div
       className="min-h-screen bg-gray-100 dark:bg-gray-900 
@@ -260,7 +221,6 @@ const AdminPanel: React.FC = () => {
                  sm:px-6 lg:px-8 transition-colors duration-300"
     >
       <div className="max-w-7xl w-full">
-        {/* Navbar (Breadcrumb + Dark Mode) */}
         <div
           className="flex justify-between items-center mb-8 px-4 py-2 
                      bg-gray-100 dark:bg-gray-800 rounded-md"
@@ -301,9 +261,7 @@ const AdminPanel: React.FC = () => {
           </button>
         </div>
 
-        {/* Main Card */}
         <div className="max-w-7xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300">
-          {/* Title & Short Description */}
           <div className="text-left">
           <h1
             className="font-extrabold text-gray-900 dark:text-gray-100 mb-2"
@@ -329,17 +287,13 @@ const AdminPanel: React.FC = () => {
 
 
           < div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-6 mb-8 space-y-6">
-
-          {/* Error Message */}
           {error && (
             <div className="text-red-500 mb-4 text-center dark:text-red-400">
               {error}
             </div>
           )}
 
-          {/* Controls: Search, Filter, Sort */}
           <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-4">
-            {/* Search Input */}
             <div className="flex items-center relative">
               <label className="mr-2 font-semibold flex items-center space-x-2 text-gray-800 dark:text-gray-200">
                 <svg
@@ -391,7 +345,6 @@ const AdminPanel: React.FC = () => {
               )}
             </div>
 
-            {/* Filter by Role */}
             <div>
               <label className="mr-2 font-semibold text-gray-800 dark:text-gray-200">
                 Filter by Role:
@@ -411,11 +364,9 @@ const AdminPanel: React.FC = () => {
               </select>
             </div>
 
-            {/* Sort by First Name */}
             <div>
               <button
                 onClick={() => {
-                  // If already sorting by firstName, toggle order; otherwise enable sort.
                   if (sortByFirstName) {
                     setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
                   } else {
@@ -471,7 +422,6 @@ const AdminPanel: React.FC = () => {
             </div>
           </div>
 
-          {/* User Table */}
           <div className="overflow-x-auto">
             <table className="min-w-full border border-gray-200 dark:border-gray-700 mt-6">
               <thead className="bg-gray-50 dark:bg-gray-700">
@@ -730,21 +680,6 @@ const AdminPanel: React.FC = () => {
               </tbody>
             </table>
           </div>
-
-          {/* Optionally, add a button to create new users */}
-          {/*
-          <div className="mt-6 flex justify-center">
-            <Link to="/admin/users/create">
-              <button
-                className="px-6 py-3 bg-indigo-600 text-white rounded-md 
-                           hover:bg-indigo-700 focus:outline-none 
-                           focus:ring-2 focus:ring-indigo-500 transition-colors"
-              >
-                Create New User
-              </button>
-            </Link>
-          </div>
-          */}
         </div>
       </div>
       </div>

@@ -1,4 +1,3 @@
-// backend/models/Stadium.js
 /**
  * @module backend/models/Stadium
  * @description This module is used for defining the schema for stadiums in the database.

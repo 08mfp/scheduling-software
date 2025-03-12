@@ -1,4 +1,3 @@
-//backend/controllers/manualFixtureController.js
 /**
  * @module backend/controllers/manualFixtureController
  * @description This file contains the controller functions for manually scheduling fixtures in the database.
@@ -26,7 +25,6 @@ exports.getPreviousFixture = async (req, res) => {
 
         const previousSeason = parseInt(season) - 1;
 
-        // Find previous fixture between the two teams
         const previousFixture = await Fixture.findOne({
             season: previousSeason,
             $or: [
@@ -38,7 +36,6 @@ exports.getPreviousFixture = async (req, res) => {
         let homeTeamId, awayTeamId;
 
         if (previousFixture) {
-            // Alternate home advantage (rugby rule)
             if (previousFixture.homeTeam.toString() === teamAId) {
                 homeTeamId = teamBId;
                 awayTeamId = teamAId;
@@ -47,12 +44,10 @@ exports.getPreviousFixture = async (req, res) => {
                 awayTeamId = teamBId;
             }
         } else {
-            // Assign home team randomly if no previous fixture (edge case)
             homeTeamId = teamAId;
             awayTeamId = teamBId;
         }
 
-        // Fetch home team, away team, and stadium
         const homeTeam = await Team.findById(homeTeamId).populate('stadium');
         const awayTeam = await Team.findById(awayTeamId);
 
@@ -60,7 +55,6 @@ exports.getPreviousFixture = async (req, res) => {
             return res.status(404).json({ message: 'Teams not found' });
         }
 
-        //  the code below is to send the response to the client (front end)
         const stadium = homeTeam.stadium;
 
         res.status(200).json({
@@ -104,7 +98,6 @@ exports.validateFixtures = async (req, res) => {
             return res.status(400).json({ message: 'No fixtures provided' });
         }
 
-        // Validate constraints (e.g., 5 rounds, 3 fixtures per round, etc.)
         const validationResult = await validateFixtures(fixtures, season);
 
         if (!validationResult.isValid) {
@@ -131,17 +124,14 @@ exports.saveFixtures = async (req, res) => {
             return res.status(400).json({ message: 'No fixtures provided' });
         }
 
-        // Validate constraints
         const validationResult = await validateFixtures(fixtures, season);
 
         if (!validationResult.isValid) {
             return res.status(400).json({ message: 'Validation failed', errors: validationResult.errors });
         }
 
-        // Delete existing fixtures for the season (avoid duplicates)
         await Fixture.deleteMany({ season });
 
-        // Save fixtures (sends to normal fixtures endpoint)
         await Fixture.insertMany(fixtures);
 
         res.status(200).json({ message: 'Fixtures saved successfully' });
@@ -151,7 +141,6 @@ exports.saveFixtures = async (req, res) => {
     }
 };
 
-// Helper function to validate fixtures. All constraints are checked here.
 async function validateFixtures(fixtures, season) {
     const errors = [];
     let isValid = true;
@@ -159,14 +148,12 @@ async function validateFixtures(fixtures, season) {
     const teams = await Team.find();
     const teamIds = teams.map(team => team._id.toString());
 
-    // 1. There are 5 rounds
     const rounds = new Set(fixtures.map(f => f.round));
     if (rounds.size !== 5) {
         isValid = false;
         errors.push('There must be exactly 5 rounds');
     }
 
-    // 2. Each round has 3 fixtures
     for (let round = 1; round <= 5; round++) {
         const fixturesInRound = fixtures.filter(f => f.round === round);
         if (fixturesInRound.length !== 3) {
@@ -175,7 +162,6 @@ async function validateFixtures(fixtures, season) {
         }
     }
 
-    // 3. Each team plays exactly once in each round
     for (let round = 1; round <=5; round++) {
         const fixturesInRound = fixtures.filter(f => f.round === round);
         const teamsInRound = new Set();
@@ -189,7 +175,6 @@ async function validateFixtures(fixtures, season) {
         }
     }
 
-    // 4. Each team plays every other team exactly once overall (round-robin)
     const matchupSet = new Set();
     fixtures.forEach(f => {
         const teamAId = f.homeTeam.toString();
@@ -203,7 +188,6 @@ async function validateFixtures(fixtures, season) {
         }
     });
 
-    // 5. Home advantage alternates each year
     for (let fixture of fixtures) {
         const previousSeason = season - 1;
         const previousFixture = await Fixture.findOne({
@@ -222,10 +206,10 @@ async function validateFixtures(fixtures, season) {
         }
     }
 
-    // 6. Dates can only be between Friday 6pm to Sunday 8pm //! This is a new constraint NO POINT PLAYING WEEKDAYS
+    // Dates can only be between Friday 6pm to Sunday 8pm //! This is a new constraint NO POINT PLAYING WEEKDAYS
     for (let fixture of fixtures) {
         const date = new Date(fixture.date);
-        const day = date.getUTCDay(); // Sunday = 0, Saturday = 6
+        const day = date.getUTCDay();
         const hours = date.getUTCHours();
         const minutes = date.getUTCMinutes();
 
@@ -234,7 +218,7 @@ async function validateFixtures(fixtures, season) {
                 isValid = false;
                 errors.push(`Fixture on ${date} is before 6pm on Friday`);
             }
-        } else if (day === 6 || day === 0) { // Saturday or Sunday
+        } else if (day === 6 || day === 0) { 
             if (day === 0 && (hours > 20 || (hours === 20 && minutes > 0))) {
                 isValid = false;
                 errors.push(`Fixture on ${date} is after 8pm on Sunday`);

@@ -1,5 +1,3 @@
-// src/components/HomePage.tsx
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -11,10 +9,9 @@ import {
 } from 'react-icons/fa';
 import '@fontsource/poppins';
 import '@fontsource/inter';
-import homeImageDark from '../assets/Images/home.png'; // Dark mode image
-import homeImageLight from '../assets/Images/home-light.png'; // Light mode image
+import homeImageDark from '../assets/Images/home.png';
+import homeImageLight from '../assets/Images/home-light.png';
 
-// FlipCard component for Previous Champions
 const FlipCard: React.FC<{ year: string; champion: string; flag: string }> = ({ year, champion, flag }) => {
   const [flipped, setFlipped] = useState(false);
 
@@ -33,7 +30,6 @@ const FlipCard: React.FC<{ year: string; champion: string; flag: string }> = ({ 
         }}
         className="w-full h-full relative"
       >
-        {/* Front side */}
         <div
           style={{ backfaceVisibility: 'hidden' }}
           className="absolute inset-0 bg-white dark:bg-gray-700 rounded-lg shadow-md flex flex-col items-center justify-center"
@@ -42,7 +38,6 @@ const FlipCard: React.FC<{ year: string; champion: string; flag: string }> = ({ 
             {year}
           </span>
         </div>
-        {/* Back side */}
         <div
           style={{
             backfaceVisibility: 'hidden',
@@ -62,7 +57,6 @@ const FlipCard: React.FC<{ year: string; champion: string; flag: string }> = ({ 
   );
 };
 
-// Inline component for expandable developer message text
 const ExpandableText: React.FC = () => {
   const [expanded, setExpanded] = useState(false);
   return (
@@ -104,8 +98,6 @@ const HomePage: React.FC = () => {
   }, [isDarkMode]);
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
-
-  // SIX NATIONS Tabs State & Data
   const [activeTab, setActiveTab] = useState<string>('overview');
 
   const sixNationsTabs = [
@@ -202,9 +194,7 @@ const HomePage: React.FC = () => {
         return (
           <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
             <div className="relative pl-12">
-              {/* Vertical timeline line */}
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-300 dark:bg-gray-600"></div>
-              {/* Timeline Item 1 */}
               <div className="mb-8 flex items-start">
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
@@ -217,7 +207,6 @@ const HomePage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              {/* Timeline Item 2 */}
               <div className="mb-8 flex items-start">
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold">
@@ -230,7 +219,6 @@ const HomePage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              {/* Timeline Item 3 */}
               <div className="flex items-start">
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
@@ -270,9 +258,7 @@ const HomePage: React.FC = () => {
         return (
           <div className="relative p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
             <div className="relative pl-12">
-              {/* Vertical line */}
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-300 dark:bg-gray-600"></div>
-              {/* Match Points Timeline Item */}
               <div className="mb-8 flex items-start">
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
@@ -290,7 +276,6 @@ const HomePage: React.FC = () => {
                   </ul>
                 </div>
               </div>
-              {/* Bonus Points Timeline Item */}
               <div className="mb-8 flex items-start">
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold">
@@ -308,7 +293,6 @@ const HomePage: React.FC = () => {
                   </ul>
                 </div>
               </div>
-              {/* Tie-breaker Timeline Item */}
               <div className="flex items-start">
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold">
@@ -334,7 +318,6 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col transition-colors duration-300">
-      {/* Dark Mode Toggle Button */}
       <header className="flex justify-end p-6">
         <button
           onClick={toggleDarkMode}
@@ -344,8 +327,6 @@ const HomePage: React.FC = () => {
           {isDarkMode ? <FaMoon size={28} /> : <FaSun size={28} />}
         </button>
       </header>
-
-      {/* Main Banner */}
       <main className="flex-grow">
         <section className="relative flex flex-col items-center justify-center text-center text-black dark:text-white h-[80vh] sm:h-[70vh] bg-white dark:bg-black px-4">
           <img
@@ -369,8 +350,6 @@ const HomePage: React.FC = () => {
             </Link>
           </div>
         </section>
-
-        {/* What is the Six Nations? - Tabbed Interface */}
         <section className="py-12 px-4 bg-white dark:bg-gray-900">
           <div className="max-w-7xl mx-auto text-center mb-8">
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
@@ -378,7 +357,6 @@ const HomePage: React.FC = () => {
             </h2>
           </div>
           <div className="max-w-3xl mx-auto">
-            {/* Tabs Header */}
             <div className="flex border-b border-gray-300 dark:border-gray-600">
               {sixNationsTabs.map((tab) => (
                 <button
@@ -394,14 +372,12 @@ const HomePage: React.FC = () => {
                 </button>
               ))}
             </div>
-            {/* Tab Content */}
             <div className="p-4 text-gray-700 dark:text-gray-300">
               {renderSixNationsContent()}
             </div>
           </div>
         </section>
 
-        {/* Feature Highlights */}
         <section className="py-12 px-4 bg-white dark:bg-gray-900">
           <div className="max-w-7xl mx-auto text-center mb-12">
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
@@ -412,7 +388,6 @@ const HomePage: React.FC = () => {
             </p>
           </div>
           <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-            {/* Card 1: Extensive Fixture Data */}
             <div className="flex flex-col items-center p-6 bg-white dark:bg-gray-700 rounded-lg shadow-md transition transform hover:scale-105">
               <FaDatabase className="text-5xl text-purple-500 mb-4" />
               <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">
@@ -422,7 +397,6 @@ const HomePage: React.FC = () => {
                 Access detailed fixture data including previous results, scores, and current rankings.
               </p>
             </div>
-            {/* Card 2: Complete Team Information */}
             <div className="flex flex-col items-center p-6 bg-white dark:bg-gray-700 rounded-lg shadow-md transition transform hover:scale-105">
               <FaBuilding className="text-5xl text-green-500 mb-4" />
               <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">
@@ -432,7 +406,6 @@ const HomePage: React.FC = () => {
                 Discover comprehensive details on teams, including stadiums, rosters, and historical performance.
               </p>
             </div>
-            {/* Card 3: Exciting Future Tournaments */}
             <div className="flex flex-col items-center p-6 bg-white dark:bg-gray-700 rounded-lg shadow-md transition transform hover:scale-105">
               <FaRocket className="text-5xl text-red-500 mb-4" />
               <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">
@@ -445,7 +418,6 @@ const HomePage: React.FC = () => {
           </div>
         </section>
 
-        {/* Testimonials / Success Stories */}
         <section className="py-12 px-4 bg-white dark:bg-gray-900">
           <div className="max-w-7xl mx-auto text-center mb-12">
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
@@ -456,7 +428,6 @@ const HomePage: React.FC = () => {
             </p>
           </div>
           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Testimonial 1 */}
             <div className="bg-white dark:bg-gray-700 p-8 rounded-lg shadow-md">
               <p className="text-lg text-gray-800 dark:text-gray-100 italic">
                 "This platform keeps me updated on every match. The Fixture & Results and detailed stats are a game changer!"
@@ -465,7 +436,6 @@ const HomePage: React.FC = () => {
                 – Alex, Rugby Fan
               </h3>
             </div>
-            {/* Testimonial 2 */}
             <div className="bg-white dark:bg-gray-700 p-8 rounded-lg shadow-md">
               <p className="text-lg text-gray-800 dark:text-gray-100 italic">
                 "The Simplicity and Innovativeness make this site my go-to source for everything Six Nations."
@@ -474,7 +444,6 @@ const HomePage: React.FC = () => {
                 – Jamie, Sports Analyst
               </h3>
             </div>
-            {/* Testimonial 3 */}
             <div className="bg-white dark:bg-gray-700 p-8 rounded-lg shadow-md">
               <p className="text-lg text-gray-800 dark:text-gray-100 italic">
                 "This platform provides the best insights and updates. It's a must-have for any rugby enthusiast!"
@@ -486,7 +455,6 @@ const HomePage: React.FC = () => {
           </div>
         </section>
 
-        {/* Message from the Developer */}
         <section className="py-12 px-4 bg-white dark:bg-gray-900">
           <div className="max-w-7xl mx-auto text-center">
             <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md transition-transform duration-300 transform hover:scale-105">
