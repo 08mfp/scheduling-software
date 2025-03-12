@@ -1,5 +1,3 @@
-// frontend/src/interfaces/Team.ts
-
 import { Stadium } from './Stadium';
 
 export interface Team {
@@ -8,6 +6,6 @@ export interface Team {
   teamRanking: number;
   teamLocation: string;
   teamCoach: string;
-  stadium: Stadium; // Reference to the Stadium interface
+  stadium: Stadium;
   image?: string;
 }

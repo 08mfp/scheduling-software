@@ -134,7 +134,7 @@ Each `.js` file within the `routes` directory defines the API endpoints for diff
 | POST   | `/save`              | Save provisional fixtures        | Admin         |
 | POST   | `/`                  | Clear provisional fixtures       | Admin         |
 
-*Note:* The `POST /` endpoint is used for both retrieving and clearing provisional fixtures. Ensure to handle these actions appropriately in the controller based on the request context.
+*Note:* The `POST /` endpoint is used for both retrieving and clearing provisional fixtures. It is handled appropriately in the controller based on the request context.
 
 ---
 

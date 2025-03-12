@@ -1,9 +1,8 @@
-// frontend/src/pages/Profile.tsx
-
 import React, { useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { FaHome, FaEdit, FaSave, FaTimes, FaSignOutAlt } from 'react-icons/fa';
 
 interface UserProfile {
   firstName: string;
@@ -14,6 +13,8 @@ interface UserProfile {
   age?: number;
   image?: string;
 }
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5003';
 
 const Profile: React.FC = () => {
   const { user, apiKey, signOut } = useContext(AuthContext);
@@ -37,7 +38,7 @@ const Profile: React.FC = () => {
   const fetchUserData = async () => {
     if (apiKey) {
       try {
-        const response = await axios.get('http://localhost:5003/api/users/me', {
+        const response = await axios.get(`${BACKEND_URL}/api/users/me`, {
           headers: { 'x-api-key': apiKey },
         });
         setFormData({
@@ -50,12 +51,13 @@ const Profile: React.FC = () => {
           image: response.data.image || '',
         });
         if (response.data.image) {
-          setImagePreview(`http://localhost:5003${response.data.image}`);
+          setImagePreview(`${BACKEND_URL}${response.data.image}`);
         } else {
           setImagePreview(null);
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
+        setError('Failed to load user data. Please try again later.');
       }
     }
   };
@@ -97,7 +99,7 @@ const Profile: React.FC = () => {
       }
 
       await axios.put(
-        'http://localhost:5003/api/users/me',
+        `${BACKEND_URL}/api/users/me`,
         data,
         {
           headers: {
@@ -107,14 +109,13 @@ const Profile: React.FC = () => {
         }
       );
 
-      // Refetch user data
       await fetchUserData();
 
       alert('Profile updated successfully!');
       setIsEditing(false);
     } catch (err: any) {
       console.error('Error updating profile:', err);
-      setError(err.response?.data?.message || 'An error occurred');
+      setError(err.response?.data?.message || 'An error occurred while updating your profile.');
     }
   };
 
@@ -125,129 +126,280 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div>
-      <h2>My Profile</h2>
-      {error && <div style={{ color: 'red' }}>{error}</div>}
-      <form onSubmit={onSubmit} encType="multipart/form-data">
-        <div>
-          <label>First Name:</label>
-          {isEditing ? (
-            <input
-              name="firstName"
-              value={formData.firstName}
-              onChange={onChange}
-              required
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-10 space-y-8">
+        <div className="flex items-center space-x-2 mb-6">
+          <a href="/" className="text-blue-600 hover:underline flex items-center">
+            <FaHome className="mr-1" />
+            Home
+          </a>
+          <span className="text-gray-500 dark:text-gray-400">/</span>
+          <span className="text-gray-700 dark:text-gray-300">Profile</span>
+        </div>
+        <div className="flex flex-col items-center mb-8">
+          {imagePreview ? (
+            <img
+              src={imagePreview}
+              alt="Profile"
+              className="w-32 h-32 object-cover rounded-full mb-4"
             />
           ) : (
-            <span>{formData.firstName}</span>
-          )}
-        </div>
-        <div>
-          <label>Last Name:</label>
-          {isEditing ? (
-            <input
-              name="lastName"
-              value={formData.lastName}
-              onChange={onChange}
-              required
-            />
-          ) : (
-            <span>{formData.lastName}</span>
-          )}
-        </div>
-        <div>
-          <label>Email:</label>
-          {isEditing ? (
-            <input
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={onChange}
-              required
-            />
-          ) : (
-            <span>{formData.email}</span>
-          )}
-        </div>
-        {isEditing && (
-          <div>
-            <label>New Password:</label>
-            <input
-              name="password"
-              type="password"
-              placeholder="Enter new password if you wish to change it"
-              onChange={onChange}
-            />
-          </div>
-        )}
-        <div>
-          <label>Home City:</label>
-          {isEditing ? (
-            <input
-              name="homeCity"
-              value={formData.homeCity}
-              onChange={onChange}
-            />
-          ) : (
-            <span>{formData.homeCity || 'N/A'}</span>
-          )}
-        </div>
-        <div>
-          <label>Age:</label>
-          {isEditing ? (
-            <input
-              name="age"
-              type="number"
-              value={formData.age || ''}
-              onChange={onChange}
-            />
-          ) : (
-            <span>{formData.age || 'N/A'}</span>
-          )}
-        </div>
-        <div>
-          <label>Profile Image:</label>
-          {imagePreview && (
-            <div>
-              <img src={imagePreview} alt="Profile" width="100" />
-              {isEditing && (
-                <button type="button" onClick={onDeleteImage}>
-                  Remove Image
-                </button>
-              )}
+            <div className="w-32 h-32 bg-gray-200 dark:bg-gray-700 rounded-full mb-4 flex items-center justify-center">
+              <span className="text-gray-500">No Image</span>
             </div>
           )}
-          {isEditing && (
-            <input type="file" accept="image/*" onChange={onFileChange} />
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-2">My Profile</h2>
+          {error && (
+            <div className="w-full bg-red-100 dark:bg-red-800 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded relative text-center">
+              <span className="block sm:inline">{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="absolute top-0 bottom-0 right-0 px-4 py-3"
+                aria-label="Close"
+              >
+                <svg
+                  className="fill-current h-6 w-6 text-red-500"
+                  role="button"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                >
+                  <title>Close</title>
+                  <path
+                    fillRule="evenodd"
+                    d="M14.348 5.652a.5.5 0 0 1 .072.638l-5 5a.5.5 0 0 1-.638.072l-5-5a.5.5 0 1 1 .638-.072l4.646 4.646 4.646-4.646a.5.5 0 0 1 .638-.072z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
-        <div>
-          <label>Role:</label>
-          <span>{formData.role}</span>
-          <p style={{ fontSize: 'small', color: 'gray' }}>
-            To change your role, please contact an administrator.
-          </p>
-        </div>
-        {isEditing ? (
+
+        <form className="space-y-6" onSubmit={onSubmit} encType="multipart/form-data">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+            <div>
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                First Name<span className="text-red-500">*</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="firstName"
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={onChange}
+                  required
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
+                />
+              ) : (
+                <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                  {formData.firstName}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                Last Name<span className="text-red-500">*</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="lastName"
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={onChange}
+                  required
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
+                />
+              ) : (
+                <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                  {formData.lastName}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div>
-            <button type="submit">Save Changes</button>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+              Email<span className="text-red-500">*</span>
+            </label>
+            {isEditing ? (
+              <input
+                type="email"
+                name="email"
+                id="email"
+                value={formData.email}
+                onChange={onChange}
+                required
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
+              />
+            ) : (
+              <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                {formData.email}
+              </div>
+            )}
+          </div>
+
+          {isEditing && (
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                New Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                id="password"
+                placeholder="Enter new password if you wish to change it"
+                onChange={onChange}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="homeCity" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                Home City
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="homeCity"
+                  id="homeCity"
+                  value={formData.homeCity}
+                  onChange={onChange}
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
+                />
+              ) : (
+                <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                  {formData.homeCity || 'N/A'}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="age" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                Age
+              </label>
+              {isEditing ? (
+                <input
+                  type="number"
+                  name="age"
+                  id="age"
+                  value={formData.age || ''}
+                  onChange={onChange}
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500"
+                />
+              ) : (
+                <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                  {formData.age || 'N/A'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+              Profile Image
+            </label>
+            <div className="mt-2 flex items-center">
+              {imagePreview ? (
+                <img
+                  src={imagePreview}
+                  alt="Profile Preview"
+                  className="w-24 h-24 object-cover rounded-full mr-4"
+                />
+              ) : (
+                <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mr-4 flex items-center justify-center">
+                  <span className="text-gray-500">No Image</span>
+                </div>
+              )}
+              {isEditing && (
+                <div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={onFileChange}
+                    className="block w-full text-sm text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer bg-white dark:bg-gray-700 focus:outline-none"
+                  />
+                  {imagePreview && (
+                    <button
+                      type="button"
+                      onClick={onDeleteImage}
+                      className="mt-2 flex items-center text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-600"
+                    >
+                      <FaTimes className="mr-1" />
+                      Remove Image
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+              Role
+            </label>
+            <div className="mt-1 block w-full text-gray-900 dark:text-gray-100 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+              {formData.role}
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              To change your role, please contact an administrator.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between">
+            {isEditing ? (
+              <div className="flex space-x-4">
+                <button
+                  type="submit"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  aria-label="Save Changes"
+                >
+                  <FaSave className="mr-2" />
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(false);
+                    fetchUserData();
+                  }}
+                  className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  aria-label="Cancel"
+                >
+                  <FaTimes className="mr-2" />
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white  
+                           rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 
+                           transition-colors duration-200 focus:outline-none 
+                           focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500"
+                aria-label="Edit Profile"
+              >
+                <FaEdit className="mr-2" />
+                Edit Profile
+              </button>
+            )}
             <button
-              type="button"
-              onClick={() => {
-                setIsEditing(false);
-                fetchUserData();
-              }}
+              onClick={() => signOut()}
+              className="inline-flex items-center px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              aria-label="Sign Out"
             >
-              Cancel
+              <FaSignOutAlt className="mr-2" />
+              Sign Out
             </button>
           </div>
-        ) : (
-          <button type="button" onClick={() => setIsEditing(true)}>
-            Edit Profile
-          </button>
-        )}
-      </form>
-      <button onClick={() => signOut()}>Sign Out</button>
+        </form>
+      </div>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-// backend/controllers/stadiumController.js
 /**
  * @module backend/controllers/stadiumController
  * @description This file contains the controller functions for managing Stadiums in the database.

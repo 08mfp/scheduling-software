@@ -1,4 +1,3 @@
-// backend/models/ManualFixture.js
 /**
  * @module backend/models/ProvisionalFixture
  * @description This module is used for defining manual fixtures which the user individually  sets all fixtures.
@@ -17,7 +16,7 @@ const ManualFixtureSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 1,
-    max: 5, // Assuming 5 rounds
+    max: 5,
   },
   date: {
     type: Date,

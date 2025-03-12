@@ -1,4 +1,3 @@
-// backend/middleware/upload.js
 /**
  * @module backend/middleware/upload
  * @description This module is used for uploading images to the server.
@@ -10,10 +9,8 @@
 //! multer Documentation: https://www.npmjs.com/package/multer
 const multer = require('multer');
 const path = require('path');
-
-// Set storage engine for multer for file uploads
 const storage = multer.diskStorage({
-  destination: './uploads/', // Folder to store uploaded images 
+  destination: './uploads/',
   filename: function (req, file, cb) {
     cb(
       null, 
@@ -22,7 +19,6 @@ const storage = multer.diskStorage({
   },
 });
 
-// Initialize upload so that it can be used in the routes
 const upload = multer({
   storage: storage, 
   limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size to 5MB //! NEED TO DO ON FRONTEND
@@ -31,18 +27,15 @@ const upload = multer({
   },
 }).single('image'); // 'image' is the name of the form field that will contain the image. Thius is the field name that multer will look for in the request body
 
-// Check file type
 function checkFileType(file, cb) {
-  // Allowed extensions
   const filetypes = /jpeg|jpg|png|gif/;
-  // Check extensions
   const extname = filetypes.test(
     path.extname(file.originalname).toLowerCase() 
   );
-  // Check mime for image so that it is not renamed to a different file type
+
   const mimetype = filetypes.test(file.mimetype);
-  if (mimetype && extname) { // If the file is an image
-    return cb(null, true); // Continue with the upload
+  if (mimetype && extname) { 
+    return cb(null, true); 
   } else {
     cb('Error: Images Only!');
   }

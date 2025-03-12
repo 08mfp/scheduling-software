@@ -89,7 +89,7 @@ backend/
 Contains various algorithms for fixture scheduling.
 
 - **balancedTravelScheduler.js**
-  - NOT YET IMPLEMENTED / MIGHT BE REMOVED ENTIRELY
+  - **Description:** Reduces the standard deviation travel for each teams total travel, aiming to create a fair and balanced travel schdule.
   
 - **randomAlgorithm.js**
   - **Description:** Implements a random fixture generation algorithm ensuring each of the 6 teams plays every other team exactly once. It assigns home and away teams by alternating venues based on the previous season's data or randomly if no prior data exists. Additionally, it schedules fixture dates within specified timeframes and ensures that no two rounds overlap on the same weekend.
@@ -99,6 +99,9 @@ Contains various algorithms for fixture scheduling.
 
 - **travelOptimizedScheduler.js**
   - **Description:** Develops a fixture schedule aimed at minimizing the total travel distance for all teams throughout the season. It leverages the Google Maps API to calculate accurate distances between stadiums, optimizes home and away assignments to balance travel, and schedules fixture dates to reduce consecutive travel burdens. The module also generates a comprehensive summary of travel distances and fixture allocations.
+
+- **UnifiedScheduler.js**
+  - **Description:** Uses a cost function which combines elements from all the other 4 algroithgms, to provide the user with the utmost flexiility.
 
 - **README.txt**
   - **Description:** Provides additional information and guidelines related to the algorithms.
@@ -181,7 +184,7 @@ Defines the API endpoints and their corresponding controllers.
     - `POST /api/fixtures`: Create a new fixture.
     - `PUT /api/fixtures/:id`: Update an existing fixture by ID.
     - `DELETE /api/fixtures/:id`: Delete a fixture by ID.
-    - `GET /api/fixtures/bulk`: Bulk create fixtures *(Note: This should ideally be a `POST` route for RESTful conventions).*
+    - `GET /api/fixtures/bulk`: Bulk create fixtures *(Note: This should ideally be a `POST` route).*
 
 - **manualFixtureRoutes.js**
   - **Description:** Defines the API endpoints for manually managing fixtures. Routes include:
@@ -206,7 +209,7 @@ Defines the API endpoints and their corresponding controllers.
 
 - **schedulerRoutes.js**
   - **Description:** Defines the API endpoints for scheduler operations. Currently includes:
-    - `POST /api/scheduler/run`: Execute the scheduler to generate fixture schedules. *(Note: The implementation inside `schedulerController` is currently a placeholder and should be expanded with actual scheduling logic.)*
+    - `POST /api/scheduler/run`: Execute the scheduler to generate fixture schedules. *(Note: The implementation inside `schedulerController` is currently a placeholder.)*
 
 - **stadiumRoutes.js**
   - **Description:** Defines the API endpoints for managing stadiums. Routes include:
@@ -346,7 +349,7 @@ The backend provides a comprehensive RESTful API for managing fixtures, teams, p
 - **POST** `/api/fixtures`: Create a new fixture.
 - **PUT** `/api/fixtures/:id`: Update an existing fixture by ID.
 - **DELETE** `/api/fixtures/:id`: Delete a fixture by ID.
-- **GET** `/api/fixtures/bulk`: Bulk create fixtures *(Note: Consider changing to POST for RESTful compliance).*
+- **GET** `/api/fixtures/bulk`: Bulk create fixtures *(Note: changing to POST).*
 
 ### Manual Fixtures
 
@@ -371,7 +374,7 @@ The backend provides a comprehensive RESTful API for managing fixtures, teams, p
 
 ### Scheduler
 
-- **POST** `/api/scheduler/run`: Execute the scheduler to generate fixture schedules. *(Currently a placeholder; expand with actual scheduling logic.)*
+- **POST** `/api/scheduler/run`: Execute the scheduler to generate fixture schedules. *(Currently a placeholder.)*
 
 ### Stadiums
 

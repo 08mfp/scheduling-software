@@ -1,4 +1,4 @@
-.App {
+/* .App {
   text-align: center;
 }
 
@@ -35,4 +35,17 @@
   to {
     transform: rotate(360deg);
   }
+} */
+@keyframes highlight {
+  0%, 100% {
+    background-color: #fef08a;
+  }
+  50% {
+    background-color: #fde047;
+  }
 }
+
+.animate-highlight {
+  animation: highlight 1s infinite;
+}
+

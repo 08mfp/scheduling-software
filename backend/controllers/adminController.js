@@ -1,4 +1,3 @@
-// backend/controllers/adminController.js
 /**
  * @module backend/controllers/adminController
  * @description This file contains the controller functions for managing Users in the database.
@@ -20,10 +19,9 @@ const path = require('path');
  */
 exports.getAllUsers = async (req, res) => {
   try {
-    // Fetch all users, excluding passwords and API keys
+
     const users = await User.find().select('-password -apiKey').lean();
 
-    // Transform users to include firstName and lastName at the top level
     const transformedUsers = users.map(user => ({
       _id: user._id,
       firstName: user.name.firstName,
@@ -49,9 +47,8 @@ exports.getAllUsers = async (req, res) => {
  */
 exports.getUserById = async (req, res) => {
   try {
-    const { userId } = req.params; // Extract userId from URL parameters
+    const { userId } = req.params; 
 
-    // Validate userId format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       logger.warn(`Invalid user ID format: ${userId}`);
       return res.status(400).json({ message: 'Invalid user ID.' });
@@ -64,7 +61,6 @@ exports.getUserById = async (req, res) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    // Transform user data
     const transformedUser = {
       _id: user._id,
       firstName: user.name.firstName,
@@ -74,7 +70,6 @@ exports.getUserById = async (req, res) => {
       homeCity: user.homeCity,
       age: user.age,
       image: user.image,
-      // Add any additional fields as necessary
     };
 
     res.status(200).json({ user: transformedUser });
@@ -91,19 +86,17 @@ exports.getUserById = async (req, res) => {
  */
 exports.updateAnyUser = async (req, res) => {
   try {
-    const { userId } = req.params; // User ID from URL
-    const admin = req.user; // Authenticated admin from middleware
+    const { userId } = req.params;
+    const admin = req.user;
 
-    // Validate userId format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       logger.warn(`Invalid user ID format: ${userId}`);
       return res.status(400).json({ message: 'Invalid user ID.' });
     }
 
-    // Prevent admin from changing their own role or deleting themselves if necessary
     if (admin._id.toString() === userId) {
       logger.info(`Admin ${admin.email} is updating their own profile.`);
-      // Optional: Decide whether to allow or restrict certain changes
+      // ! Decide whether to allow or restrict certain changes for admins, maybe add a super admin
     }
 
     const user = await User.findById(userId);
@@ -112,19 +105,17 @@ exports.updateAnyUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    // Detect if role is being changed
     const isRoleChanged = req.body.role && req.body.role !== user.role;
 
     if (isRoleChanged) {
       const { secretCode } = req.body;
-      const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY || 'YOUR_SECRET_KEY'; // Use environment variable
+      const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY || 'YOUR_SECRET_KEY'; 
 
       if (secretCode !== ADMIN_SECRET_KEY) {
         return res.status(403).json({ message: 'Invalid secret code for role change.' });
       }
     }
 
-    // Update fields
     user.name.firstName = req.body.firstName || user.name.firstName;
     user.name.lastName = req.body.lastName || user.name.lastName;
     user.email = req.body.email || user.email;
@@ -132,7 +123,6 @@ exports.updateAnyUser = async (req, res) => {
     user.homeCity = req.body.homeCity || user.homeCity;
     user.age = req.body.age !== undefined ? req.body.age : user.age;
 
-    // Handle password change
     if (req.body.password) {
       user.password = req.body.password;
     }
@@ -151,7 +141,7 @@ exports.updateAnyUser = async (req, res) => {
         role: user.role,
         homeCity: user.homeCity,
         age: user.age,
-        image: user.image, // Assuming image is still managed elsewhere
+        image: user.image,
       },
     });
   } catch (error) {
@@ -169,35 +159,30 @@ exports.deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Prevent admin from deleting themselves
     if (req.user._id.toString() === userId) {
       logger.warn(`Admin ${req.user.email} attempted to delete themselves.`);
       return res.status(400).json({ message: 'Admins cannot delete themselves.' });
     }
 
-    // Validate userId
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       logger.warn(`Invalid user ID format: ${userId}`);
       return res.status(400).json({ message: 'Invalid user ID.' });
     }
 
-    // Find and delete user
     const user = await User.findByIdAndDelete(userId);
     if (!user) {
       logger.warn(`User not found for deletion: ID ${userId}`);
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Handle image deletion if the user has an associated image
     if (user.image) {
-      const imagePath = path.join(__dirname, '..', user.image); // Adjust path as necessary
+      const imagePath = path.join(__dirname, '..', user.image);
       try {
         await fs.promises.unlink(imagePath);
         logger.info(`Deleted user image: ${imagePath}`);
       } catch (err) {
         if (err.code !== 'ENOENT') { // Ignore file not found errors
           logger.error(`Error deleting user image: ${err.message}`);
-          // Optionally, respond with an error or continue
         }
       }
     }

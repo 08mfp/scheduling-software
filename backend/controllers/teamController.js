@@ -1,4 +1,3 @@
-// backend/controllers/teamController.js
 /**
  * @module backend/controllers/teamController
  * @description This file contains the controller functions for managing Teams in the database.
@@ -127,7 +126,6 @@ exports.createTeam = (req, res) => {
             image: req.file ? `/uploads/${req.file.filename}` : undefined,
           });
   
-          // used for image removal
           if (req.body.removeImage === 'true') {
             team.image = undefined;
           }
@@ -185,16 +183,13 @@ exports.updateTeam = (req, res) => {
             return res.status(404).json({ message: 'Team not found' });
           }
   
-          // Update fields
           team.teamName = req.body.teamName || team.teamName;
           team.teamRanking = req.body.teamRanking || team.teamRanking;
           team.teamLocation = req.body.teamLocation || team.teamLocation;
           team.teamCoach = req.body.teamCoach || team.teamCoach;
           team.stadium = req.body.stadium || team.stadium;
   
-          // to handle image removal or upload
           if (req.body.removeImage === 'true') {
-            // Delete old image if exists
             if (team.image) {
               const oldImagePath = '.' + team.image;
               try {
@@ -208,7 +203,6 @@ exports.updateTeam = (req, res) => {
             }
             team.image = undefined;
           } else if (req.file) {
-            // Delete old image if exists
             if (team.image) {
               const oldImagePath = '.' + team.image;
               try {
@@ -252,4 +246,3 @@ exports.deleteTeam = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-

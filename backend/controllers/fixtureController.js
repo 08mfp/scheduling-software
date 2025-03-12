@@ -1,4 +1,3 @@
-// backend/controllers/fixtureController.js
 /**
  * @module backend/controllers/fixtureController
  * @description This file contains the controller functions for managing fixtures in the database.
@@ -37,12 +36,13 @@ exports.getAllFixtures = async (req, res) => {
  */
 // exports.getAllSeasons = async (req, res) => {
 //     try {
-//       const seasons = await Fixture.distinct('season').sort((a, b) => b - a); // Sorting in descending order
+//       const seasons = await Fixture.distinct('season').sort((a, b) => b - a);
 //       res.status(200).json(seasons);
 //     } catch (err) {
 //       res.status(500).json({ message: err.message });
 //     }
 //   };
+
 //Below is with caching to reduce the number of database queries (i think)
 /**
  * @desc    Get all distinct seasons
@@ -55,7 +55,6 @@ exports.getAllSeasons = async (req, res) => {
     if (!seasons || seasons.length === 0) {
       return res.status(404).json({ message: 'No seasons found.' });
     }
-    // Sort seasons in descending order (latest first)
     const sortedSeasons = seasons.sort((a, b) => b - a);
     res.status(200).json(sortedSeasons);
   } catch (err) {
@@ -170,7 +169,7 @@ exports.deleteFixture = async (req, res) => {
  */
 exports.bulkCreateFixtures = async (req, res) => {
   try {
-    const fixtures = req.body.fixtures; // Expecting an array of fixtures
+    const fixtures = req.body.fixtures;
     const newFixtures = await Fixture.insertMany(fixtures);
     res.status(201).json(newFixtures);
   } catch (err) {

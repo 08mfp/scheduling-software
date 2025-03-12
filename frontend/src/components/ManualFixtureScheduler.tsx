@@ -1,10 +1,10 @@
-// ManualFixtureScheduler.tsx
-
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import axios from 'axios';
+import { Navigate, Link } from 'react-router-dom';
+import { FaInfoCircle, FaSun, FaMoon, FaPlus, FaMinus } from 'react-icons/fa';
 import { Team, Fixture } from '../interfaces/ManualFixture';
 import { AuthContext } from '../contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import ManualSchedulerSplash from './ManualSchedulerSplash'; 
 
 interface ValidationError {
   message: string;
@@ -26,7 +26,55 @@ interface ManualFixtureSchedulerProps {
   initialFixtures?: Fixture[][];
 }
 
-const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = ({ initialFixtures }) => {
+const getTeamColor = (teamName: string): { backgroundColor: string; textColor: string } => {
+  switch (teamName) {
+    case 'England':
+      return { backgroundColor: '#ffffff', textColor: '#000000' };
+    case 'France':
+      return { backgroundColor: '#0033cc', textColor: '#ffffff' };
+    case 'Ireland':
+      return { backgroundColor: '#009933', textColor: '#ffffff' };
+    case 'Scotland':
+      return { backgroundColor: '#003366', textColor: '#ffffff' };
+    case 'Italy':
+      return { backgroundColor: '#0066cc', textColor: '#ffffff' };
+    case 'Wales':
+      return { backgroundColor: '#cc0000', textColor: '#ffffff' };
+    default:
+      return { backgroundColor: '#ffa500', textColor: '#000000' };
+  }
+};
+
+const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = () => {
+
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark' || false;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const [showSplash, setShowSplash] = useState(false);
+
+useEffect(() => {
+  const hasVisited = localStorage.getItem('firstTimeManualFixtures');
+  if (!hasVisited) {
+    setShowSplash(true);
+    localStorage.setItem('firstTimeManualFixtures', 'true');
+  }
+}, []);
+
+  const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
   const [season, setSeason] = useState<number>(new Date().getFullYear() + 1);
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
@@ -37,69 +85,57 @@ const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = ({ initial
   const [loading, setLoading] = useState<boolean>(false);
   const [step, setStep] = useState<'selectTeams' | 'input' | 'summary'>('selectTeams');
   const [errorMessage, setErrorMessage] = useState<string>('');
-
-  // Authentication Context
+  const [collapsedRounds, setCollapsedRounds] = useState<Set<number>>(new Set());
+  const [collapsedFixtures, setCollapsedFixtures] = useState<Set<string>>(new Set());
   const { user, apiKey } = useContext(AuthContext);
-
-  // State for overall matchup tracker
   const [matchupTracker, setMatchupTracker] = useState<{ [key: string]: boolean }>({});
+  const [perRoundTeamTracker, setPerRoundTeamTracker] = useState<{
+    [round: number]: { [teamId: string]: boolean };
+  }>({});
 
-  // State for per-round team tracker
-  const [perRoundTeamTracker, setPerRoundTeamTracker] = useState<{ [round: number]: { [teamId: string]: boolean } }>({});
-
-  // State to track visibility of suggestions per fixture
   const [showSuggestions, setShowSuggestions] = useState<{ [key: string]: boolean }>({});
-
-  // State to track conflicting rounds
   const [conflictingRounds, setConflictingRounds] = useState<{ round1: number; round2: number }[]>([]);
-
-  // State for conflict suggestions
   const [conflictSuggestions, setConflictSuggestions] = useState<{ [key: string]: ConflictSuggestion[] }>({});
+  const [unfeasibleMatchupReasons, setUnfeasibleMatchupReasons] = useState<{
+    [key: string]: UnfeasibleMatchupReason[];
+  }>({});
 
-  // State for unfeasible matchup reasons
-  const [unfeasibleMatchupReasons, setUnfeasibleMatchupReasons] = useState<{ [key: string]: UnfeasibleMatchupReason[] }>({});
-
-  // Fetch teams on component mount
   useEffect(() => {
     if (user && user.role === 'admin') {
       const fetchTeams = async () => {
         try {
-          const response = await axios.get('http://localhost:5003/api/teams', {
+          const res = await axios.get('http://localhost:5003/api/teams', {
             headers: {
               'x-api-key': apiKey,
             },
           });
-          const teamData: Team[] = response.data || [];
-          setTeams(teamData);
+          setTeams(res.data || []);
         } catch (error) {
           console.error('Error fetching teams:', error);
         }
       };
       fetchTeams();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, apiKey]);
 
-  // Handle team selection
-  const handleTeamSelection = (teamId: string) => {
+  const toggleSelectedTeam = (teamId: string) => {
     setErrorMessage('');
-    setSelectedTeamIds((prevSelected) => {
-      const newSelected = new Set(prevSelected);
-      if (newSelected.has(teamId)) {
-        newSelected.delete(teamId);
+    setSelectedTeamIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) {
+        next.delete(teamId);
       } else {
-        if (newSelected.size >= 6) {
+        if (next.size >= 6) {
           setErrorMessage('You can select up to 6 teams.');
-          return prevSelected;
+          return prev;
         }
-        newSelected.add(teamId);
+        next.add(teamId);
       }
-      return newSelected;
+      return next;
     });
   };
 
-  // Validate team selection before generating fixtures
-  const validateSelection = (): boolean => {
+  const validateTeamCount = (): boolean => {
     if (selectedTeamIds.size !== 6) {
       setErrorMessage('Please select exactly 6 teams.');
       return false;
@@ -107,18 +143,17 @@ const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = ({ initial
     return true;
   };
 
-  // Initialize fixtures with rounds and fixtures based on selected teams
-  const initializeFixtures = (selectedTeamsList: Team[]) => {
-    const initialFixtures: Fixture[][] = [];
-    const numTeams = selectedTeamsList.length;
-    const rounds = numTeams - 1; // For round-robin
-    const numFixturesPerRound = numTeams / 2; // Assuming even number of teams
+  const initializeFixtures = (teamList: Team[]) => {
+    const totalTeams = teamList.length;
+    const rounds = totalTeams - 1;
+    const fixturesPerRound = totalTeams / 2;
 
-    for (let round = 1; round <= rounds; round++) {
+    const newFixtures: Fixture[][] = [];
+    for (let r = 1; r <= rounds; r++) {
       const roundFixtures: Fixture[] = [];
-      for (let i = 0; i < numFixturesPerRound; i++) {
+      for (let i = 0; i < fixturesPerRound; i++) {
         roundFixtures.push({
-          round,
+          round: r,
           date: '',
           homeTeam: null,
           awayTeam: null,
@@ -127,166 +162,138 @@ const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = ({ initial
           touched: false,
         });
       }
-      initialFixtures.push(roundFixtures);
+      newFixtures.push(roundFixtures);
     }
-    setFixtures(initialFixtures);
+    setFixtures(newFixtures);
   };
 
-  // Initialize overall matchup tracker
   const initializeMatchupTracker = (teamList: Team[]) => {
     const tracker: { [key: string]: boolean } = {};
     for (let i = 0; i < teamList.length; i++) {
       for (let j = i + 1; j < teamList.length; j++) {
-        const teamA = teamList[i];
-        const teamB = teamList[j];
-        const matchupKey = `${teamA._id}-${teamB._id}`;
-        tracker[matchupKey] = false; // Initially not scheduled
+        const tA = teamList[i];
+        const tB = teamList[j];
+        const key = [tA._id, tB._id].sort().join('-');
+        tracker[key] = false;
       }
     }
     setMatchupTracker(tracker);
   };
 
-  // Initialize per-round team tracker
   const initializePerRoundTeamTracker = (teamList: Team[]) => {
-    const perRoundTracker: { [round: number]: { [teamId: string]: boolean } } = {};
-    const numRounds = teamList.length - 1;
-    for (let round = 1; round <= numRounds; round++) {
-      perRoundTracker[round] = {};
-      teamList.forEach(team => {
-        perRoundTracker[round][team._id] = false; // Initially not scheduled
+    const rounds = teamList.length - 1;
+    const newTracker: { [round: number]: { [teamId: string]: boolean } } = {};
+    for (let r = 1; r <= rounds; r++) {
+      newTracker[r] = {};
+      teamList.forEach((t) => {
+        newTracker[r][t._id] = false;
       });
     }
-    setPerRoundTeamTracker(perRoundTracker);
+    setPerRoundTeamTracker(newTracker);
   };
 
-  // Update both overall and per-round trackers
-  const updateTrackers = (fixturesToCheck: Fixture[][]) => {
-    // Update overall matchup tracker
-    const overallTracker: { [key: string]: boolean } = {};
-    // Initialize all matchups as not scheduled
+  const updateTrackers = (fx: Fixture[][]) => {
+    const overall: { [key: string]: boolean } = {};
     selectedTeams.forEach((teamA, i) => {
-      selectedTeams.slice(i + 1).forEach(teamB => {
-        const matchupKey = `${teamA._id}-${teamB._id}`;
-        overallTracker[matchupKey] = false;
+      selectedTeams.slice(i + 1).forEach((teamB) => {
+        const key = [teamA._id, teamB._id].sort().join('-');
+        overall[key] = false;
       });
     });
 
-    for (let roundFixtures of fixturesToCheck) {
-      for (let fixture of roundFixtures) {
-        if (fixture.homeTeam && fixture.awayTeam) {
-          const teamAId = fixture.homeTeam._id;
-          const teamBId = fixture.awayTeam._id;
-          const matchupKey = [teamAId, teamBId].sort().join('-');
-
-          if (overallTracker.hasOwnProperty(matchupKey)) {
-            overallTracker[matchupKey] = true;
+    fx.forEach((roundFx) => {
+      roundFx.forEach((fix) => {
+        if (fix.homeTeam && fix.awayTeam) {
+          const mk = [fix.homeTeam._id, fix.awayTeam._id].sort().join('-');
+          if (overall.hasOwnProperty(mk)) {
+            overall[mk] = true;
           }
         }
-      }
-    }
-    setMatchupTracker(overallTracker);
-
-    // Update per-round team tracker
-    const newPerRoundTracker: { [round: number]: { [teamId: string]: boolean } } = {};
-    fixturesToCheck.forEach((roundFixtures, roundIndex) => {
-      const roundNumber = roundIndex + 1;
-      newPerRoundTracker[roundNumber] = {};
-      selectedTeams.forEach(team => {
-        newPerRoundTracker[roundNumber][team._id] = false; // Initially not scheduled
       });
-      roundFixtures.forEach(fixture => {
-        if (fixture.homeTeam && fixture.awayTeam) {
-          newPerRoundTracker[roundNumber][fixture.homeTeam._id] = true;
-          newPerRoundTracker[roundNumber][fixture.awayTeam._id] = true;
+    });
+    setMatchupTracker(overall);
+
+    const newPR: { [round: number]: { [teamId: string]: boolean } } = {};
+    fx.forEach((roundFx, rIndex) => {
+      const roundNo = rIndex + 1;
+      newPR[roundNo] = {};
+      selectedTeams.forEach((t) => {
+        newPR[roundNo][t._id] = false;
+      });
+      roundFx.forEach((fix) => {
+        if (fix.homeTeam && fix.awayTeam) {
+          newPR[roundNo][fix.homeTeam._id] = true;
+          newPR[roundNo][fix.awayTeam._id] = true;
         }
       });
     });
-    setPerRoundTeamTracker(newPerRoundTracker);
+    setPerRoundTeamTracker(newPR);
   };
 
-  // Handle team selection for home and away teams in fixtures
   const handleTeamSelectionForFixture = async (
     roundIndex: number,
     fixtureIndex: number,
     teamType: 'teamA' | 'teamB',
     teamId: string
   ) => {
-    const newFixtures = [...fixtures];
-    const fixture = { ...newFixtures[roundIndex][fixtureIndex] };
+    const updated = [...fixtures];
+    const fix = { ...updated[roundIndex][fixtureIndex] };
+    const foundTeam = selectedTeams.find((t) => t._id === teamId);
 
-    // Find the selected team
-    const selectedTeam = selectedTeams.find(team => team._id === teamId);
     if (teamType === 'teamA') {
-      fixture.homeTeam = selectedTeam || { _id: teamId, teamName: 'Unknown Team' } as Team;
+      fix.homeTeam = foundTeam || ({ _id: teamId, teamName: 'Unknown' } as Team);
     } else {
-      fixture.awayTeam = selectedTeam || { _id: teamId, teamName: 'Unknown Team' } as Team;
+      fix.awayTeam = foundTeam || ({ _id: teamId, teamName: 'Unknown' } as Team);
     }
+    fix.stadium = null;
+    fix.location = '';
+    fix.touched = true;
 
-    // Reset stadium and location since home/away may change
-    fixture.stadium = null;
-    fixture.location = '';
-    fixture.touched = true; // Mark fixture as touched
-
-    // If both teams are selected, fetch home/away info
-    if (fixture.homeTeam && fixture.awayTeam) {
+    if (fix.homeTeam && fix.awayTeam) {
       try {
-        const response = await axios.get(
-          'http://localhost:5003/api/manual-fixtures/previous-fixture',
-          {
-            params: {
-              season,
-              teamAId: fixture.homeTeam._id,
-              teamBId: fixture.awayTeam._id,
-            },
-          }
-        );
-        const data = response.data;
-        fixture.homeTeam = data.homeTeam;
-        fixture.awayTeam = data.awayTeam;
-        fixture.stadium = data.stadium;
-        fixture.location = data.location;
-        fixture.previousFixture = data.previousFixture;
-        // Update fixtures
-        newFixtures[roundIndex][fixtureIndex] = fixture;
-        setFixtures(newFixtures);
-        // Re-validate constraints
-        checkConstraints(newFixtures);
-        // Update trackers
-        updateTrackers(newFixtures);
-      } catch (error) {
-        console.error('Error fetching previous fixture:', error);
+        const res = await axios.get('http://localhost:5003/api/manual-fixtures/previous-fixture', {
+          params: {
+            season,
+            teamAId: fix.homeTeam._id,
+            teamBId: fix.awayTeam._id,
+          },
+        });
+        const data = res.data;
+        fix.homeTeam = data.homeTeam;
+        fix.awayTeam = data.awayTeam;
+        fix.stadium = data.stadium;
+        fix.location = data.location;
+        fix.previousFixture = data.previousFixture;
+
+        updated[roundIndex][fixtureIndex] = fix;
+        setFixtures(updated);
+        checkConstraints(updated);
+        updateTrackers(updated);
+      } catch (err) {
+        console.error('Error fetching previous fixture:', err);
       }
     } else {
-      // Update fixtures
-      newFixtures[roundIndex][fixtureIndex] = fixture;
-      setFixtures(newFixtures);
-      // Re-validate constraints
-      checkConstraints(newFixtures);
-      // Update trackers
-      updateTrackers(newFixtures);
+      updated[roundIndex][fixtureIndex] = fix;
+      setFixtures(updated);
+      checkConstraints(updated);
+      updateTrackers(updated);
     }
   };
 
-  // Handle date change for fixtures
   const handleDateChange = (roundIndex: number, fixtureIndex: number, date: string) => {
-    const newFixtures = [...fixtures];
-    const fixture = { ...newFixtures[roundIndex][fixtureIndex] };
-    fixture.date = date;
-    fixture.touched = true; // Mark fixture as touched
-    newFixtures[roundIndex][fixtureIndex] = fixture;
-    setFixtures(newFixtures);
-    checkConstraints(newFixtures);
-    // Update trackers since date might influence constraints
-    updateTrackers(newFixtures);
+    const updated = [...fixtures];
+    const fix = { ...updated[roundIndex][fixtureIndex] };
+    fix.date = date;
+    fix.touched = true;
+    updated[roundIndex][fixtureIndex] = fix;
+    setFixtures(updated);
+    checkConstraints(updated);
+    updateTrackers(updated);
   };
 
-  // Handle resetting a fixture to default
   const handleResetFixture = (roundIndex: number, fixtureIndex: number) => {
-    const newFixtures = [...fixtures];
-    const fixtureToReset = newFixtures[roundIndex][fixtureIndex];
-
-    // Reset the fixture
-    newFixtures[roundIndex][fixtureIndex] = {
+    const updated = [...fixtures];
+    updated[roundIndex][fixtureIndex] = {
       round: roundIndex + 1,
       date: '',
       homeTeam: null,
@@ -295,404 +302,344 @@ const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = ({ initial
       location: '',
       touched: false,
     };
-    setFixtures(newFixtures);
-    // Re-validate constraints
-    checkConstraints(newFixtures);
-    // Update trackers based on the new fixtures
-    updateTrackers(newFixtures);
+    setFixtures(updated);
+    checkConstraints(updated);
+    updateTrackers(updated);
   };
 
-  // Check if the date is within the allowed range
-  const isDateWithinAllowedRange = (dateString: string): boolean => {
-    const date = new Date(dateString);
-    const month = date.getUTCMonth(); // January = 0
-    const dayOfWeek = date.getUTCDay(); // Sunday = 0
-    const hours = date.getUTCHours();
-    const minutes = date.getUTCMinutes();
+  const toggleRoundCollapse = (roundIndex: number) => {
+    setCollapsedRounds((prev) => {
+      const next = new Set(prev);
+      if (next.has(roundIndex)) next.delete(roundIndex);
+      else next.add(roundIndex);
+      return next;
+    });
+  };
 
-    // Games must be in February or March
-    if (month !== 1 && month !== 2) {
-      return false;
-    }
+  const toggleFixtureCollapse = (roundIndex: number, fixtureIndex: number) => {
+    const key = `${roundIndex}-${fixtureIndex}`;
+    setCollapsedFixtures((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  };
 
-    // Friday, Saturday, Sunday only
-    if (dayOfWeek === 5) { // Friday
-      return hours >= 18;
-    } else if (dayOfWeek === 6) { // Saturday
+  const isDateWithinAllowedRange = (ds: string) => {
+    const d = new Date(ds);
+    const month = d.getUTCMonth();
+    const dow = d.getUTCDay();
+    const hr = d.getUTCHours();
+    const mm = d.getUTCMinutes();
+
+
+    if (month !== 1 && month !== 2) return false;
+    if (dow === 5) {
+      return hr >= 18;
+    } else if (dow === 6) {
       return true;
-    } else if (dayOfWeek === 0) { // Sunday
-      return hours < 20 || (hours === 20 && minutes === 0);
-    } else {
-      return false;
+    } else if (dow === 0) {
+      return hr < 20 || (hr === 20 && mm === 0);
     }
+    return false;
   };
 
-  // Get the weekend (Saturday) date as a string
-  const getWeekend = (date: Date): string => {
-    const day = date.getUTCDate();
-    const month = date.getUTCMonth();
-    const year = date.getUTCFullYear();
-    // Adjust date to Saturday
-    const dayOfWeek = date.getUTCDay(); // Sunday = 0
-    const saturdayOffset = (6 - dayOfWeek + 7) % 7;
-    const saturday = new Date(Date.UTC(year, month, day + saturdayOffset));
-    return `${saturday.getUTCFullYear()}-${saturday.getUTCMonth()}-${saturday.getUTCDate()}`;
+function getWeekend(d: Date): string {
+  const dow = d.getUTCDay();   // Sunday=0, Monday=1, ... Saturday=6 //! check later as could mess up weekends
+  const dd = d.getUTCDate();
+  const mm = d.getUTCMonth(); // January=0, February=1, ... December=11
+  const yy = d.getUTCFullYear();
+
+  let offset = 0;  
+  if (dow === 5) {
+    offset = 1;
+  }
+  else if (dow === 0) {
+    offset = -1;
+  }
+  const anchorDate = new Date(Date.UTC(yy, mm, dd + offset));
+
+  return `${anchorDate.getUTCFullYear()}-${anchorDate.getUTCMonth()}-${anchorDate.getUTCDate()}`;
+}
+
+  const getPreviousWeekend = (d: Date) => {
+    const dow = d.getUTCDay();
+    const dd = d.getUTCDate();
+    const mm = d.getUTCMonth();
+    const yy = d.getUTCFullYear();
+    const offset = -((dow + 1) % 7) - 1;
+    const prevSat = new Date(Date.UTC(yy, mm, dd + offset));
+    return `${prevSat.getUTCFullYear()}-${prevSat.getUTCMonth()}-${prevSat.getUTCDate()}`;
   };
 
-  // Get the previous weekend (Saturday) date as a string
-  const getPreviousWeekend = (date: Date): string => {
-    const day = date.getUTCDate();
-    const month = date.getUTCMonth();
-    const year = date.getUTCFullYear();
-    // Adjust date to previous Saturday
-    const dayOfWeek = date.getUTCDay(); // Sunday = 0
-    const saturdayOffset = -((dayOfWeek + 1) % 7) - 1;
-    const previousSaturday = new Date(Date.UTC(year, month, day + saturdayOffset));
-    return `${previousSaturday.getUTCFullYear()}-${previousSaturday.getUTCMonth()}-${previousSaturday.getUTCDate()}`;
-  };
-
-  // Get the week of the month (1-5)
-  const getWeekOfMonth = (date: Date): number => {
-    const day = date.getUTCDate();
+  const getWeekOfMonth = (d: Date): number => {
+    const day = d.getUTCDate();
     return Math.ceil(day / 7);
   };
-
-  // Validate constraints based on fixtures
-  const checkConstraints = (fixturesToCheck: Fixture[][]) => {
+  const checkConstraints = (fx: Fixture[][]) => {
     const errors: ValidationError[] = [];
     const constraints: { [key: string]: boolean } = {};
-
-    const touchedFixturesWithIndices: { fixture: Fixture; roundIndex: number; fixtureIndex: number }[] = [];
-
-    for (let roundIndex = 0; roundIndex < fixturesToCheck.length; roundIndex++) {
-      const roundFixtures = fixturesToCheck[roundIndex];
-      for (let fixtureIndex = 0; fixtureIndex < roundFixtures.length; fixtureIndex++) {
-        const fixture = roundFixtures[fixtureIndex];
-        if (fixture.touched) {
-          touchedFixturesWithIndices.push({ fixture, roundIndex, fixtureIndex });
+    const roundConflicts: { round1: number; round2: number }[] = [];
+    const conflictMap: { [key: string]: ConflictSuggestion[] } = {};
+    const touched: { fixture: Fixture; roundIndex: number; fixtureIndex: number }[] = [];
+    for (let rI = 0; rI < fx.length; rI++) {
+      for (let fI = 0; fI < fx[rI].length; fI++) {
+        const fix = fx[rI][fI];
+        if (fix.touched) {
+          touched.push({ fixture: fix, roundIndex: rI, fixtureIndex: fI });
         }
       }
     }
-
-    if (touchedFixturesWithIndices.length === 0) {
-      // No fixtures have been touched, skip validation
-      setConstraintChecks(constraints);
-      setValidationErrors(errors);
+  
+    if (touched.length === 0) {
+      setValidationErrors([]);
+      setConstraintChecks({});
       setConflictingRounds([]);
       setConflictSuggestions({});
       setUnfeasibleMatchupReasons({});
       return;
     }
-
-    // Check playsOncePerRound and teamPlaysOnlyOncePerRound
+  
+    const completedFixtures = touched.filter(
+      ({ fixture }) => fixture.homeTeam && fixture.awayTeam && fixture.date
+    );
+  
+    if (completedFixtures.length === 0) {
+      setValidationErrors([]);
+      setConstraintChecks({});
+      setConflictingRounds([]);
+      setConflictSuggestions({});
+      setUnfeasibleMatchupReasons({});
+      return;
+    }
+  
     let playsOncePerRound = true;
     let teamPlaysOnlyOncePerRound = true;
-
-    for (let roundIndex = 0; roundIndex < fixturesToCheck.length; roundIndex++) {
-      const roundFixtures = fixturesToCheck[roundIndex];
-      const teamIdsInRound = new Map<string, { fixtureIndex: number }>();
+  
+    for (let rI = 0; rI < fx.length; rI++) {
+      const roundFx = fx[rI];
       let roundTouched = false;
-
-      for (let fixtureIndex = 0; fixtureIndex < roundFixtures.length; fixtureIndex++) {
-        const fixture = roundFixtures[fixtureIndex];
-        if (!fixture.touched) continue; // Skip untouched fixtures
+      const tracker = new Map<string, boolean>();
+  
+      for (let fI = 0; fI < roundFx.length; fI++) {
+        const fix = roundFx[fI];
+        if (!fix.homeTeam || !fix.awayTeam || !fix.date) continue;
+  
         roundTouched = true;
-
-        if (fixture.homeTeam) {
-          const existing = teamIdsInRound.get(fixture.homeTeam._id);
-          if (existing) {
+  
+        if (fix.homeTeam) {
+          if (tracker.has(fix.homeTeam._id)) {
             teamPlaysOnlyOncePerRound = false;
-            // Avoid adding this error if the fixture already has a self-play error
-            const hasSelfPlayError = errors.some(
-              error =>
-                error.fixtureIndices?.roundIndex === roundIndex &&
-                error.fixtureIndices.fixtureIndex === fixtureIndex &&
-                error.message.includes('cannot play against itself')
-            );
-            if (!hasSelfPlayError) {
-              errors.push({
-                message: `Team ${fixture.homeTeam.teamName || fixture.homeTeam._id} is scheduled to play more than once in Round ${fixture.round}.`,
-                fixtureIndices: { roundIndex, fixtureIndex },
-              });
-            }
+            errors.push({
+              message: `Team ${fix.homeTeam.teamName} is scheduled multiple times in Round ${fix.round}.`,
+              fixtureIndices: { roundIndex: rI, fixtureIndex: fI },
+            });
           } else {
-            teamIdsInRound.set(fixture.homeTeam._id, { fixtureIndex });
+            tracker.set(fix.homeTeam._id, true);
           }
         }
-
-        if (fixture.awayTeam) {
-          const existing = teamIdsInRound.get(fixture.awayTeam._id);
-          if (existing) {
+        if (fix.awayTeam) {
+          if (tracker.has(fix.awayTeam._id)) {
             teamPlaysOnlyOncePerRound = false;
-            // Avoid adding this error if the fixture already has a self-play error
-            const hasSelfPlayError = errors.some(
-              error =>
-                error.fixtureIndices?.roundIndex === roundIndex &&
-                error.fixtureIndices.fixtureIndex === fixtureIndex &&
-                error.message.includes('cannot play against itself')
-            );
-            if (!hasSelfPlayError) {
-              errors.push({
-                message: `Team ${fixture.awayTeam.teamName || fixture.awayTeam._id} is scheduled to play more than once in Round ${fixture.round}.`,
-                fixtureIndices: { roundIndex, fixtureIndex },
-              });
-            }
+            errors.push({
+              message: `Team ${fix.awayTeam.teamName} is scheduled multiple times in Round ${fix.round}.`,
+              fixtureIndices: { roundIndex: rI, fixtureIndex: fI },
+            });
           } else {
-            teamIdsInRound.set(fixture.awayTeam._id, { fixtureIndex });
+            tracker.set(fix.awayTeam._id, true);
           }
         }
       }
-
-      // Each round should have exactly number of fixtures * 2 teams
-      const totalTeamsInRound = teamIdsInRound.size;
+  
       if (roundTouched) {
-        const expectedTeams = fixturesToCheck[roundIndex].length * 2;
-        if (totalTeamsInRound !== expectedTeams) {
+        const foundTeams = tracker.size;
+        const expectedTeams = roundFx.length * 2;
+        if (foundTeams !== expectedTeams) {
           playsOncePerRound = false;
           errors.push({
-            message: `Round ${roundIndex + 1} does not have all teams scheduled.`,
+            message: `Round ${rI + 1} does not have all teams scheduled.`,
           });
         }
       }
     }
-
+  
     constraints['playsOncePerRound'] = playsOncePerRound;
     constraints['teamPlaysOnlyOncePerRound'] = teamPlaysOnlyOncePerRound;
+  
 
-    // Check noSelfPlay and noDuplicateMatchups
     let validMatchups = true;
     let noSelfPlay = true;
-    const matchupSet = new Map<string, { fixtureIndices: { roundIndex: number; fixtureIndex: number } }>();
-    const conflictSuggestionsMap: { [key: string]: ConflictSuggestion[] } = {};
-
-    for (let { fixture, roundIndex, fixtureIndex } of touchedFixturesWithIndices) {
-      if (fixture.homeTeam && fixture.awayTeam) {
-        const teamAId = fixture.homeTeam._id;
-        const teamBId = fixture.awayTeam._id;
-        if (teamAId === teamBId) {
-          noSelfPlay = false;
-          // Avoid adding duplicate errors
-          if (!errors.some(
-            error =>
-              error.fixtureIndices?.roundIndex === roundIndex &&
-              error.fixtureIndices.fixtureIndex === fixtureIndex &&
-              error.message.includes('cannot play against itself')
-          )) {
-            errors.push({
-              message: `Team ${fixture.homeTeam.teamName || teamAId} is scheduled to play against itself.`,
-              fixtureIndices: { roundIndex, fixtureIndex },
-            });
-          }
-          continue; // Skip further checks for this fixture
-        }
-        const matchupKey = [teamAId, teamBId].sort().join('-');
-        if (matchupSet.has(matchupKey)) {
-          validMatchups = false;
-          errors.push({
-            message: `Duplicate matchup found between teams ${fixture.homeTeam.teamName || teamAId} and ${fixture.awayTeam.teamName || teamBId}.`,
-            fixtureIndices: { roundIndex, fixtureIndex },
-          });
-
-          // Suggest resetting one of the conflicting fixtures
-          const conflictingFixture = matchupSet.get(matchupKey)!.fixtureIndices;
-          const suggestion: ConflictSuggestion = {
-            fixtureToReset: { roundIndex, fixtureIndex },
-            conflictingFixture: { roundIndex: conflictingFixture.roundIndex, fixtureIndex: conflictingFixture.fixtureIndex },
-          };
-
-          if (!conflictSuggestionsMap[`${roundIndex}-${fixtureIndex}`]) {
-            conflictSuggestionsMap[`${roundIndex}-${fixtureIndex}`] = [];
-          }
-          conflictSuggestionsMap[`${roundIndex}-${fixtureIndex}`].push(suggestion);
-        } else {
-          matchupSet.set(matchupKey, { fixtureIndices: { roundIndex, fixtureIndex } });
-        }
+    const used = new Map<string, { roundIndex: number; fixtureIndex: number }>();
+    for (let item of completedFixtures) {
+      const { fixture, roundIndex, fixtureIndex } = item;
+      const tA = fixture.homeTeam!._id;
+      const tB = fixture.awayTeam!._id;
+      if (tA === tB) {
+        noSelfPlay = false;
+        errors.push({
+          message: `Team ${fixture.homeTeam?.teamName ?? 'Unknown'} is playing itself.`,
+          fixtureIndices: { roundIndex, fixtureIndex },
+        });
+        continue;
+      }
+  
+      const mk = [tA, tB].sort().join('-');
+      if (used.has(mk)) {
+        validMatchups = false;
+        errors.push({
+          message: `Duplicate matchup: ${fixture.homeTeam?.teamName ?? 'Unknown'} vs ${fixture.awayTeam?.teamName ?? 'Unknown'}.`,
+          fixtureIndices: { roundIndex, fixtureIndex },
+        });
+        const existing = used.get(mk)!;
+        const suggestion: ConflictSuggestion = {
+          fixtureToReset: { roundIndex, fixtureIndex },
+          conflictingFixture: { roundIndex: existing.roundIndex, fixtureIndex: existing.fixtureIndex },
+        };
+        const key = `${roundIndex}-${fixtureIndex}`;
+        if (!conflictMap[key]) conflictMap[key] = [];
+        conflictMap[key].push(suggestion);
+      } else {
+        used.set(mk, { roundIndex, fixtureIndex });
       }
     }
-
+  
     constraints['eachTeamPlaysEachOther'] = validMatchups;
     constraints['noSelfPlay'] = noSelfPlay;
-
-    // Check datesWithinAllowedRange and conflicting weekends
+  
     let validDates = true;
     let datesInFebMarch = true;
-    let roundDateMap = new Map<number, Date>(); // Map round number to date
-
-    for (let { fixture, roundIndex, fixtureIndex } of touchedFixturesWithIndices) {
-      if (fixture.date) {
-        const date = new Date(fixture.date);
-        if (!isDateWithinAllowedRange(fixture.date)) {
-          validDates = false;
-          errors.push({
-            message: `Fixture between ${fixture.homeTeam?.teamName || fixture.homeTeam?._id} and ${fixture.awayTeam?.teamName || fixture.awayTeam?._id} has an invalid date/time.`,
-            fixtureIndices: { roundIndex, fixtureIndex },
-          });
-        }
-
-        const month = date.getUTCMonth(); // 0-based index
-        if (month !== 1 && month !== 2) {
-          datesInFebMarch = false;
-          errors.push({
-            message: `Fixture between ${fixture.homeTeam?.teamName || fixture.homeTeam?._id} and ${fixture.awayTeam?.teamName || fixture.awayTeam?._id} must be scheduled in February or March.`,
-            fixtureIndices: { roundIndex, fixtureIndex },
-          });
-        }
-
-        // Map round to date
-        if (!roundDateMap.has(fixture.round)) {
-          roundDateMap.set(fixture.round, date);
-        } else {
-          // Ensure all fixtures in the same round are on the same weekend
-          const existingDate = roundDateMap.get(fixture.round)!;
-          const existingWeekend = getWeekend(existingDate);
-          const currentWeekend = getWeekend(date);
-          if (existingWeekend !== currentWeekend) {
-            validDates = false;
-            errors.push({
-              message: `All fixtures in Round ${fixture.round} must be on the same weekend.`,
-              fixtureIndices: { roundIndex, fixtureIndex },
-            });
-          }
-        }
-      } else {
+    const roundDateMap = new Map<number, Date>();
+  
+    for (let item of completedFixtures) {
+      const { fixture, roundIndex, fixtureIndex } = item;
+      const d = new Date(fixture.date!);
+      if (!isDateWithinAllowedRange(fixture.date!)) {
         validDates = false;
         errors.push({
-          message: `Fixture between ${fixture.homeTeam?.teamName || fixture.homeTeam?._id} and ${fixture.awayTeam?.teamName || fixture.awayTeam?._id} is missing a date/time.`,
+          message: `Invalid date/time for ${fixture.homeTeam?.teamName} vs ${fixture.awayTeam?.teamName}.`,
           fixtureIndices: { roundIndex, fixtureIndex },
         });
       }
-    }
-
-    // Identify conflicting rounds based on weekends
-    const weekendToRoundsMap = new Map<string, number[]>();
-
-    roundDateMap.forEach((date, round) => {
-      const weekend = getWeekend(date);
-      if (weekendToRoundsMap.has(weekend)) {
-        weekendToRoundsMap.get(weekend)!.push(round);
+      const mo = d.getUTCMonth();
+      if (mo !== 1 && mo !== 2) {
+        datesInFebMarch = false;
+        errors.push({
+          message: `Fixture must be in Feb or Mar: ${fixture.homeTeam?.teamName} vs ${fixture.awayTeam?.teamName}.`,
+          fixtureIndices: { roundIndex, fixtureIndex },
+        });
+      }
+  
+      if (!roundDateMap.has(fixture.round)) {
+        roundDateMap.set(fixture.round, d);
       } else {
-        weekendToRoundsMap.set(weekend, [round]);
+        const existingDate = roundDateMap.get(fixture.round)!;
+        if (getWeekend(existingDate) !== getWeekend(d)) {
+          validDates = false;
+          errors.push({
+            message: `All fixtures in Round ${fixture.round} must be on the same weekend.`,
+            fixtureIndices: { roundIndex, fixtureIndex },
+          });
+        }
+      }
+    }
+  
+    constraints['datesWithinAllowedRange'] = validDates && datesInFebMarch;
+  
+    const weekendToRounds = new Map<string, number[]>();
+    roundDateMap.forEach((date, r) => {
+      const wkd = getWeekend(date);
+      if (weekendToRounds.has(wkd)) {
+        weekendToRounds.get(wkd)!.push(r);
+      } else {
+        weekendToRounds.set(wkd, [r]);
       }
     });
-
-    const conflictingRoundsList: { round1: number; round2: number }[] = [];
-
-    weekendToRoundsMap.forEach((rounds, weekend) => {
-      if (rounds.length > 1) {
-        for (let i = 0; i < rounds.length; i++) {
-          for (let j = i + 1; j < rounds.length; j++) {
-            conflictingRoundsList.push({ round1: rounds[i], round2: rounds[j] });
+  
+    weekendToRounds.forEach((rnds, wkd) => {
+      if (rnds.length > 1) {
+        for (let i = 0; i < rnds.length; i++) {
+          for (let j = i + 1; j < rnds.length; j++) {
+            roundConflicts.push({ round1: rnds[i], round2: rnds[j] });
             errors.push({
-              message: `Rounds ${rounds[i]} and ${rounds[j]} are scheduled on the same weekend (${weekend}).`,
+              message: `Rounds ${rnds[i]} and ${rnds[j]} share the same weekend (${wkd}).`,
             });
           }
         }
       }
     });
-
-    if (conflictingRoundsList.length > 0) {
-      constraints['conflictingRounds'] = false;
-    } else {
-      constraints['conflictingRounds'] = true;
-    }
-
-    constraints['datesWithinAllowedRange'] =
-      validDates &&
-      datesInFebMarch;
-
-    // Ensure rounds are in order and scheduled after previous rounds
+    constraints['conflictingRounds'] = roundConflicts.length === 0;
+  
     let roundsInOrder = true;
-    for (let round = 2; round <= fixturesToCheck.length; round++) {
-      const prevRoundDate = roundDateMap.get(round - 1);
-      const currentRoundDate = roundDateMap.get(round);
-      if (prevRoundDate && currentRoundDate) {
-        if (currentRoundDate <= prevRoundDate) {
-          roundsInOrder = false;
-          errors.push({
-            message: `Round ${round} must be scheduled after Round ${round - 1}.`,
-          });
-        }
-      }
-    }
-
-    constraints['roundsInOrder'] = roundsInOrder;
-
-    // Ensure Round 1 is in the first week of February
-    let round1InFirstWeek = true;
-    const round1Date = roundDateMap.get(1);
-    if (round1Date) {
-      const weekOfMonth = getWeekOfMonth(round1Date);
-      if (weekOfMonth !== 1) {
-        round1InFirstWeek = false;
+    for (let i = 2; i <= fx.length; i++) {
+      const prev = roundDateMap.get(i - 1);
+      const curr = roundDateMap.get(i);
+      if (prev && curr && curr <= prev) {
+        roundsInOrder = false;
         errors.push({
-          message: `Round 1 must be scheduled in the first week of February.`,
+          message: `Round ${i} must be after Round ${i - 1}.`,
         });
       }
     }
-
+    constraints['roundsInOrder'] = roundsInOrder;
+  
+    let round1InFirstWeek = true;
+    const r1Date = roundDateMap.get(1);
+    if (r1Date) {
+      if (getWeekOfMonth(r1Date) !== 1) {
+        round1InFirstWeek = false;
+        errors.push({ message: 'Round 1 must be in the first week of February.' });
+      }
+    }
     constraints['round1InFirstWeek'] = round1InFirstWeek;
-
-    // Ensure no rounds are scheduled in the weekend before Round 1
+  
     let noRoundsBeforeRound1 = true;
-    if (round1Date) {
-      const previousWeekend = getPreviousWeekend(round1Date);
-      weekendToRoundsMap.forEach((rounds, weekend) => {
-        if (weekend === previousWeekend) {
-          rounds.forEach(round => {
-            errors.push({
-              message: `No rounds can be scheduled in the weekend before Round 1. Round ${round} is scheduled then.`,
-            });
+    if (r1Date) {
+      const prevWkd = getPreviousWeekend(r1Date);
+      weekendToRounds.forEach((rnds, wkd) => {
+        if (wkd === prevWkd) {
+          rnds.forEach((rr) => {
+            errors.push({ message: `Round ${rr} is on the weekend before Round 1.` });
           });
           noRoundsBeforeRound1 = false;
         }
       });
     }
-
     constraints['noRoundsBeforeRound1'] = noRoundsBeforeRound1;
-
-    // All fixtures must be touched to proceed
-    const allFixturesTouched = fixturesToCheck.every(roundFixtures =>
-      roundFixtures.every(fixture => fixture.touched)
-    );
-    constraints['allFixturesTouched'] = allFixturesTouched;
-
-    // Update conflicting rounds state
-    setConflictingRounds(conflictingRoundsList);
-
-    // Update conflict suggestions state
-    setConflictSuggestions(conflictSuggestionsMap);
-
-    setConstraintChecks(constraints);
+  
+    const allTouched = fx.every((rFx) => rFx.every((f) => f.touched));
+    constraints['allFixturesTouched'] = allTouched;
+  
     setValidationErrors(errors);
+    setConstraintChecks(constraints);
+    setConflictingRounds(roundConflicts);
+    setConflictSuggestions(conflictMap);
   };
-
-  // Save fixtures to backend
+  
   const saveFixtures = async () => {
     setLoading(true);
-    const allFixtures = fixtures.flat();
-
-    // Prepare data to send to backend
-    const fixturesToSave = allFixtures.map(fixture => ({
-      round: fixture.round,
-      date: fixture.date,
-      homeTeam: fixture.homeTeam?._id,
-      awayTeam: fixture.awayTeam?._id,
-      stadium: fixture.stadium?._id,
-      location: fixture.location,
+    const allFx = fixtures.flat();
+    const toSave = allFx.map((fx) => ({
+      round: fx.round,
+      date: fx.date,
+      homeTeam: fx.homeTeam?._id,
+      awayTeam: fx.awayTeam?._id,
+      stadium: fx.stadium?._id,
+      location: fx.location,
       season,
     }));
 
     try {
-      // Validate fixtures first
-      const validateResponse = await axios.post('http://localhost:5003/api/manual-fixtures/validate', {
-        fixtures: fixturesToSave,
+      const validateResp = await axios.post('http://localhost:5003/api/manual-fixtures/validate', {
+        fixtures: toSave,
         season,
       });
-
-      if (validateResponse.data.message === 'Fixtures are valid') {
-        // Save fixtures
-        const saveResponse = await axios.post('http://localhost:5003/api/manual-fixtures/save', {
-          fixtures: fixturesToSave,
+      if (validateResp.data.message === 'Fixtures are valid') {
+        await axios.post('http://localhost:5003/api/manual-fixtures/save', {
+          fixtures: toSave,
           season,
         });
         alert('Fixtures saved successfully!');
@@ -711,596 +658,899 @@ const ManualFixtureScheduler: React.FC<ManualFixtureSchedulerProps> = ({ initial
     }
   };
 
-  // Check if all constraints are satisfied
   const allConstraintsSatisfied = useMemo(() => {
-    return Object.values(constraintChecks).every(
-      (value) => value !== false
-    );
+    return Object.values(constraintChecks).every((val) => val !== false);
   }, [constraintChecks]);
 
-  // Function to suggest possible matchups for a fixture
-  const suggestMatchups = (roundIndex: number, fixtureIndex: number): string[] => {
-    const suggestions: string[] = [];
-    const roundNumber = roundIndex + 1;
-    const scheduledTeams = Object.keys(perRoundTeamTracker[roundNumber] || {}).filter(
-      (teamId) => perRoundTeamTracker[roundNumber][teamId]
+  const suggestMatchups = (rI: number, fI: number): string[] => {
+    const out: string[] = [];
+    const roundNo = rI + 1;
+    const scheduled = Object.keys(perRoundTeamTracker[roundNo] || {}).filter(
+      (id) => perRoundTeamTracker[roundNo][id]
     );
-    const availableTeams = selectedTeams.filter(team => !scheduledTeams.includes(team._id));
+    const avails = selectedTeams.filter((t) => !scheduled.includes(t._id));
 
-    for (let i = 0; i < availableTeams.length; i++) {
-      for (let j = i + 1; j < availableTeams.length; j++) {
-        const teamA = availableTeams[i];
-        const teamB = availableTeams[j];
-        // Check if this matchup has already been scheduled
-        const matchupKey = [teamA._id, teamB._id].sort().join('-');
-        if (
-          !matchupTracker[matchupKey]
-        ) {
-          suggestions.push(`${teamA.teamName} vs ${teamB.teamName}`);
+    for (let i = 0; i < avails.length; i++) {
+      for (let j = i + 1; j < avails.length; j++) {
+        const tA = avails[i];
+        const tB = avails[j];
+        const mk = [tA._id, tB._id].sort().join('-');
+        if (!matchupTracker[mk]) {
+          out.push(`${tA.teamName} vs ${tB.teamName}`);
         }
       }
     }
-
-    return suggestions;
+    return out;
   };
 
-  // Function to toggle suggestions visibility for a fixture
-  const toggleSuggestions = (roundIndex: number, fixtureIndex: number) => {
-    const key = `${roundIndex}-${fixtureIndex}`;
-    setShowSuggestions(prev => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+  const toggleSuggestions = (rI: number, fI: number) => {
+    const key = `${rI}-${fI}`;
+    setShowSuggestions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Function to generate suggestions when no feasible matchups are available
-  const generateConflictSolutions = (roundIndex: number, fixtureIndex: number): ConflictSuggestion[] => {
-    const key = `${roundIndex}-${fixtureIndex}`;
+  const generateConflictSolutions = (rI: number, fI: number): ConflictSuggestion[] => {
+    const key = `${rI}-${fI}`;
     return conflictSuggestions[key] || [];
   };
 
-  // Function to generate unfeasible matchup reasons
   const getUnfeasibleMatchupReasons = useMemo(() => {
     const reasons: { [key: string]: UnfeasibleMatchupReason[] } = {};
-    for (let roundIndex = 0; roundIndex < fixtures.length; roundIndex++) {
-      for (let fixtureIndex = 0; fixtureIndex < fixtures[roundIndex].length; fixtureIndex++) {
-        const key = `${roundIndex}-${fixtureIndex}`;
-        if (showSuggestions[key] && !suggestMatchups(roundIndex, fixtureIndex).length) {
-          const roundNumber = roundIndex + 1;
-          const fixture = fixtures[roundIndex][fixtureIndex];
-          const scheduledTeams = Object.keys(perRoundTeamTracker[roundNumber] || {}).filter(
-            (teamId) => perRoundTeamTracker[roundNumber][teamId]
+    for (let rI = 0; rI < fixtures.length; rI++) {
+      for (let fI = 0; fI < fixtures[rI].length; fI++) {
+        const key = `${rI}-${fI}`;
+        if (showSuggestions[key] && !suggestMatchups(rI, fI).length) {
+          const roundNo = rI + 1;
+          const scheduled = Object.keys(perRoundTeamTracker[roundNo] || {}).filter(
+            (id) => perRoundTeamTracker[roundNo][id]
           );
-          const availableTeams = selectedTeams.filter(team => !scheduledTeams.includes(team._id));
-          const unfeasibleReasons: UnfeasibleMatchupReason[] = [];
+          const avails = selectedTeams.filter((t) => !scheduled.includes(t._id));
+          const temp: UnfeasibleMatchupReason[] = [];
 
-          for (let i = 0; i < availableTeams.length; i++) {
-            for (let j = i + 1; j < availableTeams.length; j++) {
-              const teamA = availableTeams[i];
-              const teamB = availableTeams[j];
-              const matchupKey = [teamA._id, teamB._id].sort().join('-');
-
-              if (matchupTracker[matchupKey]) {
-                unfeasibleReasons.push({
-                  teamA,
-                  teamB,
-                  reason: 'These teams have already played each other in another round.',
+          for (let i = 0; i < avails.length; i++) {
+            for (let j = i + 1; j < avails.length; j++) {
+              const tA = avails[i];
+              const tB = avails[j];
+              const mk = [tA._id, tB._id].sort().join('-');
+              if (matchupTracker[mk]) {
+                temp.push({
+                  teamA: tA,
+                  teamB: tB,
+                  reason: 'Already played each other.',
                 });
               } else {
-                unfeasibleReasons.push({
-                  teamA,
-                  teamB,
-                  reason: 'Unknown reason (possibly a scheduling conflict).',
+                temp.push({
+                  teamA: tA,
+                  teamB: tB,
+                  reason: 'Unknown conflict.',
                 });
               }
             }
           }
-
-          reasons[key] = unfeasibleReasons;
+          reasons[key] = temp;
         }
       }
     }
     return reasons;
   }, [fixtures, perRoundTeamTracker, selectedTeams, matchupTracker, showSuggestions]);
 
-  // Team Selection Interface
-  const TeamSelection: React.FC = () => {
-    return (
-      <div style={{ marginBottom: '30px' }}>
-        <h3>Select 6 Teams for the Season</h3>
-        {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
-        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-          {teams.map(team => (
-            <div key={team._id} style={{ marginRight: '10px', marginBottom: '10px' }}>
-              <input
-                type="checkbox"
-                id={team._id}
-                checked={selectedTeamIds.has(team._id)}
-                onChange={() => handleTeamSelection(team._id)}
-              />
-              <label htmlFor={team._id} style={{ marginLeft: '5px' }}>{team.teamName}</label>
-            </div>
-          ))}
-        </div>
+  const ConstraintBadge = ({ valid }: { valid: boolean }) =>
+    valid ? (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        OK
+      </span>
+    ) : (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        Issue
+      </span>
+    );
+
+  const TeamSelection = () => (
+    < div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-6 mb-8 space-y-6">
+          <div className="flex flex-col items-center">
+            <label
+              htmlFor="season"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
+            >
+              Season:
+            </label>
+            <input
+              type="number"
+              id="season"
+              value={season}
+              onChange={(e) => setSeason(parseInt(e.target.value))}
+              min={2000}
+              className="border border-gray-300 dark:border-gray-600 
+                         bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 
+                         rounded px-3 py-1 w-60 text-center"
+            />
+          </div>
+
+    <div className="text-center mb-8">
+      <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
+        Select 6 Teams for the Season
+      </h3>
+      {errorMessage && <p className="text-red-500 mb-2">{errorMessage}</p>}
+
+      <div className="inline-flex flex-wrap gap-4 justify-center">
+      {teams.map((team) => {
+      const selected = selectedTeamIds.has(team._id);
+      const { backgroundColor, textColor } = getTeamColor(team.teamName);
+
+      return (
         <button
-          onClick={() => {
-            if (validateSelection()) {
-              // Initialize selectedTeams
-              const selectedTeamsList = teams.filter(team => selectedTeamIds.has(team._id));
-              setSelectedTeams(selectedTeamsList);
-              initializeFixtures(selectedTeamsList);
-              initializeMatchupTracker(selectedTeamsList);
-              initializePerRoundTeamTracker(selectedTeamsList);
-              setStep('input');
-            }
-          }}
+          key={team._id}
+          onClick={() => toggleSelectedTeam(team._id)}
+          className={`
+                      px-4 py-3 text-sm font-medium rounded-md focus:outline-none 
+                      focus:ring-2 focus:ring-blue-500 transition-colors
+                      w-44 h-20 flex flex-col items-center justify-center
+                      relative border border-black dark:border-white
+                    `}
           style={{
-            padding: '10px 20px',
-            backgroundColor: '#28a745',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            marginTop: '10px',
+            backgroundColor,
+            color: textColor,
+            opacity: selected ? 1 : 0.85,
           }}
         >
-          Proceed to Schedule Fixtures
+          {team.image && (
+            <img
+              src={`http://localhost:5003${team.image}`}
+              alt={`${team.teamName} Logo`}
+              className="w-8 h-8 object-contain rounded-full mb-1"
+              style={{ backgroundColor: '#fff' }}
+            />
+          )}
+          <span className="whitespace-nowrap font-semibold">{team.teamName}</span>
+          {selected && <span className="text-xs font-bold mt-1">SELECTED</span>}
         </button>
+      );
+    })}
+
       </div>
-    );
-  };
+
+      <p className="mt-4 text-gray-600 dark:text-gray-300">
+        {selectedTeamIds.size} of 6 teams selected.
+      </p>
+
+      <button
+        onClick={() => {
+          if (validateTeamCount()) {
+            const sel = teams.filter((t) => selectedTeamIds.has(t._id));
+            setSelectedTeams(sel);
+            initializeFixtures(sel);
+            initializeMatchupTracker(sel);
+            initializePerRoundTeamTracker(sel);
+            setStep('input');
+          }
+        }}
+        className="block mt-6 mx-auto px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 
+                   focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+      >
+        Proceed to Schedule Fixtures
+      </button>
+    </div>
+    </div>
+  );
+
+  const tableHeaderClass =
+    'border border-gray-300 dark:border-gray-600 px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100';
+  const tableCellClass =
+    'border border-gray-300 dark:border-gray-600 px-2 py-1 text-gray-700 dark:text-gray-200';
+
+  if (!user || !['admin', 'manager', 'viewer'].includes(user.role)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1600px', margin: '0 auto', display: 'flex' }}>
-      {/* Fixture Scheduling Interface */}
-      <div style={{ flex: 2, marginRight: '20px' }}>
-        <h2>Manual Fixture Scheduler</h2>
+    <>
+    <ManualSchedulerSplash
+      show={showSplash}
+      onClose={() => setShowSplash(false)}
+    />
+    
+    <div
+      className="min-h-screen bg-gray-100 dark:bg-gray-900 
+                 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8
+                 transition-colors duration-300"
+    >
 
-        {/* Season Selection */}
-        <div style={{ marginBottom: '20px' }}>
-          <label htmlFor="season">Season:</label>
-          <input
-            type="number"
-            id="season"
-            value={season}
-            onChange={(e) => setSeason(parseInt(e.target.value))}
-            min={2000}
-            style={{ marginLeft: '10px', padding: '5px' }}
-          />
-        </div>
+      <div className="max-w-7xl w-full mb-8">
+        <div
+          className="flex justify-between items-center px-4 py-2
+                     bg-gray-100 dark:bg-gray-800 rounded-md"
+        >
+          <nav className="flex items-center space-x-2" aria-label="Breadcrumb">
+            <Link
+              to="/"
+              className="text-blue-600 dark:text-blue-400 hover:underline flex items-center"
+            >
+              <FaInfoCircle className="mr-1" />
+              Home
+            </Link>
+            <span className="text-gray-500 dark:text-gray-400">/ Admin /</span>
+            <span className="text-gray-700 dark:text-gray-300 font-semibold">
+              Manual Fixture Scheduler
+            </span>
+          </nav>
 
-        {step === 'selectTeams' && (
-          <TeamSelection />
-        )}
+                      <div className="flex items-center space-x-4">
+                        <button
+                          onClick={() => setShowSplash(true)}
+                          className="flex items-center justify-center w-9 h-9 bg-gray-200 dark:bg-gray-700
+                                     text-gray-800 dark:text-gray-200 rounded-md
+                                     hover:bg-gray-300 dark:hover:bg-gray-600
+                                     transition-colors duration-200 focus:outline-none
+                                     focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+                          aria-label="Show Splash Info"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            aria-hidden="true"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M10 11h2v5m-2 0h4m-2.592-8.5h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                            />
+                          </svg>
+                        </button>
 
-        {step === 'input' && (
-          <>
-            {/* Display Constraint Checks */}
-            <div style={{ marginBottom: '20px' }}>
-              <h3>Constraints</h3>
-              <ul>
-                <li>
-                  {constraintChecks['playsOncePerRound'] && constraintChecks['teamPlaysOnlyOncePerRound'] ? '✅' : '❌'} Each team plays exactly once in each round
-                </li>
-                <li>
-                  {constraintChecks['eachTeamPlaysEachOther'] ? '✅' : '❌'} Each team plays every other team exactly once overall
-                </li>
-                <li>
-                  {constraintChecks['noSelfPlay'] ? '✅' : '❌'} No team plays against itself
-                </li>
-                <li>
-                  {constraintChecks['datesWithinAllowedRange'] ? '✅' : '❌'} Dates and times are within allowed ranges
-                </li>
-                <li>
-                  {constraintChecks['roundsInOrder'] ? '✅' : '❌'} Rounds are scheduled in chronological order
-                </li>
-                <li>
-                  {constraintChecks['round1InFirstWeek'] ? '✅' : '❌'} Round 1 is scheduled in the first week of February
-                </li>
-                <li>
-                  {constraintChecks['noRoundsBeforeRound1'] ? '✅' : '❌'} No rounds are scheduled in the weekend before Round 1
-                </li>
-                <li>
-                  {constraintChecks['conflictingRounds'] ? '✅' : '❌'} No conflicting rounds scheduled on the same weekend
-                </li>
-                <li>
-                  {constraintChecks['allFixturesTouched'] ? '✅' : '❌'} All fixtures are filled
-                </li>
-              </ul>
-            </div>
+                        <button
+                          onClick={toggleDarkMode}
+                          className="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 
+                                     text-gray-800 dark:text-gray-200 rounded-md 
+                                     hover:bg-gray-300 dark:hover:bg-gray-600 
+                                     transition-colors duration-200 focus:outline-none 
+                                     focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+                          aria-label="Toggle Dark Mode"
+                        >
+                          {isDarkMode ? (
+                            <>
+                              <FaSun className="mr-2" />
+                              Light Mode
+                            </>
+                          ) : (
+                            <>
+                              <FaMoon className="mr-2" />
+                              Dark Mode
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Display Validation Errors */}
-            {validationErrors.length > 0 && (
-              <div style={{ color: 'red', marginBottom: '20px' }}>
-                <h4>Validation Errors:</h4>
-                <ul>
-                  {validationErrors.map((error, idx) => (
-                    <li key={idx}>{error.message}</li>
-                  ))}
+      <div className="max-w-7xl w-full bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 transition-colors duration-300">
+        <div className="text-left mb-6">
+          <h2 className="font-extrabold text-gray-900 dark:text-gray-100 mb-2 text-3xl">
+                  Manual Fixture Scheduler
+          </h2>
+          <p className="text-gray-700 dark:text-gray-300 mb-2 text-base">
+          This interface allows you to manually schedule your fixtures using an interactive interface with a live tracker that ensures every round is fully scheduled and adheres to Six Nations rules. 
+          Benefit from real-time constraint checking and handy suggestion buttons that offer valid matchups to fill any gaps in your schedule.
+          </p>
+          <br />
+          <p className="text-gray-500 dark:text-gray-400 italic text-xs">
+          Note: Because scheduling is sequential, some combinations might later prove infeasible. In such cases, feedback is provided to help you backtrack and correct errors.
+          </p>
+          <br />
+
+      </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[repeat(14,minmax(0,1fr))] gap-4">
+          <div className="lg:col-span-4 sticky top-4 space-y-4">
+            {(step === 'input' || step === 'summary') && (
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
+                <h3 className="text-lg font-bold mb-3 text-gray-800 dark:text-gray-100">
+                  Constraints
+                </h3>
+                <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                  <li className="flex justify-between">
+                    <span>All teams play once per round.</span>
+                    <ConstraintBadge
+                      valid={
+                        constraintChecks['playsOncePerRound'] &&
+                        constraintChecks['teamPlaysOnlyOncePerRound']
+                      }
+                    />
+                  </li>
+                  <li className="flex justify-between">
+                    <span>All teams plays every other team once.</span>
+                    <ConstraintBadge valid={constraintChecks['eachTeamPlaysEachOther']} />
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Dates & times within allowed ranges.</span>
+                    <ConstraintBadge valid={constraintChecks['datesWithinAllowedRange']} />
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Round 1 in first week of Feb.</span>
+                    <ConstraintBadge valid={constraintChecks['round1InFirstWeek']} />
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Round 1 must be first </span>
+                    <ConstraintBadge valid={constraintChecks['noRoundsBeforeRound1']} />
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Rounds in chronological order.</span>
+                    <ConstraintBadge valid={constraintChecks['roundsInOrder']} />
+                  </li>
+                  <li className="flex justify-between">
+                    <span>No Conflicting Rounds.</span>
+                    <ConstraintBadge valid={constraintChecks['conflictingRounds']} />
+                  </li>
+                  <li className="flex justify-between">
+                    <span>No team plays itself.</span>
+                    <ConstraintBadge valid={constraintChecks['noSelfPlay']} />
+                  </li>
+                  <li className="flex justify-between">
+                    <span>All fixtures are filled.</span>
+                    <ConstraintBadge valid={constraintChecks['allFixturesTouched']} />
+                  </li>
                 </ul>
               </div>
             )}
 
-            {/* Fixtures Input */}
-            {fixtures.map((roundFixtures, roundIndex) => {
-              const isConflicting = conflictingRounds.some(
-                conflict => conflict.round1 === roundIndex + 1 || conflict.round2 === roundIndex + 1
-              );
-              return (
-                <div key={roundIndex} style={{ marginBottom: '30px' }}>
-                  <h3
-                    style={{
-                      backgroundColor: isConflicting ? '#f8d7da' : '#f1f1f1',
-                      padding: '10px',
-                      borderRadius: '5px',
-                      border: isConflicting ? '1px solid #f5c6cb' : '1px solid #ccc',
-                    }}
-                  >
-                    Round {roundIndex + 1} {isConflicting && '(Conflicting Round)'}
-                  </h3>
-                  {roundFixtures.map((fixture, fixtureIndex) => {
-                    // Find errors related to this fixture
-                    const fixtureErrors = validationErrors.filter(
-                      (error) =>
-                        error.fixtureIndices &&
-                        error.fixtureIndices.roundIndex === roundIndex &&
-                        error.fixtureIndices.fixtureIndex === fixtureIndex
-                    );
+            {(step === 'input' || step === 'summary') && (
+              <div
+                className={`
+                  p-4 rounded
+                  ${
+                    validationErrors.length > 0
+                      ? 'bg-red-50 dark:bg-red-900 border border-red-300 dark:border-red-600'
+                      : 'bg-green-50 dark:bg-green-900 border border-green-300 dark:border-green-600'
+                  }
+                `}
+              >
+                <h4
+                  className={`
+                    text-md font-semibold mb-2
+                    ${
+                      validationErrors.length > 0
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-green-600 dark:text-green-400'
+                    }
+                  `}
+                >
+                  Validation Errors
+                </h4>
+                {validationErrors.length === 0 ? (
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    No validation errors found.
+                  </p>
+                ) : (
+                  <ul className="list-disc list-inside text-sm space-y-1 text-red-600 dark:text-red-300">
+                    {validationErrors.map((err, idx) => (
+                      <li key={idx}>{err.message}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
 
-                    // Suggest possible matchups
-                    const matchups = suggestMatchups(roundIndex, fixtureIndex);
+          <div className="lg:col-span-6">
+            {step === 'selectTeams' && <TeamSelection />}
 
-                    // Generate a unique key for suggestions visibility
-                    const suggestionsKey = `${roundIndex}-${fixtureIndex}`;
+            {step === 'input' && (
+              <>
+                {fixtures.map((roundFixtures, roundIndex) => {
+                  const isCollapsed = collapsedRounds.has(roundIndex);
+                  const isConflicting = conflictingRounds.some(
+                    (c) => c.round1 === roundIndex + 1 || c.round2 === roundIndex + 1
+                  );
 
-                    // Check if fixture has validation errors
-                    const hasError = fixtureErrors.length > 0;
-
-                    return (
+                  return (
+                    <div key={roundIndex} className="mb-6">
                       <div
-                        key={fixtureIndex}
-                        style={{
-                          marginBottom: '15px',
-                          border: hasError ? '2px solid #dc3545' : '1px solid #ccc',
-                          padding: '10px',
-                          borderRadius: '5px',
-                          backgroundColor: hasError ? '#f8d7da' : '#fff',
-                        }}
+                        className={`
+                          w-full px-4 py-2 rounded mb-2 font-bold flex items-center justify-between
+                          ${
+                            isConflicting
+                              ? 'bg-red-100 border border-red-300 text-red-800'
+                              : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 border'
+                          }
+                        `}
                       >
-                        <h4
-                          style={{
-                            color: hasError ? '#721c24' : '#000',
-                          }}
-                        >
-                          Fixture {fixtureIndex + 1}
-                        </h4>
-                        {/* Team Selection */}
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <select
-                            value={fixture.homeTeam ? fixture.homeTeam._id : ''}
-                            onChange={(e) => handleTeamSelectionForFixture(roundIndex, fixtureIndex, 'teamA', e.target.value)}
-                            style={{ marginRight: '10px', padding: '5px' }}
+                        <span>
+                          Round {roundIndex + 1} {isConflicting && '(Conflicting)'}
+                        </span>
+                        {isCollapsed ? (
+                          <button
+                            onClick={() => toggleRoundCollapse(roundIndex)}
+                            className="text-green-600 hover:text-green-800 dark:hover:text-green-400 focus:outline-none"
                           >
-                            <option value="">Select Team A</option>
-                            {selectedTeams.map(team => (
-                              <option key={team._id} value={team._id}>{team.teamName}</option>
-                            ))}
-                          </select>
-                          <span style={{ margin: '0 10px' }}>vs</span>
-                          <select
-                            value={fixture.awayTeam ? fixture.awayTeam._id : ''}
-                            onChange={(e) => handleTeamSelectionForFixture(roundIndex, fixtureIndex, 'teamB', e.target.value)}
-                            style={{ marginLeft: '10px', padding: '5px' }}
+                            <FaPlus />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => toggleRoundCollapse(roundIndex)}
+                            className="text-red-600 hover:text-red-800 dark:hover:text-red-400 focus:outline-none"
                           >
-                            <option value="">Select Team B</option>
-                            {selectedTeams.map(team => (
-                              <option key={team._id} value={team._id}>{team.teamName}</option>
-                            ))}
-                          </select>
-                        </div>
-                        {/* Display error if team plays itself */}
-                        {fixture.homeTeam && fixture.awayTeam && fixture.homeTeam._id === fixture.awayTeam._id && (
-                          <p style={{ color: 'red' }}>A team cannot play against itself.</p>
-                        )}
-                        {/* Date Selection */}
-                        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center' }}>
-                          <label htmlFor={`date-${roundIndex}-${fixtureIndex}`}>Date and Time:</label>
-                          <input
-                            type="datetime-local"
-                            id={`date-${roundIndex}-${fixtureIndex}`}
-                            value={fixture.date}
-                            onChange={(e) => handleDateChange(roundIndex, fixtureIndex, e.target.value)}
-                            style={{ marginLeft: '10px', padding: '5px' }}
-                          />
-                          {fixture.date && (
-                            <span style={{ marginLeft: '10px' }}>
-                              {isDateWithinAllowedRange(fixture.date) ? '✅' : '❌'}
-                            </span>
-                          )}
-                        </div>
-                        {/* Reset Button */}
-                        <button
-                          onClick={() => handleResetFixture(roundIndex, fixtureIndex)}
-                          style={{
-                            padding: '5px 10px',
-                            backgroundColor: '#dc3545',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '5px',
-                            cursor: 'pointer',
-                            marginTop: '10px',
-                            marginRight: '10px',
-                          }}
-                        >
-                          Reset
-                        </button>
-                        {/* Display Fixture-specific Validation Errors */}
-                        {fixtureErrors.length > 0 && (
-                          <div style={{ color: 'red', marginTop: '10px' }}>
-                            {fixtureErrors.map((error, idx) => (
-                              <p key={idx}>{error.message}</p>
-                            ))}
-                          </div>
-                        )}
-                        {/* Suggestions Toggle Button */}
-                        <button
-                          onClick={() => toggleSuggestions(roundIndex, fixtureIndex)}
-                          style={{
-                            padding: '5px 10px',
-                            backgroundColor: '#17a2b8',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '5px',
-                            cursor: 'pointer',
-                            marginTop: '10px',
-                          }}
-                        >
-                          {showSuggestions[suggestionsKey] ? 'Hide Suggestions' : 'Show Suggestions'}
-                        </button>
-                        {/* Suggested Matchups or Explanatory Message */}
-                        {showSuggestions[suggestionsKey] && (
-                          <div style={{ marginTop: '10px' }}>
-                            {matchups.length > 0 ? (
-                              <>
-                                <h5>Suggested Matchups:</h5>
-                                <ul>
-                                  {matchups.map((matchup, idx) => (
-                                    <li key={idx}>{matchup}</li>
-                                  ))}
-                                </ul>
-                              </>
-                            ) : (
-                              <>
-                                <h5>No Suggestions Available</h5>
-                                <p>
-                                  No feasible matchups are available for this fixture due to existing scheduling conflicts or duplicate matchups.
-                                </p>
-                                {/* Detailed Explanation */}
-                                {unfeasibleMatchupReasons[`${roundIndex}-${fixtureIndex}`] && unfeasibleMatchupReasons[`${roundIndex}-${fixtureIndex}`].length > 0 && (
-                                  <>
-                                    <p><strong>Available Teams:</strong></p>
-                                    <ul>
-                                      {unfeasibleMatchupReasons[`${roundIndex}-${fixtureIndex}`].map((reason, idx) => (
-                                        <li key={idx}>
-                                          {reason.teamA.teamName} vs {reason.teamB.teamName}: {reason.reason}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </>
-                                )}
-                                {/* Check if there are conflict suggestions */}
-                                {generateConflictSolutions(roundIndex, fixtureIndex).length > 0 ? (
-                                  <>
-                                    <p>
-                                      <strong>Suggested Actions:</strong>
-                                    </p>
-                                    <ul>
-                                      {generateConflictSolutions(roundIndex, fixtureIndex).map((suggestion, idx) => (
-                                        <li key={idx}>
-                                          Reset <strong>Round {suggestion.conflictingFixture.roundIndex + 1}, Fixture {suggestion.conflictingFixture.fixtureIndex + 1}</strong> to free up teams.
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </>
-                                ) : (
-                                  <>
-                                    <p>
-                                      <strong>Possible Solutions:</strong>
-                                    </p>
-                                    <ul>
-                                      <li>Reset conflicting fixtures to free up teams.</li>
-                                      <li>Adjust the season or rounds to accommodate all matchups.</li>
-                                      <li>Ensure that each team plays every other team only once.</li>
-                                    </ul>
-                                  </>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        )}
-                        {/* Display Home/Away and Stadium */}
-                        {fixture.homeTeam && fixture.awayTeam && fixture.stadium && (
-                          <div style={{ marginTop: '10px' }}>
-                            <h5>Current Season ({season}) Fixture:</h5>
-                            <p>
-                              Home Team: {fixture.homeTeam.teamName}
-                            </p>
-                            <p>
-                              Away Team: {fixture.awayTeam.teamName}
-                            </p>
-                            <p>
-                              Stadium: {fixture.stadium.stadiumName}
-                            </p>
-                            <p>
-                              Location: {fixture.location}
-                            </p>
-                            <p style={{ color: 'blue', fontStyle: 'italic' }}>
-                              Note: Due to the requirement of alternating stadiums, this matchup has to be played at {fixture.stadium.stadiumName}.
-                            </p>
-                            {fixture.previousFixture && (
-                              <div style={{ marginTop: '10px' }}>
-                                <h5>Previous Season ({fixture.previousFixture.season}) Fixture:</h5>
-                                <p>
-                                  {selectedTeams.find(team => team._id === fixture.previousFixture?.homeTeam)?.teamName ?? 'Unknown Team'} vs{' '}
-                                  {selectedTeams.find(team => team._id === fixture.previousFixture?.awayTeam)?.teamName ?? 'Unknown Team'}
-                                </p>
-                              </div>
-                            )}
-                          </div>
+                            <FaMinus />
+                          </button>
                         )}
                       </div>
-                    );
-                  })}
+
+                      {!isCollapsed && (
+                        <div className="space-y-4 px-4">
+                          {roundFixtures.map((fixture, fixtureIndex) => {
+                            const fixtureErrors = validationErrors.filter(
+                              (err) =>
+                                err.fixtureIndices?.roundIndex === roundIndex &&
+                                err.fixtureIndices.fixtureIndex === fixtureIndex
+                            );
+                            const hasError = fixtureErrors.length > 0;
+                            const key = `${roundIndex}-${fixtureIndex}`;
+                            const matchups = suggestMatchups(roundIndex, fixtureIndex);
+                            const roundNo = roundIndex + 1;
+                            const fix = fixtures[roundIndex][fixtureIndex];
+                            const availableTeamsForHome = selectedTeams.filter(
+                              (team) =>
+                                !perRoundTeamTracker[roundNo][team._id] ||
+                                (fix.homeTeam && fix.homeTeam._id === team._id)
+                            );
+
+                            const availableTeamsForAway = selectedTeams.filter(
+                              (team) =>
+                                !perRoundTeamTracker[roundNo][team._id] ||
+                                (fix.awayTeam && fix.awayTeam._id === team._id)
+                            );
+
+                            if (collapsedFixtures.has(key)) {
+                              return (
+                                <div
+                                  className={`p-4 rounded border ${
+                                    hasError
+                                      ? 'border-red-500 '
+                                      : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+                                  }`}
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <h4
+                                      className={`text-md font-semibold ${
+                                        hasError ? 'text-red-700 dark:text-red-800' : 'text-gray-800 dark:text-gray-200'
+                                      }`}
+                                    >
+                                      Fixture {fixtureIndex + 1}
+                                    </h4>
+
+                                    <button
+                                      onClick={() => toggleFixtureCollapse(roundIndex, fixtureIndex)}
+                                      className="text-blue-600 dark:text-blue-400 focus:outline-none"
+                                    >
+                                      <FaPlus />
+                                    </button>
+                                  </div>
+
+                                  <div className="mt-2 text-gray-800 dark:text-gray-200">
+                                    {fixture.homeTeam && fixture.awayTeam ? (
+                                      <>
+                                        <p>
+                                          {fixture.homeTeam.teamName} vs {fixture.awayTeam.teamName}
+                                        </p>
+                                        
+                                        {fixture.date ? (
+                                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                            {new Date(fixture.date).toLocaleString()}
+                                          </p>
+                                        ) : (
+                                          <p className=" text-red-700 dark:text-red-800 mt-1">
+                                            Date not set
+                                          </p>
+                                        )}
+                                      </>
+                                    ) : (
+                                        <p className="text-red-700 dark:text-red-800">Fixture details missing.</p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div
+                                key={fixtureIndex}
+                                className={`p-4 rounded border text-left ${
+                                  hasError
+                                    ? 'border-red-500'
+                                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+                                }`}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <h4
+                                    className={`text-md font-semibold mb-2 ${
+                                      hasError ? 'text-red-700 dark:text-red-800' : 'text-gray-800 dark:text-gray-200'
+                                    }`}
+                                  >
+                                    Fixture {fixtureIndex + 1}
+                                  </h4>
+                                  <button
+                                    onClick={() => toggleFixtureCollapse(roundIndex, fixtureIndex)}
+                                    className="text-blue-600 dark:text-blue-400 focus:outline-none"
+                                  >
+                                    <FaMinus />
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center space-x-4 mt-3">
+                                <select
+                                  value={fixture.homeTeam ? fixture.homeTeam._id : ''}
+                                  onChange={(e) =>
+                                    handleTeamSelectionForFixture(roundIndex, fixtureIndex, 'teamA', e.target.value)
+                                  }
+                                  className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 
+                                            text-gray-800 dark:text-gray-200 rounded px-2 py-1 w-40"
+                                >
+                                  <option value="">Select Team A</option>
+                                  {availableTeamsForHome.map((t) => (
+                                    <option key={t._id} value={t._id}>
+                                      {t.teamName}
+                                    </option>
+                                  ))}
+                                </select>
+
+                                <span className="text-gray-500 dark:text-gray-400">vs</span>
+
+                                <select
+                                  value={fixture.awayTeam ? fixture.awayTeam._id : ''}
+                                  onChange={(e) =>
+                                    handleTeamSelectionForFixture(roundIndex, fixtureIndex, 'teamB', e.target.value)
+                                  }
+                                  className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 
+                                            text-gray-800 dark:text-gray-200 rounded px-2 py-1 w-40"
+                                >
+                                  <option value="">Select Team B</option>
+                                  {availableTeamsForAway.map((t) => (
+                                    <option key={t._id} value={t._id}>
+                                      {t.teamName}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                                <div className="flex items-center space-x-2 mt-4">
+                                  <label
+                                    htmlFor={`date-${roundIndex}-${fixtureIndex}`}
+                                    className="font-medium text-gray-700 dark:text-gray-200"
+                                  >
+                                    Date/Time:
+                                  </label>
+                                  <input
+                                    type="datetime-local"
+                                    id={`date-${roundIndex}-${fixtureIndex}`}
+                                    value={fixture.date}
+                                    onChange={(e) =>
+                                      handleDateChange(roundIndex, fixtureIndex, e.target.value)
+                                    }
+                                    className="border border-gray-300 dark:border-gray-600 
+                                               bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 
+                                               rounded px-2 py-1"
+                                  />
+                                </div>
+
+                                {fixtureErrors.length > 0 && (
+                                  <div className="text-red-600 mt-3 space-y-1 text-sm">
+                                    {fixtureErrors.map((err, eidx) => (
+                                      <p key={eidx}>{err.message}</p>
+                                    ))}
+                                  </div>
+                                )}
+
+                                <div className="mt-4 flex justify-between">
+                                  <button
+                                    onClick={() => toggleSuggestions(roundIndex, fixtureIndex)}
+                                    className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 
+                                               focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                                  >
+                                    {showSuggestions[key] ? 'Hide Suggestions' : 'Show Suggestions'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleResetFixture(roundIndex, fixtureIndex)}
+                                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 
+                                               focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+                                  >
+                                    Reset
+                                  </button>
+                                </div>
+
+                                {showSuggestions[key] && (
+                                  <div className="mt-4 border-t pt-4 border-gray-200 dark:border-gray-600">
+                                    {matchups.length > 0 ? (
+                                      <>
+                                        <h5 className="font-medium text-gray-800 dark:text-gray-200">
+                                          Suggested Matchups:
+                                        </h5>
+                                        <ul className="list-disc list-inside ml-4 text-gray-700 dark:text-gray-300 mt-1">
+                                          {matchups.map((m, idx2) => (
+                                            <li key={idx2}>{m}</li>
+                                          ))}
+                                        </ul>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <h5 className="font-medium text-gray-800 dark:text-gray-200">
+                                          No Suggestions Available
+                                        </h5>
+                                        <p className="text-gray-700 dark:text-gray-300 mt-1">
+                                          No feasible matchups due to conflicts or duplicates.
+                                        </p>
+                                        {getUnfeasibleMatchupReasons[key] &&
+                                          getUnfeasibleMatchupReasons[key].length > 0 && (
+                                            <div className="mt-2">
+                                              <p className="font-semibold text-gray-800 dark:text-gray-200">
+                                                Available Teams:
+                                              </p>
+                                              <ul className="list-disc list-inside ml-4 text-gray-700 dark:text-gray-300 mt-1">
+                                                {getUnfeasibleMatchupReasons[key].map((r, rIdx) => (
+                                                  <li key={rIdx}>
+                                                    {r.teamA.teamName} vs {r.teamB.teamName}: {r.reason}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            </div>
+                                          )}
+                                        {generateConflictSolutions(roundIndex, fixtureIndex).length > 0 ? (
+                                          <div className="mt-2">
+                                            <p className="font-semibold text-gray-800 dark:text-gray-200">
+                                              Suggested Actions:
+                                            </p>
+                                            <ul className="list-disc list-inside ml-4 text-gray-700 dark:text-gray-300 mt-1">
+                                              {generateConflictSolutions(roundIndex, fixtureIndex).map((c, cIdx) => (
+                                                <li key={cIdx}>
+                                                  Reset{' '}
+                                                  <strong>
+                                                    Round {c.conflictingFixture.roundIndex + 1}, Fixture{' '}
+                                                    {c.conflictingFixture.fixtureIndex + 1}
+                                                  </strong>{' '}
+                                                  to free up teams.
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          </div>
+                                        ) : (
+                                          <div className="mt-2">
+                                            <p className="font-semibold text-gray-800 dark:text-gray-200">
+                                              Possible Solutions:
+                                            </p>
+                                            <ul className="list-disc list-inside ml-4 text-gray-700 dark:text-gray-300 mt-1">
+                                              <li>Reset all fixtures from the current round.</li>
+                                              <li>Open the suggestions panel to see all feasible solutions</li>
+                                              <li>Refer to the Overall Matchup Tracker to choose fixtures.</li>
+                                            </ul>
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+
+                                {fixture.homeTeam && fixture.awayTeam && fixture.stadium && (
+                                  <div className="mt-4 bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                                    <h5 className="font-medium text-gray-700 dark:text-gray-100 mb-2">
+                                      Current Season ({season}) Fixture:
+                                    </h5>
+                                    <p className="text-gray-800 dark:text-gray-200">
+                                      <strong>Home Team:</strong> {fixture.homeTeam.teamName}
+                                    </p>
+                                    <p className="text-gray-800 dark:text-gray-200">
+                                      <strong>Away Team:</strong> {fixture.awayTeam.teamName}
+                                    </p>
+                                    <p className="text-gray-800 dark:text-gray-200">
+                                      <strong>Stadium:</strong> {fixture.stadium.stadiumName}
+                                    </p>
+                                    <p className="text-gray-800 dark:text-gray-200">
+                                      <strong>Location:</strong> {fixture.location}
+                                    </p>
+                                    <p className="text-blue-600 dark:text-blue-400 italic mt-2">
+                                      This matchup must be played at {fixture.stadium.stadiumName}.
+                                    </p>
+
+                                    {fixture.previousFixture && (
+                                      <div className="mt-4 border-t pt-2 border-gray-200 dark:border-gray-600">
+                                        <h5 className="font-medium text-gray-700 dark:text-gray-100 mb-1">
+                                          Previous Season ({fixture.previousFixture.season}) Fixture:
+                                        </h5>
+                                        <p className="text-gray-800 dark:text-gray-200">
+                                          {
+                                            selectedTeams.find(
+                                              (x) => x._id === fixture.previousFixture?.homeTeam
+                                            )?.teamName
+                                          }{' '}
+                                          vs{' '}
+                                          {
+                                            selectedTeams.find(
+                                              (x) => x._id === fixture.previousFixture?.awayTeam
+                                            )?.teamName
+                                          }
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                <button
+                  onClick={() => {
+                    if (allConstraintsSatisfied) {
+                      setStep('summary');
+                    } else {
+                      alert(
+                        'Please fix the following issues:\n' +
+                          validationErrors.map((v) => v.message).join('\n')
+                      );
+                    }
+                  }}
+                  disabled={loading}
+                  className={`
+                    mt-6 px-6 py-2 
+                    rounded
+                    focus:outline-none 
+                    focus:ring-2 
+                    focus:ring-blue-500
+                    text-white
+                    ${
+                      loading
+                        ? 'bg-blue-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700 transition-colors'
+                    }
+                  `}
+                >
+                  Next
+                </button>
+              </>
+            )}
+
+            {step === 'summary' && (
+              <>
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 text-center">
+                  Fixture Summary
+                </h3>
+                <div className="overflow-x-auto mx-auto max-w-3xl">
+                  <table className="min-w-full text-left border border-gray-300 dark:border-gray-600">
+                    <thead>
+                      <tr>
+                        <th className={tableHeaderClass}>Round</th>
+                        <th className={tableHeaderClass}>Date</th>
+                        <th className={tableHeaderClass}>Home Team</th>
+                        <th className={tableHeaderClass}>Away Team</th>
+                        <th className={tableHeaderClass}>Stadium</th>
+                        {/* <th className={tableHeaderClass}>Location</th> */}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fixtures.flat().map((fx, idx) => (
+                        <tr
+                          key={idx}
+                          className="border-b last:border-b-0 border-gray-200 dark:border-gray-700"
+                        >
+                          <td className={tableCellClass}>{fx.round}</td>
+                          <td className={tableCellClass}>
+                            {fx.date ? new Date(fx.date).toLocaleString() : 'N/A'}
+                          </td>
+                          <td className={tableCellClass}>{fx.homeTeam?.teamName || 'N/A'}</td>
+                          <td className={tableCellClass}>{fx.awayTeam?.teamName || 'N/A'}</td>
+                          <td className={tableCellClass}>{fx.stadium?.stadiumName || 'N/A'}</td>
+                          {/* <td className={tableCellClass}>{fx.location || 'N/A'}</td> */}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              );
-            })}
 
-            {/* Next Button */}
-            <button
-              onClick={() => {
-                if (allConstraintsSatisfied) {
-                  setStep('summary');
-                } else {
-                  alert('Please fix the following issues before proceeding:\n' + validationErrors.map(e => e.message).join('\n'));
-                }
-              }}
-              disabled={loading}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#007bff',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                marginTop: '20px',
-              }}
-            >
-              Next
-            </button>
-          </>
-        )}
+                <div className="mt-6 flex justify-center space-x-4">
+                  <button
+                    onClick={() => setStep('input')}
+                    className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 
+                               focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={saveFixtures}
+                    disabled={loading}
+                    className={`
+                      px-6 py-2 rounded 
+                      focus:outline-none 
+                      focus:ring-2 
+                      focus:ring-green-500
+                      text-white
+                      ${
+                        loading
+                          ? 'bg-green-400 cursor-not-allowed'
+                          : 'bg-green-600 hover:bg-green-700'
+                      }
+                    `}
+                  >
+                    {loading ? 'Saving...' : 'Save Fixtures'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
-        {step === 'summary' && (
-          <>
-            {/* Summary Components */}
-            <h3>Fixture Summary</h3>
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                marginTop: '10px',
-              }}
-            >
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>Round</th>
-                  <th style={tableHeaderStyle}>Date</th>
-                  <th style={tableHeaderStyle}>Home Team</th>
-                  <th style={tableHeaderStyle}>Away Team</th>
-                  <th style={tableHeaderStyle}>Stadium</th>
-                  <th style={tableHeaderStyle}>Location</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fixtures.flat().map((fixture, index) => (
-                  <tr key={index}>
-                    <td style={tableCellStyle}>{fixture.round}</td>
-                    <td style={tableCellStyle}>{fixture.date ? new Date(fixture.date).toLocaleString() : 'N/A'}</td>
-                    <td style={tableCellStyle}>{fixture.homeTeam?.teamName || 'N/A'}</td>
-                    <td style={tableCellStyle}>{fixture.awayTeam?.teamName || 'N/A'}</td>
-                    <td style={tableCellStyle}>{fixture.stadium?.stadiumName || 'N/A'}</td>
-                    <td style={tableCellStyle}>{fixture.location || 'N/A'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="lg:col-span-4 sticky top-4 space-y-4">
+            {(step === 'input' || step === 'summary') && (
+              <>
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                    Overall Matchup Tracker
+                  </h3>
+                  <ul className="space-y-2 text-sm">
+                    {Object.entries(matchupTracker).map(([k, scheduled], i) => {
+                      const [tAId, tBId] = k.split('-');
+                      const tA = selectedTeams.find((t) => t._id === tAId)?.teamName || 'Unknown';
+                      const tB = selectedTeams.find((t) => t._id === tBId)?.teamName || 'Unknown';
+                      return (
+                        <li key={i} className="flex items-center justify-between">
+                          <span className="text-gray-700 dark:text-gray-200">
+                            {tA} vs {tB}
+                          </span>
+                          {scheduled ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Scheduled
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              Not Scheduled
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
 
-            {/* Back and Save Buttons */}
-            <button
-              onClick={() => setStep('input')}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#6c757d',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                marginTop: '20px',
-                marginRight: '10px',
-              }}
-            >
-              Back
-            </button>
-            <button
-              onClick={saveFixtures}
-              disabled={loading}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#28a745',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                marginTop: '20px',
-              }}
-            >
-              {loading ? 'Saving...' : 'Save Fixtures'}
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Matchup Tracker Interfaces */}
-      <div style={{ flex: 1 }}>
-        {/* Overall Matchup Tracker */}
-        <div style={{ marginBottom: '30px' }}>
-          <h3>Overall Matchup Tracker</h3>
-          <ul>
-            {Object.entries(matchupTracker).map(([matchupKey, scheduled], index) => {
-              const [teamAId, teamBId] = matchupKey.split('-');
-              const teamAName = selectedTeams.find(team => team._id === teamAId)?.teamName || 'Unknown Team';
-              const teamBName = selectedTeams.find(team => team._id === teamBId)?.teamName || 'Unknown Team';
-              return (
-                <li key={index}>
-                  {scheduled ? '✅' : '❌'} {teamAName} vs {teamBName}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-
-        {/* Per-Round Team Tracker */}
-        <div>
-          <h3>Per-Round Team Tracker</h3>
-          {Object.entries(perRoundTeamTracker).map(([round, teamStatuses]) => (
-            <div key={round} style={{ marginBottom: '20px' }}>
-              <h4>Round {round}</h4>
-              <ul>
-                {selectedTeams.map(team => (
-                  <li key={team._id}>
-                    {teamStatuses[team._id] ? '✅' : '❌'} {team.teamName}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                    Per-Round Team Tracker
+                  </h3>
+                  {Object.entries(perRoundTeamTracker).map(([roundNo, statuses]) => (
+                    <div key={roundNo} className="mb-4">
+                      <h4 className="font-medium text-gray-800 dark:text-gray-100 mb-2 text-sm">
+                        Round {roundNo}
+                      </h4>
+                      <ul className="space-y-1">
+                        {selectedTeams.map((team) => (
+                          <li
+                            key={team._id}
+                            className="flex items-center justify-between text-sm text-gray-700 dark:text-gray-200"
+                          >
+                            <span>{team.teamName}</span>
+                            {statuses[team._id] ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Playing
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                Not Playing
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
+    </>
   );
-};
-
-// Styles for table headers and cells
-const tableHeaderStyle: React.CSSProperties = {
-  border: '1px solid #dee2e6',
-  padding: '8px',
-  backgroundColor: '#f1f1f1',
-  textAlign: 'left',
-};
-
-const tableCellStyle: React.CSSProperties = {
-  border: '1px solid #dee2e6',
-  padding: '8px',
 };
 
 export default ManualFixtureScheduler;

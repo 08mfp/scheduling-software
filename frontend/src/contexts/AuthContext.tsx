@@ -1,4 +1,3 @@
-// frontend/src/contexts/AuthContext.tsx
 /**
  * @module frontend/src/contexts/AuthContext
  * @description This file defines the AuthContext, which provides user authentication and authorization functionality to the application.
@@ -33,7 +32,7 @@ interface AuthContextProps {
     role: string,
     secretCode?: string
   ) => Promise<void>;
-  updateUser: (userData: User) => void; // New method
+  updateUser: (userData: User) => void;
 }
 
 export const AuthContext = createContext<AuthContextProps>({
@@ -43,7 +42,7 @@ export const AuthContext = createContext<AuthContextProps>({
   signIn: async () => {},
   signOut: () => {},
   signUp: async () => {},
-  updateUser: () => {}, // Initialize as empty function
+  updateUser: () => {},
 });
 
 interface AuthProviderProps {
@@ -55,7 +54,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Load user and apiKey from localStorage on mount
+  // Load thje user and apiKey from localStorage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const storedApiKey = localStorage.getItem('apiKey');
@@ -75,7 +74,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       const { apiKey } = response.data;
 
-      // Fetch user details
       const userResponse = await axios.get('http://localhost:5003/api/users/me', {
         headers: { 'x-api-key': apiKey },
       });
@@ -107,11 +105,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     secretCode?: string
   ) => {
     try {
-      // Verify secret code for Manager/Admin roles
       if ((role === 'manager' || role === 'admin') && secretCode !== 'SECRET_CODE') { //? THIS IS THE SECRET CODE BEING UISED IN ADMIN PANEL AND IN SIGN UP. CHANGE THIS MAYBE TO ENV VARIABLE and add to .env file
-        throw new Error('Invalid secret code for the selected role');
+        throw new Error('Invalid secret code for the selected role'); //! THW SECRET CODE IS SECRET_CODE
       }
-
       await axios.post('http://localhost:5003/api/users/register', {
         firstName,
         lastName,
@@ -120,14 +116,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         role,
       });
 
-      // Automatically sign in the user after registration
       await signIn(email, password);
     } catch (error) {
       throw error;
     }
   };
 
-  // New method to update user
   const updateUser = (userData: User) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));

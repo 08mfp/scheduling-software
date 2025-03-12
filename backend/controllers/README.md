@@ -751,7 +751,7 @@ Each `.js` file within the `controllers` directory defines a set of controller f
      }
      ```
 
-   > **Note:** This endpoint is a placeholder and should be implemented with the actual scheduling logic.
+   > **Note:** This endpoint is a placeholder.
 
 ---
 

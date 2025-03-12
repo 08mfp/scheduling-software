@@ -1,4 +1,3 @@
-// backend/server/server.js
 /**
  * @module backend/server/server
  * @description This module is the entry point for the server.
@@ -7,18 +6,13 @@
  * @authors github.com/08mfp
  */
 
-const express = require('express'); // Import express server
-const mongoose = require('mongoose'); // used for MongoDB
-const bodyParser = require('body-parser'); // used to parse incoming request bodies
-const cors = require('cors'); // used to enable Cross-Origin Resource Sharing (and authentication)
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const cors = require('cors');
 require('dotenv').config();
-
-// Import Middleware for logging to console
 const logger = require('../middleware/logger');
 const { morganMiddleware } = require('../middleware/logger');
-
-
-// Routes
 const teamRoutes = require('../routes/teamRoutes');
 const stadiumRoutes = require('../routes/stadiumRoutes');
 const playerRoutes = require('../routes/playerRoutes');
@@ -30,13 +24,11 @@ const userRoutes = require('../routes/userRoutes');
 const adminRoutes = require('../routes/adminRoutes');
 
 
-const app = express(); // Initialize express server and store in app
-app.use(bodyParser.json()); // Parse incoming request bodies
-app.use(cors()); // Enable Cross-Origin Resource Sharing //! ADD AUTHENTICATION HERE
-// app.use(logger); // Server logging middleware go comsole
+const app = express();
+app.use(bodyParser.json());
+app.use(cors()); //! ADD AUTHENTICATION HERE
+// app.use(logger); 
 app.use(morganMiddleware);
-
-// Routes
 app.use('/api/teams', teamRoutes);
 app.use('/api/stadiums', stadiumRoutes);
 app.use('/api/players', playerRoutes);
@@ -49,7 +41,6 @@ app.use('/api/manual-fixtures', manualFixtureRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Connect to MongoDB
 mongoose
   .connect('mongodb://localhost:27017/sixnations', {
     useNewUrlParser: true, //! wht is this?

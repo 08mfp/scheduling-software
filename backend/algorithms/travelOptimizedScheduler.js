@@ -1,557 +1,470 @@
- // backend/algorithms/travelOptimizedScheduler.js
 /**
  * @module backend/algorithms/travelOptimizedScheduler
- * @description This module contains the algorithm for generating fixtures in a way where total travel distance is minimized.
- * @description It works by generating all unique matchups and then assigning home and away teams, then reordering the fixtures to reduce travel.
- * @api NONE
- * @version 1.0.0
- * @authors github.com/08mfp
+ * @description
+ * Generates fixtures while attempting to minimize total travel distance.
+ * Key features:
+ *   - Up to 1000 attempts (random + minor local search)
+ *   - Forcing teams home on rest weeks and after final round
+ *   - Tolerance-based location matching for summary logs
+ *   - Clear "Last Season" references to avoid undefined vs undefined
+ *  @version 3.4.0
  */
-
-//! Things to test:
-//! all teamss play once per round
-//! each team plays every other team once
-//! each team everty other team once only
-//! each team plays at least 2 home and 2 away games (3H 2A or 2H 3A)
-//! make sure fixtures correct alternate home and away based on previous year
-//! make sure all fixtures for rounds are on the same weekend (in feb to march). No two rounds on same weekend. no overlapping fixtures.
-//! fix date and timing logic 
-
-//? CODE IMPROVEMENT IDEAS:
-//? 1. Give user option to incorporate rest weeks (e.g. after round 2 and 4)
-//? 2. Add tests for all functions and algorithm overall
-//? 3. after provisional fixtures are generated, allow user to manually edit fixtures (using provisional fixture functioinality). then send to final. 
-//? ^MIGHT BE DIFFICULT AS IT WOULD VALIDATE CONSTRAINTS. MAYVE ALLOW TO EDIT DATES AND TIMES ONLY (WITHIN ROUND WEEKEND)
-//? 4.  show on front end the summary of the fixtures generated (and have a checker for all constraints)
-
-//* RESTRICT FROM FRONT END SO THT BACK END ONLY RECEIVES 6 TEAMS
-
-//TODO: ALGORITHM IS WORKING BUT NEED TO TEST THAT DISTANCES BETWEEN LOCATIONS ARE CORRECT. AND MANUALLY FIND THE BEST TRAVEL ROUTE for 2024 and 2025 FOR TESTING.
-//TODO: ADD DOCUMENTATION FOR ALL env for google maps api
-//* ERROR WITH DISTANCE CALCULATION. FIX THIS. READ BELOW.
-//! ISSUE AS calculateDistanceBetweenCoordinates uses the Haversine formula, whilst getDistanceBetweenLocations uses the Google Maps API. 
-//! This may cause discrepancies in the distances calculated.
-//! What if travel needs to be over 1000km? Google Maps API may be better for this.
-//! What if its less work to fly, haversine doesnt know this
-//! can come up with eco friendly solution, but lowest distance could be via plane and not bus which would be more eco friendly
-//! rework the algorithm to use google maps api for all distances or haversine for all distances. 
-//! MAYBE JUST USE GOOGLE MAPS API FOR ALL DISTANCES (as it works for over countries) and then use Directions Service to get more travel details.
 
 const Stadium = require('../models/Stadium');
 const Fixture = require('../models/Fixture');
 const Team = require('../models/Team');
-const axios = require('axios');
 const NodeCache = require('node-cache');
-const { Client } = require('@googlemaps/google-maps-services-js'); // Google Maps API Client (used for distance matrix)
-const client = new Client({}); // Initialize Google Maps API Client
 require('dotenv').config();
 
-// Initialize cache with a TTL of 24 hours
-const distanceCache = new NodeCache({ stdTTL: 86400 }); // 24 hours so that we don't have to fetch distances every time
+const distanceCache = new NodeCache({ stdTTL: 86400 });
 
-/**
- * Generate fixtures while minimizing total travel distance over the season.
- *
- * @param {Array} teams - List of exactly 6 team objects with stadiums populated.
- * @param {Number} season - The season year.
- * @returns {Object} - An object containing fixtures and summary.
- */
-async function generateTravelOptimizedFixtures(teams, season) {
-  console.log('===== Starting Fixture Generation ====='); //! This is for console logging only
 
-  // Validation: Ensure there are exactly 6 teams given 
+async function generateTravelOptimizedFixtures(teams, season, restWeeks = []) {
+  console.log('===== Starting Travel-Optimized Fixture Generation =====');
+
   if (teams.length !== 6) {
-    throw new Error('The algorithm requires exactly 6 teams.'); //! This is for console logging only
+    throw new Error('Requires exactly 6 teams for travel-optimized scheduling.');
   }
-  console.log(`Validated: ${teams.length} teams provided.`); //! This is for console logging only
 
-  // Fetch previous season fixtures to apply the alternating venue rule
-  console.log('Fetching previous season fixtures...');
+  if (!restWeeks || restWeeks.length === 0) {
+    restWeeks = [2, 4];
+  }
+
   const previousSeasonFixtures = await Fixture.find({ season: season - 1 })
     .populate('homeTeam', '_id')
     .populate('awayTeam', '_id')
     .lean();
-  console.log(`Fetched ${previousSeasonFixtures.length} fixtures from season ${season - 1}.`); //! This is for console logging only
 
-  // Build a lookup map for previous fixtures
   const previousFixtureMap = new Map();
-  for (const fixture of previousSeasonFixtures) { 
-    const homeId = fixture.homeTeam._id.toString(); 
-    const awayId = fixture.awayTeam._id.toString();
-    const key = [homeId, awayId].sort().join('-'); // sot and join to make sure the key is always in the same order
-    previousFixtureMap.set(key, fixture);
+  for (let fix of previousSeasonFixtures) {
+    const hId = fix.homeTeam._id.toString();
+    const aId = fix.awayTeam._id.toString();
+    const key = [hId, aId].sort().join('-');
+    previousFixtureMap.set(key, fix);
   }
 
-  // Precompute Distances Between Stadiums
-  const { distances, distanceMessages } = await precomputeDistances(teams); 
-  console.log('All distances have been precomputed.');
+  const { distances, distanceMessages } = await precomputeDistances(teams);
 
-  // Run the algorithm multiple times and keep the best result
-  const maxAttempts = 10000; //! EXTREMELY HIGH NUMBER OF ATTEMPTS.
+  const maxAttempts = 100000; //! from 10 to 1000
   let bestResult = null;
-  let minimalTotalDistance = Infinity;
+  let minTravel = Infinity;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     console.log(`\n=== Attempt ${attempt} ===`);
-
     let result;
     if (previousSeasonFixtures.length > 0) {
-      // Previous season data exists (alternating venue rule)
-      result = await generateFixturesWithPreviousData( 
+      result = await generateFixturesWithPreviousData(
         teams,
         season,
         previousFixtureMap,
         distances,
-        distanceMessages
+        distanceMessages,
+        restWeeks
       );
     } else {
-      // No previous season data
       result = await generateFixturesWithoutPreviousData(
         teams,
         season,
         distances,
-        distanceMessages
+        distanceMessages,
+        restWeeks
       );
     }
 
-    const totalTravelDistance = result.totalTravelDistance;
-    console.log(`Total Travel Distance for Attempt ${attempt}: ${totalTravelDistance.toFixed(2)} km`);
-
-    if (totalTravelDistance < minimalTotalDistance) {
-      minimalTotalDistance = totalTravelDistance; // this is the best result so far
+    const total = result.totalTravelDistance;
+    console.log(`Total Travel Distance (Attempt ${attempt}): ${total.toFixed(2)} km`);
+    if (total < minTravel) {
+      minTravel = total;
       bestResult = result;
-      console.log(`New best result found on attempt ${attempt}.`);
+      console.log(`New best found on attempt ${attempt}.`);
     }
   }
 
-  console.log('===== Fixture Generation Complete =====\n');
+  console.log('===== Travel-Optimized Scheduling Complete =====\n');
   return bestResult;
 }
 
-/**
- * Generate fixtures when previous season data is available.
- *
- * @param {Array} teams - List of team objects.
- * @param {Number} season - The season year.
- * @param {Map} previousFixtureMap - Map of previous season fixtures.
- * @param {Object} distances - Precomputed distances between teams from Google Maps API.
- * @param {Array} distanceMessages - Messages from distance calculations.
- * @returns {Object} - An object containing fixtures, summary, and totalTravelDistance.
- */
 async function generateFixturesWithPreviousData(
   teams,
   season,
   previousFixtureMap,
   distances,
-  distanceMessages
+  distanceMessages,
+  restWeeks
 ) {
-  console.log('Generating fixtures using previous season data...');
+  console.log('Generating with previous-season data...');
 
-  // Step 1: Generate Round-Robin Matchups (All Unique Matchups)
+  // 1) Generate round-robin matchups
   const initialFixtures = generateRoundRobinMatchups(teams);
-  console.log(`Generated ${initialFixtures.length} initial fixtures.`);
 
-  // Step 2: Optimize Home and Away Assignments to Alternate Venues
+  // 2) Optimize home/away
   const { optimizedFixtures, matchupChanges } = optimizeHomeAwayAssignments(
     initialFixtures,
     previousFixtureMap,
-    teams,
-    distances
-  );
-  console.log('Home and away assignments optimized.');
-
-  // Step 3: Assign Fixtures to Rounds with Flexibility (Allow Swapping)
-  const { scheduledFixtures } = assignFixturesToRoundsOptimized(optimizedFixtures, teams, distances);
-  console.log('Fixtures have been assigned to rounds with optimization.');
-
-  // Step 4: Schedule Dates and Times Considering Sequential Games 
-  const finalScheduledFixtures = await scheduleFixturesOptimized(scheduledFixtures, season, distances);
-  console.log('Dates and times scheduled with consideration for sequential games.');
-
-  // Step 5: Calculate Total Travel Distances (Per Team and Per Match)
-  const { teamTravelDistances, matchTravelDistances } = calculateTeamTravelDistances(
-    finalScheduledFixtures,
-    distances,
     teams
   );
-  console.log('Total travel distances calculated.');
 
-  // Step 6: Build Summary (Includes Matchup Changes, for front end)
-  const totalTravelDistance = Object.values(teamTravelDistances).reduce(
-    (sum, distance) => sum + distance,
-    0
+  // 3) Assign to rounds randomly + local search
+  let { scheduledFixtures } = assignFixturesToRoundsOptimized(optimizedFixtures, teams);
+  scheduledFixtures = localSearchRoundSwap(scheduledFixtures, teams, distances);
+
+  // 4) schedule day/time with rest weeks
+  const finalScheduled = await scheduleFixturesOptimized(
+    scheduledFixtures,
+    season,
+    distances,
+    restWeeks
   );
+
+  // 5) Calculate travel
+  const { teamTravelDistances, matchTravelDistances } = calculateTeamTravelDistances(
+    finalScheduled,
+    distances,
+    teams,
+    restWeeks
+  );
+
+  const total = Object.values(teamTravelDistances).reduce((a, b) => a + b, 0);
+
+  // 6) Build summary
   const summary = buildSummary(
     teams,
-    finalScheduledFixtures,
+    finalScheduled,
     distanceMessages,
     teamTravelDistances,
     matchTravelDistances,
     matchupChanges,
-    totalTravelDistance
+    total,
+    restWeeks
   );
-  console.log('Summary built.');
 
-  // Step 7: Format Final Fixtures List (For Database Storage)
-  const formattedFixtures = finalScheduledFixtures.map((fixture) => ({
-    round: fixture.round,
-    date: fixture.date,
-    homeTeam: fixture.homeTeam._id,
-    awayTeam: fixture.awayTeam._id,
-    stadium: fixture.stadium ? fixture.stadium._id : null,
-    location: fixture.location,
+  // 7) Format for DB
+  const formattedFixtures = finalScheduled.map((fix) => ({
+    round: fix.round,
+    date: fix.date,
+    homeTeam: fix.homeTeam._id,
+    awayTeam: fix.awayTeam._id,
+    stadium: fix.stadium ? fix.stadium._id : null,
+    location: fix.location,
     season,
   }));
-  console.log('Final fixtures formatted.');
 
-  return { fixtures: formattedFixtures, summary, totalTravelDistance };
+  return { fixtures: formattedFixtures, summary, totalTravelDistance: total };
 }
 
-/**
- * Generate fixtures when no previous season data is available.
- *
- * @param {Array} teams - List of team objects.
- * @param {Number} season - The season year.
- * @param {Object} distances - Precomputed distances between teams from Google Maps API.
- * @param {Array} distanceMessages - Messages from distance calculations.
- * @returns {Object} - An object containing fixtures, summary, and totalTravelDistance.
- */
 async function generateFixturesWithoutPreviousData(
   teams,
   season,
   distances,
-  distanceMessages
+  distanceMessages,
+  restWeeks
 ) {
-  console.log('Generating fixtures without previous season data...');
+  console.log('Generating with NO previous-season data...');
 
-  // Step 1: Generate Round-Robin Matchups (All Unique Matchups)
+  // 1) Round-robin
   const initialFixtures = generateRoundRobinMatchups(teams);
-  console.log(`Generated ${initialFixtures.length} initial fixtures.`);
 
-  // Step 2: Optimize Home and Away Assignments to Alternate Venues
+  // 2) Optimize home/away (if no previousMap then pass null)
   const { optimizedFixtures, matchupChanges } = optimizeHomeAwayAssignments(
     initialFixtures,
-    null, // No previous season data
-    teams,
-    distances
-  );
-  console.log('Home and away assignments optimized.');
-
-  // Step 3: Assign Fixtures to Rounds with Flexibility (Allow Swapping)
-  const { scheduledFixtures } = assignFixturesToRoundsOptimized(optimizedFixtures, teams, distances);
-  console.log('Fixtures have been assigned to rounds with optimization.');
-
-  // Step 4: Schedule Dates and Times Considering Sequential Games 
-  const finalScheduledFixtures = await scheduleFixturesOptimized(scheduledFixtures, season, distances);
-  console.log('Dates and times scheduled with consideration for sequential games.');
-
-  // Step 5: Calculate Total Travel Distances (Per Team and Per Match)
-  const { teamTravelDistances, matchTravelDistances } = calculateTeamTravelDistances(
-    finalScheduledFixtures,
-    distances,
+    null,
     teams
   );
-  console.log('Total travel distances calculated.');
 
-  // Step 6: Build Summary (Includes Matchup Changes, for front end)
-  const totalTravelDistance = Object.values(teamTravelDistances).reduce(
-    (sum, distance) => sum + distance,
-    0
+  // 3) Assign to rounds randomly + local search
+  let { scheduledFixtures } = assignFixturesToRoundsOptimized(optimizedFixtures, teams);
+  scheduledFixtures = localSearchRoundSwap(scheduledFixtures, teams, distances);
+
+  // 4) schedule times
+  const finalScheduled = await scheduleFixturesOptimized(
+    scheduledFixtures,
+    season,
+    distances,
+    restWeeks
   );
+
+  // 5) calc travel
+  const { teamTravelDistances, matchTravelDistances } = calculateTeamTravelDistances(
+    finalScheduled,
+    distances,
+    teams,
+    restWeeks
+  );
+
+  const total = Object.values(teamTravelDistances).reduce((a, b) => a + b, 0);
+
+  // 6) summary
   const summary = buildSummary(
     teams,
-    finalScheduledFixtures,
+    finalScheduled,
     distanceMessages,
     teamTravelDistances,
     matchTravelDistances,
     matchupChanges,
-    totalTravelDistance
+    total,
+    restWeeks
   );
-  console.log('Summary built.');
 
-  // Step 7: Format Final Fixtures List (For Database Storage)
-  const formattedFixtures = finalScheduledFixtures.map((fixture) => ({
-    round: fixture.round,
-    date: fixture.date,
-    homeTeam: fixture.homeTeam._id,
-    awayTeam: fixture.awayTeam._id,
-    stadium: fixture.stadium ? fixture.stadium._id : null,
-    location: fixture.location,
+  // 7) format
+  const formattedFixtures = finalScheduled.map((fix) => ({
+    round: fix.round,
+    date: fix.date,
+    homeTeam: fix.homeTeam._id,
+    awayTeam: fix.awayTeam._id,
+    stadium: fix.stadium ? fix.stadium._id : null,
+    location: fix.location,
     season,
   }));
-  console.log('Final fixtures formatted.');
 
-  return { fixtures: formattedFixtures, summary, totalTravelDistance };
+  return { fixtures: formattedFixtures, summary, totalTravelDistance: total };
 }
 
-/**
- * Generate Round-Robin Matchups for an even number of teams using the circle method. fisher yates shuffle or 
- *
- * @param {Array} teams - List of team objects.
- * @returns {Array} - List of fixture objects with homeTeam and awayTeam.
- */
+
 function generateRoundRobinMatchups(teams) {
-  const numTeams = teams.length;
-  if (numTeams % 2 !== 0) { //! maybe just be if numTeams !== 6
-    throw new Error('Round-Robin scheduling requires an even number of teams.');
-  }
+  const numTeams = teams.length; 
+  const totalRounds = numTeams - 1; 
+  const halfSize = numTeams / 2; 
 
-  const totalRounds = numTeams - 1; //! will break if numTeams !== 6
-  const halfSize = numTeams / 2; //! will break if numTeams !== 6
-
-  // Create a list excluding the first team so that we can rotate the teams
-  const teamsList = teams.slice(1);
-
+  // Circle method
+  const list = teams.slice(1);
   const rounds = [];
-
-  for (let round = 0; round < totalRounds; round++) {
+  for (let r = 0; r < totalRounds; r++) {
     const fixtures = [];
-    const teamCount = teamsList.length;
-
-    // Pair teams
     for (let i = 0; i < halfSize; i++) {
-      const home = i === 0 ? teams[0] : teamsList[i - 1]; // First team is always home
-      const away = teamsList[teamCount - i - 1]; // Last team is always away
+      const home = i === 0 ? teams[0] : list[i - 1];
+      const away = list[list.length - i - 1];
       fixtures.push({ homeTeam: home, awayTeam: away });
     }
-
     rounds.push(fixtures);
-
-    // Rotate teams for next round (except the first team)
-    teamsList.unshift(teamsList.pop()); // Move last team to second position
+    list.unshift(list.pop());
   }
 
-  // Flatten all rounds into a single list of fixtures
   const allFixtures = [];
   rounds.forEach((roundFixtures, roundIndex) => {
-    roundFixtures.forEach((fixture) => {
+    roundFixtures.forEach((f) => {
       allFixtures.push({
-        homeTeam: fixture.homeTeam,
-        awayTeam: fixture.awayTeam,
-        round: roundIndex + 1, // Temporarily assign round number
+        homeTeam: f.homeTeam,
+        awayTeam: f.awayTeam,
+        round: roundIndex + 1,
       });
     });
   });
-
   return allFixtures;
 }
 
-/**
- * Optimize home and away assignments to always alternate venues from the previous season. (RULE)
- *
- * @param {Array} fixtures - List of fixtures with homeTeam and awayTeam.
- * @param {Map|null} previousFixtureMap - Map of previous season fixtures or null.
- * @param {Array} teams - List of team objects.
- * @param {Object} distances - Precomputed distances between teams.
- * @returns {Object} - Optimized fixtures and matchup changes.
- */
-function optimizeHomeAwayAssignments(fixtures, previousFixtureMap, teams, distances) {
-  console.log('Optimizing home and away assignments to always alternate venues...');
+function assignFixturesToRoundsOptimized(fixtures, teams) {
+  const totalRounds = 5;
+  const rounds = Array.from({ length: totalRounds }, () => []);
+  const teamRoundMap = {};
+  teams.forEach((t) => (teamRoundMap[t._id.toString()] = new Set()));
 
-  const matchupChanges = []; // Record changes made to matchups
-  const teamIds = teams.map((team) => team._id.toString());
+  const all = shuffleArray([...fixtures]);
+  const maxReset = 1000;
+  let resetCount = 0;
 
-  // Initialize home and away counts
-  const homeCounts = {};
-  const awayCounts = {};
-  teamIds.forEach((teamId) => {
-    homeCounts[teamId] = 0; 
-    awayCounts[teamId] = 0;
-  });
+  while (resetCount < maxReset) {
+    rounds.forEach((r) => r.splice(0, r.length));
+    Object.values(teamRoundMap).forEach((s) => s.clear());
 
-  // Initialize assignments
-  const optimizedFixtures = []; 
-
-  // Shuffle fixtures for randomness
-  fixtures = shuffleArray(fixtures);
-
-  // For each fixture, decide on home/away assignment
-  fixtures.forEach((fixture) => {
-    const homeTeamId = fixture.homeTeam._id.toString();
-    const awayTeamId = fixture.awayTeam._id.toString();
-    const key = [homeTeamId, awayTeamId].sort().join('-'); // sort to make sure the key is always in the same order
-
-    let selectedOption;
-
-    if (previousFixtureMap && previousFixtureMap.has(key)) { // if there is previous season data
-      // Previous fixture exists between these teams
-      const previousFixture = previousFixtureMap.get(key); // get the previous fixture
-      const previousHomeTeamId = previousFixture.homeTeam._id.toString(); // get the previous home team id
-
-      // Alternate the venue compared to last season
-      if (previousHomeTeamId === fixture.homeTeam._id.toString()) { // if the previous home team is the same as the current home team
-        // Swap home and away
-        selectedOption = {
-          homeTeam: fixture.awayTeam,
-          awayTeam: fixture.homeTeam,
-        };
-      } else {
-        // Keep home and away as is
-        selectedOption = {
-          homeTeam: fixture.homeTeam,
-          awayTeam: fixture.awayTeam,
-        };
-      }
-
-      matchupChanges.push({ // record the change made
-        previousMatchup: `${getTeamNameById(teams, previousFixture.homeTeam._id)} vs ${getTeamNameById( 
-          teams,
-          previousFixture.awayTeam._id
-        )}`,
-        currentMatchup: `${selectedOption.homeTeam.teamName} vs ${selectedOption.awayTeam.teamName}`,
-        note: 'Venue alternated from previous season.',
-      });
-    } else {
-      // No previous season data, assign while balancing home/away counts
-      const homeCountHomeTeam = homeCounts[homeTeamId]; // get the home count for the home team
-      const homeCountAwayTeam = homeCounts[awayTeamId]; // get the home count for the away team
-      const awayCountHomeTeam = awayCounts[homeTeamId]; // get the away count for the home team
-      const awayCountAwayTeam = awayCounts[awayTeamId]; // get the away count for the away team
-
-      const canHomeTeamBeHome = homeCountHomeTeam < 3 && awayCountAwayTeam < 3; // check if the home team can be home (only 3 home games allowed)
-      const canAwayTeamBeHome = homeCountAwayTeam < 3 && homeCountHomeTeam < 3; // check if the away team can be home (only 3 home games allowed)
-
-      if (canHomeTeamBeHome && (!canAwayTeamBeHome || homeCountHomeTeam <= homeCountAwayTeam)) { // if the home team can be home and the away team cannot be home or the home team has less home games than the away team
-        selectedOption = {
-          homeTeam: fixture.homeTeam,
-          awayTeam: fixture.awayTeam,
-        };
-      } else if (canAwayTeamBeHome) { // if the away team can be home
-        selectedOption = {
-          homeTeam: fixture.awayTeam,
-          awayTeam: fixture.homeTeam,
-        };
-      } else {
-        // If both options exceed home/away counts, assign randomly
-        if (Math.random() < 0.5) { 
-          selectedOption = {
-            homeTeam: fixture.homeTeam,
-            awayTeam: fixture.awayTeam,
-          };
-        } else {
-          selectedOption = {
-            homeTeam: fixture.awayTeam,
-            awayTeam: fixture.homeTeam,
-          };
+    let success = true;
+    for (let fix of all) {
+      let placed = false;
+      for (let r = 1; r <= totalRounds; r++) {
+        const hId = fix.homeTeam._id.toString();
+        const aId = fix.awayTeam._id.toString();
+        if (!teamRoundMap[hId].has(r) && !teamRoundMap[aId].has(r)) {
+          fix.round = r;
+          rounds[r - 1].push(fix);
+          teamRoundMap[hId].add(r);
+          teamRoundMap[aId].add(r);
+          placed = true;
+          break;
         }
       }
-
-      matchupChanges.push({ // record the change made
-        previousMatchup: 'No previous matchup',
-        currentMatchup: `${selectedOption.homeTeam.teamName} vs ${selectedOption.awayTeam.teamName}`,
-        note: 'Venue assigned while balancing home and away counts.',
-      });
+      if (!placed) {
+        success = false;
+        break;
+      }
     }
-
-    // Update counts
-    const selectedHomeTeamId = selectedOption.homeTeam._id.toString();
-    const selectedAwayTeamId = selectedOption.awayTeam._id.toString();
-    homeCounts[selectedHomeTeamId] += 1;
-    awayCounts[selectedAwayTeamId] += 1;
-
-    // Assign stadium and location
-    const homeTeamStadium = selectedOption.homeTeam.stadium;
-    if (!homeTeamStadium) { // if the stadium is not found
-      console.warn(
-        `Stadium not found for team ${selectedOption.homeTeam.teamName}. Assigning 'Unknown' as location.`
-      );
-      selectedOption.stadium = null; // assign null to stadium
-      selectedOption.location = 'Unknown'; // assign unknown to location
+    if (success) {
+      return { scheduledFixtures: rounds.flat() };
     } else {
-      selectedOption.stadium = homeTeamStadium;
-      selectedOption.location = homeTeamStadium.stadiumCity;
+      resetCount++;
+      shuffleArray(all);
     }
-
-    optimizedFixtures.push(selectedOption);
-  });
-
-  // Ensure home and away counts are balanced
-  balanceHomeAwayCounts(optimizedFixtures, homeCounts, awayCounts, teams, previousFixtureMap);
-
-  console.log('Home and away assignments have been optimized with venues alternated.');
-  return { optimizedFixtures, matchupChanges };
+  }
+  console.warn('assignFixturesToRoundsOptimized: reached max reset attempts');
+  return { scheduledFixtures: rounds.flat() };
 }
 
-/**
- * Balance home and away counts to ensure each team has at least 2 home and 2 away games,
- * while respecting the venue alternation from the previous season.
- *
- * @param {Array} fixtures - List of fixtures.
- * @param {Object} homeCounts - Home game counts per team.
- * @param {Object} awayCounts - Away game counts per team.
- * @param {Array} teams - List of team objects.
- * @param {Map} previousFixtureMap - Map of previous season fixtures.
- */
-function balanceHomeAwayCounts(fixtures, homeCounts, awayCounts, teams, previousFixtureMap) {
-  console.log('Balancing home and away counts while respecting venue alternation...');
-  let adjustmentsMade;
+function optimizeHomeAwayAssignments(fixtures, previousFixtureMap, teams) {
+  const matchupChanges = [];
+  fixtures = shuffleArray(fixtures);
 
-  do {
-    adjustmentsMade = false;
+  const homeCounts = {};
+  const awayCounts = {};
+  teams.forEach((t) => {
+    homeCounts[t._id.toString()] = 0;
+    awayCounts[t._id.toString()] = 0;
+  });
 
-    teams.forEach((team) => {
-      const teamId = team._id.toString();
-      if (homeCounts[teamId] < 2) {
-        // Find a fixture where the team is away and can swap without violating venue alternation
-        for (let fixture of fixtures) {
-          const homeTeamId = fixture.homeTeam._id.toString();
-          const awayTeamId = fixture.awayTeam._id.toString();
-          const key = [homeTeamId, awayTeamId].sort().join('-');
+  const optimized = [];
 
-          if (awayTeamId === teamId && homeCounts[homeTeamId] > 2) { // if the team is away and the home team has more than 2 home games
-            // Check if swapping would violate venue alternation
-            let canSwap = true;
-            if (previousFixtureMap && previousFixtureMap.has(key)) { // if there is previous season data
-              const previousFixture = previousFixtureMap.get(key); // get the previous fixture
-              const previousHomeTeamId = previousFixture.homeTeam._id.toString(); 
-              // After swapping, check if the new home team is the same as last season
-              if (previousHomeTeamId === teamId) { // if the previous home team is the same as the current team
-                canSwap = false;
+  for (let fix of fixtures) {
+    const hId = fix.homeTeam._id.toString();
+    const aId = fix.awayTeam._id.toString();
+    const key = [hId, aId].sort().join('-');
+
+    let chosen = null;
+    let note = '';
+    let prevDescription = 'No previous matchup';
+    if (previousFixtureMap && previousFixtureMap.has(key)) {
+      const prevFix = previousFixtureMap.get(key);
+      const prevHomeName = getTeamNameById(teams, prevFix.homeTeam._id);
+      const prevAwayName = getTeamNameById(teams, prevFix.awayTeam._id);
+      prevDescription = `Last Season: ${prevHomeName} vs ${prevAwayName}`;
+
+      const prevHomeId = prevFix.homeTeam._id.toString();
+      // If last-year home = this-year home then we flip
+      if (prevHomeId === hId) {
+        chosen = { homeTeam: fix.awayTeam, awayTeam: fix.homeTeam };
+        note = 'Flipped from last year';
+      } else {
+        chosen = { homeTeam: fix.homeTeam, awayTeam: fix.awayTeam };
+        note = 'Maintained (already alternated) from last year';
+      }
+    } else {
+      // if no previous we do normal approach
+      chosen = decideHomeAwayNoPrevious(fix, homeCounts, awayCounts);
+      note = (chosen.homeTeam._id.toString() === fix.homeTeam._id.toString())
+        ? 'Assigned (original) to manage constraints'
+        : 'Assigned (flipped) to manage constraints';
+    }
+
+    const hid2 = chosen.homeTeam._id.toString();
+    const aid2 = chosen.awayTeam._id.toString();
+    homeCounts[hid2]++;
+    awayCounts[aid2]++;
+
+    const st = chosen.homeTeam.stadium;
+    if (st) {
+      chosen.stadium = st;
+      chosen.location = st.stadiumCity;
+    } else {
+      chosen.stadium = null;
+      chosen.location = 'Unknown';
+    }
+
+    matchupChanges.push({
+      previousMatchup: prevDescription,
+      currentMatchup: `${chosen.homeTeam.teamName} vs ${chosen.awayTeam.teamName}`,
+      note,
+    });
+
+    optimized.push(chosen);
+  }
+
+  balanceHomeAwayCounts(optimized, homeCounts, awayCounts, teams, previousFixtureMap);
+
+  return { optimizedFixtures: optimized, matchupChanges };
+}
+
+function decideHomeAwayNoPrevious(fixture, homeCounts, awayCounts) {
+  const hId = fixture.homeTeam._id.toString();
+  const aId = fixture.awayTeam._id.toString();
+  const homeCountH = homeCounts[hId];
+  const homeCountA = homeCounts[aId];
+
+  if (homeCountH < 3 && (homeCountA >= 3 || homeCountH <= homeCountA)) {
+    return { homeTeam: fixture.homeTeam, awayTeam: fixture.awayTeam };
+  } else {
+    return { homeTeam: fixture.awayTeam, awayTeam: fixture.homeTeam };
+  }
+}
+
+function balanceHomeAwayCounts(
+  fixtures,
+  homeCounts,
+  awayCounts,
+  teams,
+  previousFixtureMap
+) {
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let t of teams) {
+      const tid = t._id.toString();
+      // if team has <2 home then we find a fixture to flip
+      if (homeCounts[tid] < 2) {
+        for (let fix of fixtures) {
+          if (fix.awayTeam._id.toString() === tid) {
+            const homeId = fix.homeTeam._id.toString();
+            if (homeCounts[homeId] > 2 && awayCounts[tid] > 2) {
+              // check if flipping breaks last-year rule
+              if (canFlipFixture(fix, teams, previousFixtureMap)) {
+                homeCounts[homeId]--;
+                awayCounts[tid]--;
+                homeCounts[tid]++;
+                awayCounts[homeId]++;
+                const oldHome = fix.homeTeam;
+                fix.homeTeam = fix.awayTeam;
+                fix.awayTeam = oldHome;
+                const st = fix.homeTeam.stadium;
+                fix.stadium = st || null;
+                fix.location = st ? st.stadiumCity : 'Unknown';
+                changed = true;
+                break;
               }
-            }
-            if (canSwap) {
-              // Swap home and away
-              if (homeCounts[teamId] + 1 <= 3 && awayCounts[homeTeamId] + 1 <= 3) { // if the team has less than 3 home games and the home team has less than 3 away games
-                // Swap home and away
-                [fixture.homeTeam, fixture.awayTeam] = [fixture.awayTeam, fixture.homeTeam]; 
-                // Update counts
-                homeCounts[teamId] += 1;
-                awayCounts[teamId] -= 1;
-                homeCounts[homeTeamId] -= 1;
-                awayCounts[homeTeamId] += 1;
-                adjustmentsMade = true;
-              }
-
-              // Update stadium and location (same as other methid)
-              const homeTeamStadium = fixture.homeTeam.stadium;
-              if (!homeTeamStadium) {
-                console.warn(
-                  `Stadium not found for team ${fixture.homeTeam.teamName}. Assigning 'Unknown' as location.`
-                );
-                fixture.stadium = null;
-                fixture.location = 'Unknown';
-              } else {
-                fixture.stadium = homeTeamStadium;
-                fixture.location = homeTeamStadium.stadiumCity;
-              }
-
-              adjustmentsMade = true; // adjustments made
-              break;
             }
           }
         }
       }
-    });
-  } while (adjustmentsMade); // keep doing this until no adjustments are made
 
-  console.log('Home and away counts balanced.');
+      // if team has <2 away then find a fixture to flip
+      if (awayCounts[tid] < 2) {
+        for (let fix of fixtures) {
+          if (fix.homeTeam._id.toString() === tid) {
+            const awayId = fix.awayTeam._id.toString();
+            if (homeCounts[tid] > 2 && awayCounts[awayId] > 2) {
+              if (canFlipFixture(fix, teams, previousFixtureMap)) {
+                homeCounts[tid]--;
+                awayCounts[awayId]--;
+                homeCounts[awayId]++;
+                awayCounts[tid]++;
+                const oldHome = fix.homeTeam;
+                fix.homeTeam = fix.awayTeam;
+                fix.awayTeam = oldHome;
+                const st = fix.homeTeam.stadium;
+                fix.stadium = st || null;
+                fix.location = st ? st.stadiumCity : 'Unknown';
+                changed = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+function canFlipFixture(fix, teams, previousFixtureMap) {
+  const oldHomeId = fix.homeTeam._id.toString();
+  const oldAwayId = fix.awayTeam._id.toString();
+  const key = [oldHomeId, oldAwayId].sort().join('-');
+  if (!previousFixtureMap || !previousFixtureMap.has(key)) {
+    return true;
+  }
+  const prev = previousFixtureMap.get(key);
+  const prevHomeId = prev.homeTeam._id.toString();
+  if (prevHomeId === oldAwayId) {
+    return false;
+  }
+  return true;
 }
 
 /**
- * Shuffle an array in place. Fisher-Yates algorithm.
- *
- * @param {Array} array - The array to shuffle.
- * @returns {Array} - The shuffled array.
+ * Fisher-Yates shuffle
  */
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -561,499 +474,343 @@ function shuffleArray(array) {
   return array;
 }
 
-/**
- * Assign fixtures to rounds while allowing swapping between rounds to minimize travel.
- *
- * @param {Array} fixtures - List of fixtures with homeTeam and awayTeam.
- * @param {Array} teams - List of team objects.
- * @param {Object} distances - Precomputed distances between teams.
- * @returns {Object} - Object containing scheduledFixtures.
- */
-function assignFixturesToRoundsOptimized(fixtures, teams, distances) {
-  console.log('Assigning fixtures to rounds with optimization...');
+function getWeekStartDate(date) {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() - copy.getDay());
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
 
-  const totalRounds = 5; // For 6 teams
-  const rounds = Array.from({ length: totalRounds }, () => []);
-  const teamRoundMap = {};
-  const teamIds = teams.map((team) => team._id.toString());
+function localSearchRoundSwap(scheduledFixtures, teams, distances) {
+  let bestArrangement = [...scheduledFixtures];
+  let bestTravel = quickCalculateTravel(bestArrangement, teams, distances);
 
-  // Initialize teamRoundMap
-  teamIds.forEach((teamId) => {
-    teamRoundMap[teamId] = new Set();
+  const maxSwaps = 50;
+  let improved = true;
+  let attempts = 0;
+
+  while (improved && attempts < maxSwaps) {
+    improved = false;
+    attempts++;
+
+    let fix1Index = Math.floor(Math.random() * bestArrangement.length);
+    let fix2Index = Math.floor(Math.random() * bestArrangement.length);
+    if (fix1Index === fix2Index) continue;
+
+    let f1 = bestArrangement[fix1Index];
+    let f2 = bestArrangement[fix2Index];
+    if (f1.round === f2.round) continue;
+
+    const oldRound1 = f1.round;
+    const oldRound2 = f2.round;
+    f1.round = oldRound2;
+    f2.round = oldRound1;
+
+    const newTravel = quickCalculateTravel(bestArrangement, teams, distances);
+    if (newTravel < bestTravel) {
+      bestTravel = newTravel;
+      improved = true;
+    } else {
+      // revert
+      f1.round = oldRound1;
+      f2.round = oldRound2;
+    }
+  }
+  return bestArrangement;
+}
+
+function quickCalculateTravel(fixtures, teams, distances) {
+  const byRound = {};
+  fixtures.forEach((f) => {
+    if (!byRound[f.round]) byRound[f.round] = [];
+    byRound[f.round].push(f);
+  });
+  let total = 0;
+
+  const loc = {};
+  teams.forEach((t) => {
+    loc[t._id.toString()] = t._id.toString();
   });
 
-  let unassignedFixtures = [];
-  let resetAttempts = 0;
-  const maxResetAttempts = 1000; // Maximum number of reset attempts
+  const roundsUsed = Object.keys(byRound).map(Number).sort((a, b) => a - b);
 
-  while (resetAttempts < maxResetAttempts) {
-    unassignedFixtures = shuffleArray([...fixtures]); // Shuffle fixtures each time
-    // Clear previous assignments
-    rounds.forEach((round) => round.splice(0, round.length)); // clear all rounds
-    teamIds.forEach((teamId) => {
-      teamRoundMap[teamId].clear(); 
-    });
-
-    let success = true;
-
-    for (let fixture of unassignedFixtures) { // for each fixture
-      let assigned = false; // Assume not assigned until proven otherwise
-
-      // Try to assign the fixture to a round
-      for (let round = 1; round <= totalRounds; round++) {
-        const homeId = fixture.homeTeam._id.toString();
-        const awayId = fixture.awayTeam._id.toString();
-
-        if (!teamRoundMap[homeId].has(round) && !teamRoundMap[awayId].has(round)) { // if the team has not played in this round
-          rounds[round - 1].push(fixture); // add the fixture to the round
-          teamRoundMap[homeId].add(round);
-          teamRoundMap[awayId].add(round);
-          fixture.round = round; // assign the round to the fixture
-          assigned = true; // assigned
-          break;
-        }
+  for (let r of roundsUsed) {
+    const roundFx = byRound[r];
+    for (let fix of roundFx) {
+      const awayId = fix.awayTeam._id.toString();
+      if (loc[awayId] !== fix.homeTeam._id.toString()) {
+        total += getDistanceFromIDs(loc[awayId], fix.homeTeam._id.toString(), distances);
       }
+      loc[awayId] = fix.homeTeam._id.toString();
 
-      if (!assigned) { // if the fixture was not assigned
-        // Could not assign fixture, need to reset and try again
-        success = false;
-        break;
+      // if home was away then teams come home
+      const homeId = fix.homeTeam._id.toString();
+      if (loc[homeId] !== homeId) {
+        total += getDistanceFromIDs(loc[homeId], homeId, distances);
+        loc[homeId] = homeId;
       }
-    }
-
-    if (success) {
-      console.log('All fixtures have been assigned to rounds.');
-      const scheduledFixtures = rounds.flat(); // flatten the rounds so that it is a single array
-      return { scheduledFixtures }; // return the scheduled fixtures and break the loop
-    } else { // if not successful
-      resetAttempts++; // increment the reset attempts
     }
   }
 
-  console.warn('Max reset attempts reached while assigning fixtures to rounds.');
-  const scheduledFixtures = rounds.flat(); // flatten the rounds so that it is a single array
-  return { scheduledFixtures };
+  return total;
 }
 
-/**
- * Calculate the travel distances for each team based on the current fixture layout.
- *
- * @param {Array} fixtures - List of fixtures with dates scheduled.
- * @param {Object} distances - Precomputed distances between teams.
- * @param {Array} teams - List of team objects.
- * @returns {Object} - Object containing total travel distance per team and per match.
- */
-function calculateTeamTravelDistances(fixtures, distances, teams) {
-  const teamTravelDistances = {};
-  const matchTravelDistances = [];
-  const teamLocations = {}; // Current location of each team
+function getDistanceFromIDs(idA, idB, distances) {
+  if (idA === idB) return 0;
+  const k1 = `${idA}-${idB}`;
+  const k2 = `${idB}-${idA}`;
+  return distances[k1] || distances[k2] || 0;
+}
 
-  // Initialize team locations to their home stadiums
-  teams.forEach((team) => {
-    const teamId = team._id.toString();
-    teamLocations[teamId] = {
-      latitude: team.stadium.latitude,
-      longitude: team.stadium.longitude,
-    };
-    teamTravelDistances[teamId] = 0; // Initialize travel distance to 0
-  });
+async function scheduleFixturesOptimized(fixtures, season, distances, restWeeks = []) {
+  const matchTimes = [
+    { day: 5, timeSlots: ['20:00'] },
+    { day: 6, timeSlots: ['14:00', '16:00', '18:00', '20:00'] },
+    { day: 0, timeSlots: ['14:00', '16:00', '18:00'] },
+  ];
+  const roundsUsed = [...new Set(fixtures.map((f) => f.round))].sort((a, b) => a - b);
+  let scheduled = [];
+  let dateCursor = new Date(`${season}-02-01`);
 
-  // Sort fixtures by date and round
-  fixtures.sort((a, b) => a.date - b.date || a.round - b.round);
+  for (let r of roundsUsed) {
+    const roundFx = fixtures.filter((fx) => fx.round === r);
+    let roundCursor = new Date(dateCursor);
 
-  // Create a mapping from stadium coordinates to team names for easy lookup
-  const coordToTeamName = {};
-  teams.forEach((team) => {
-    const stadium = team.stadium;
-    if (stadium) {
-        const key = `${stadium.latitude},${stadium.longitude}`; // create a key from the coordinates
-        coordToTeamName[key] = team.teamName; // assign the team name to the key
-    }
-  });
-
-  fixtures.forEach((fixture) => { // for each fixture
-    const homeId = fixture.homeTeam._id.toString();
-    const awayId = fixture.awayTeam._id.toString();
-
-    // Home team stays at their stadium
-    const homeLocation = {
-      latitude: fixture.stadium.latitude,
-      longitude: fixture.stadium.longitude,
-    };
-
-    // Calculate away team's travel from their current location to the match location
-    const awayCurrentLocation = teamLocations[awayId]; // get the current location of the away team
-    const travelToMatch = calculateDistanceBetweenCoordinates( // calculate the distance to the match
-      awayCurrentLocation,
-      homeLocation
+    roundFx.sort((a, b) =>
+      a.awayTeam.teamName.localeCompare(b.awayTeam.teamName)
     );
 
-    // Update total travel distance for away team
-    teamTravelDistances[awayId] += travelToMatch;
-
-    // Record travel details
-    const fromKey = `${awayCurrentLocation.latitude.toFixed(2)},${awayCurrentLocation.longitude.toFixed(2)}`;
-    const toKey = `${homeLocation.latitude.toFixed(2)},${homeLocation.longitude.toFixed(2)}`;
-    const fromTeamName = coordToTeamName[fromKey] || 'Unknown'; 
-    const toTeamName = coordToTeamName[toKey] || 'Unknown';
-
-    matchTravelDistances.push({ // record the travel distance
-      round: fixture.round,
-      teamName: fixture.awayTeam.teamName,
-      fromTeamName: fromTeamName,
-      from: awayCurrentLocation,
-      toTeamName: toTeamName,
-      to: homeLocation,
-      opponent: fixture.homeTeam.teamName,
-      distance: travelToMatch,
-      date: fixture.date,
-      note: null,
-    });
-
-    // Update away team's current location to match location (home stadium)
-    teamLocations[awayId] = homeLocation;
-
-    // For home team, check if they were away in the previous match
-    if (fixture.round > 1) {
-      const previousFixture = fixtures.find(
-        (f) =>
-          f.round === fixture.round - 1 && 
-          (f.homeTeam._id.toString() === homeId || f.awayTeam._id.toString() === homeId) // if the home team was home in the previous fixture
-      );
-      if (previousFixture) { // if there is a previous fixture
-        const wasAwayLastMatch = previousFixture.awayTeam._id.toString() === homeId; // check if the home team was away in the previous fixture
-        if (wasAwayLastMatch) {
-          // Home team needs to travel back home
-          const previousOpponentId =
-            previousFixture.homeTeam._id.toString() === homeId
-              ? previousFixture.awayTeam._id.toString()
-              : previousFixture.homeTeam._id.toString();
-          const previousLocation = teamLocations[homeId]; // get the previous location of the home team
-          const travelBackHome = calculateDistanceBetweenCoordinates( // calculate the distance back home
-            previousLocation,
-            homeLocation
-          );
-          teamTravelDistances[homeId] += travelBackHome; // update the travel distance with the distance back home
-
-          // Record travel back home
-          const prevFromKey = `${previousLocation.latitude.toFixed(2)},${previousLocation.longitude.toFixed(2)}`;
-          const prevToKey = `${homeLocation.latitude.toFixed(2)},${homeLocation.longitude.toFixed(2)}`;
-          const prevFromTeamName = coordToTeamName[prevFromKey] || 'Unknown';
-          const prevToTeamName = coordToTeamName[prevToKey] || 'Unknown';
-
-          matchTravelDistances.push({
-            round: fixture.round - 1,
-            teamName: fixture.homeTeam.teamName,
-            fromTeamName: prevFromTeamName,
-            from: previousLocation,
-            toTeamName: prevToTeamName,
-            to: homeLocation,
-            opponent: getTeamNameById(teams, previousOpponentId),
-            distance: travelBackHome,
-            date: fixture.date,
-            note: 'Return home',
-          });
-
-          // Update home team's current location to home stadium
-          teamLocations[homeId] = homeLocation;
-        }
-      }
-    }
-  });
-
-  // At the end of the season, if a team is not at home, bring them back home
-  teams.forEach((team) => {
-    const teamId = team._id.toString();
-    const homeLocation = {
-      latitude: team.stadium.latitude,
-      longitude: team.stadium.longitude,
-    };
-    const currentLocation = teamLocations[teamId];
-
-    if (
-      currentLocation.latitude !== homeLocation.latitude || // if the team is not at home
-      currentLocation.longitude !== homeLocation.longitude
-    ) {
-      const travelBackHome = calculateDistanceBetweenCoordinates(
-        currentLocation,
-        homeLocation
-      );
-      teamTravelDistances[teamId] += travelBackHome;
-
-      // Record travel back home
-      matchTravelDistances.push({
-        round: fixtures[fixtures.length - 1].round,
-        teamName: team.teamName,
-        fromTeamName: coordToTeamName[`${currentLocation.latitude.toFixed(2)},${currentLocation.longitude.toFixed(2)}`] || 'Unknown',
-        from: currentLocation,
-        toTeamName: team.teamName,
-        to: homeLocation,
-        opponent: 'Home',
-        distance: travelBackHome,
-        date: null,
-        note: 'Return home at season end',
+    if (r === 5) {
+      const finalSaturday = new Date(`2025-03-15T00:00:00`); 
+      const times = ['14:00', '16:00', '18:00'];
+      
+      roundFx.forEach((fix, idx) => {
+        const dtStr = `${finalSaturday.toISOString().split('T')[0]}T${times[idx]}:00`;
+        fix.date = new Date(dtStr);
       });
-
-      teamLocations[teamId] = homeLocation;
+      
+      scheduled.push(...roundFx);
+      continue;
     }
-  });
 
-  return { teamTravelDistances, matchTravelDistances };
-}
-
-/**
- * Calculate the (Haversine distance between two coordinates). Google Maps API is used to get the distance between two coordinates. //! DOUBLE CHECK THIS!!!!!!
- *
- * @param {Object} coord1 - Coordinates { latitude, longitude }.
- * @param {Object} coord2 - Coordinates { latitude, longitude }.
- * @returns {Number} - Distance in kilometers.
- */
-function calculateDistanceBetweenCoordinates(coord1, coord2) {
-  const R = 6371; // Earth's radius in km
-  const lat1 = coord1.latitude * (Math.PI / 180); // convert to radians
-  const lat2 = coord2.latitude * (Math.PI / 180); // convert to radians
-  const deltaLat = lat2 - lat1; // get the difference in latitude
-  const deltaLon = (coord2.longitude - coord1.longitude) * (Math.PI / 180); // get the difference in longitude
-
-  const a = // a is the square of half the chord length between the points
-    Math.sin(deltaLat / 2) ** 2 + // calculate a
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2; // calculate b which is the square of half the chord length between the points
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); // calculate c which is the angular distance in radians
-
-  return R * c; // return the distance
-}
-
-/**
- * Schedule fixtures with dates and times, considering sequential games and minimizing travel.
- *
- * @param {Array} fixtures - The list of fixtures with rounds assigned.
- * @param {Number} season - The season year.
- * @param {Object} distances - Precomputed distances between teams.
- * @returns {Array} - Fixtures with date and time scheduled.
- */
-async function scheduleFixturesOptimized(fixtures, season, distances) {
-  console.log('Scheduling fixtures with consideration for sequential games...');
-
-  // Define possible match times
-  const matchTimes = [
-    // Saturday
-    { day: 6, timeSlots: ['12:00', '14:00', '16:00'] }, //! more later
-  ];
-
-  const scheduledFixtures = [];
-  let dateCursor = new Date(`${season}-02-01`); // Start from February 1st
-  console.log(`Starting scheduling from date: ${dateCursor.toDateString()}`);
-
-  // Group fixtures by rounds
-  const rounds = {};
-  for (let fixture of fixtures) {
-    if (!rounds[fixture.round]) {
-      rounds[fixture.round] = [];
-    }
-    rounds[fixture.round].push(fixture);
-  }
-
-  // Schedule each round
-  for (let round = 1; round <= 5; round++) {
-    const roundFixtures = rounds[round];
-    let roundDateCursor = new Date(dateCursor);
-    console.log(`\nScheduling Round ${round} fixtures:`);
-
-    // Sort fixtures in the round based on away teams' previous match
-    roundFixtures.sort((a, b) => {
-      const aPrevDistance = getPreviousTravelDistance(a.awayTeam._id, scheduledFixtures, distances);
-      const bPrevDistance = getPreviousTravelDistance(b.awayTeam._id, scheduledFixtures, distances);
-      return aPrevDistance - bPrevDistance;
-    });
-
-    for (let fixture of roundFixtures) {
-      let scheduled = false;
-      while (!scheduled) {
-        const dayOfWeek = roundDateCursor.getDay(); 
-        const matchDay = matchTimes.find((mt) => mt.day === dayOfWeek); // find the match day based on the day of the week
-
+    for (let fix of roundFx) {
+      let assigned = false;
+      while (!assigned) {
+        const day = roundCursor.getDay();
+        const matchDay = matchTimes.find((mt) => mt.day === day);
         if (matchDay) {
-          for (let time of matchDay.timeSlots) { // for each time slot
-            const dateTimeString = `${roundDateCursor // create a date time string
-              .toISOString()
-              .split('T')[0]}T${time}:00`;
-            const dateTime = new Date(dateTimeString); // create a date object
+          for (let slot of matchDay.timeSlots) {
+            const dtStr = `${roundCursor.toISOString().split('T')[0]}T${slot}:00`;
+            const dt = new Date(dtStr);
 
-            // Check if this date and time is already taken
-            const isSlotTaken = scheduledFixtures.some(
-              (f) => f.date.getTime() === dateTime.getTime()
+            const slotTaken = scheduled.some(
+              (sf) => sf.date.getTime() === dt.getTime()
             );
-
-            // Check if the teams are already scheduled in the same week
-            const weekStart = getWeekStartDate(dateTime);
-            const teamInWeek = scheduledFixtures.some((f) => {
-              const fWeekStart = getWeekStartDate(f.date);
+            const weekStart = getWeekStartDate(dt);
+            const sameWeekTeam = scheduled.some((sf) => {
+              const sfWeek = getWeekStartDate(sf.date);
               return (
-                fWeekStart.getTime() === weekStart.getTime() &&
-                (f.homeTeam._id.toString() === fixture.homeTeam._id.toString() ||
-                  f.awayTeam._id.toString() === fixture.awayTeam._id.toString()) // if the team is already scheduled in the same week
+                sfWeek.getTime() === weekStart.getTime() &&
+                (sf.homeTeam._id.toString() === fix.homeTeam._id.toString() ||
+                  sf.awayTeam._id.toString() === fix.awayTeam._id.toString())
               );
             });
-
-            if (!isSlotTaken && !teamInWeek) { // if the slot is not taken and the team is not scheduled in the same week
-              // Assign date and time
-              fixture.date = dateTime;
-              scheduledFixtures.push(fixture);
-              scheduled = true;
-              console.log(
-                `  Assigned: ${fixture.homeTeam.teamName} vs ${fixture.awayTeam.teamName} on ${dateTime}`
-              );
+            if (!slotTaken && !sameWeekTeam) {
+              fix.date = dt;
+              scheduled.push(fix);
+              assigned = true;
               break;
             }
           }
         }
-
-        if (!scheduled) {
-          // Move to the next day
-          roundDateCursor.setDate(roundDateCursor.getDate() + 1); // move to the next day
-          console.log(
-            `    No available slots on ${roundDateCursor.toDateString()}, moving to next day.`
-          );
+        if (!assigned) {
+          roundCursor.setDate(roundCursor.getDate() + 1);
         }
       }
     }
-
-    // Move dateCursor to the next week after the round
-    dateCursor.setDate(dateCursor.getDate() + 7); 
-    console.log(`  Moving to next week starting from ${dateCursor.toDateString()}`);
+    dateCursor.setDate(dateCursor.getDate() + 7);
+    if (restWeeks.includes(r)) {
+      dateCursor.setDate(dateCursor.getDate() + 7);
+    }
   }
-
-  console.log('All fixtures have been scheduled with dates and times.');
-  return scheduledFixtures;
+  scheduled.sort((a, b) => a.date - b.date);
+  return scheduled;
 }
 
-/**
- * Get the previous travel distance for a team.
- *
- * @param {String} teamId - Team ID.
- * @param {Array} scheduledFixtures - List of scheduled fixtures.
- * @param {Object} distances - Precomputed distances.
- * @returns {Number} - Previous travel distance.
- */
-function getPreviousTravelDistance(teamId, scheduledFixtures, distances) {
-  const lastFixture = [...scheduledFixtures].reverse().find( // get the last fixture
-    (f) => f.awayTeam._id.toString() === teamId || f.homeTeam._id.toString() === teamId // if the team is the away team or the home team
+function calculateTeamTravelDistances(fixtures, distances, teams, restWeeks) {
+  const teamTravelDistances = {};
+  teams.forEach((t) => {
+    teamTravelDistances[t._id.toString()] = 0;
+  });
+
+  const matchTravelLog = [];
+  const teamLocations = {};
+  teams.forEach((t) => {
+    teamLocations[t._id.toString()] = {
+      lat: t.stadium.latitude,
+      lon: t.stadium.longitude,
+    };
+  });
+
+  fixtures.sort((a, b) => a.date - b.date);
+  let currentRound = 1;
+
+  for (let i = 0; i < fixtures.length; i++) {
+    const fix = fixtures[i];
+    const round = fix.round;
+    if (round !== currentRound) {
+      if (restWeeks.includes(currentRound)) {
+        forceAllTeamsHome(
+          teams,
+          teamLocations,
+          teamTravelDistances,
+          matchTravelLog,
+          fixtures[i - 1].date,
+          currentRound,
+          distances,
+          false
+        );
+      }
+      currentRound = round;
+    }
+
+    const awayId = fix.awayTeam._id.toString();
+    const fromLoc = { ...teamLocations[awayId] };
+    const toLoc = {
+      lat: fix.stadium.latitude,
+      lon: fix.stadium.longitude,
+    };
+    const dist = calculateDistanceBetweenCoordinates(fromLoc, toLoc);
+    teamTravelDistances[awayId] += dist;
+    matchTravelLog.push({
+      round,
+      teamName: fix.awayTeam.teamName,
+      fromTeamName: findTeamNameByLocation(teams, fromLoc),
+      from: fromLoc,
+      toTeamName: fix.homeTeam.teamName,
+      to: toLoc,
+      opponent: fix.homeTeam.teamName,
+      distance: dist,
+      date: fix.date,
+      note: null,
+    });
+    teamLocations[awayId] = toLoc;
+
+    const homeId = fix.homeTeam._id.toString();
+    const homeLoc = { ...teamLocations[homeId] };
+    const stadiumLoc = {
+      lat: fix.stadium.latitude,
+      lon: fix.stadium.longitude,
+    };
+    if (homeLoc.lat !== stadiumLoc.lat || homeLoc.lon !== stadiumLoc.lon) {
+      const distHome = calculateDistanceBetweenCoordinates(homeLoc, stadiumLoc);
+      teamTravelDistances[homeId] += distHome;
+      matchTravelLog.push({
+        round,
+        teamName: fix.homeTeam.teamName,
+        fromTeamName: findTeamNameByLocation(teams, homeLoc),
+        from: homeLoc,
+        toTeamName: fix.homeTeam.teamName,
+        to: stadiumLoc,
+        opponent: fix.awayTeam.teamName,
+        distance: distHome,
+        date: fix.date,
+        note: 'Return home to host',
+      });
+      teamLocations[homeId] = stadiumLoc;
+    }
+  }
+
+  if (restWeeks.includes(currentRound)) {
+    forceAllTeamsHome(
+      teams,
+      teamLocations,
+      teamTravelDistances,
+      matchTravelLog,
+      fixtures[fixtures.length - 1].date,
+      currentRound,
+      distances,
+      false
+    );
+  }
+
+  forceAllTeamsHome(
+    teams,
+    teamLocations,
+    teamTravelDistances,
+    matchTravelLog,
+    fixtures[fixtures.length - 1].date,
+    currentRound,
+    distances,
+    true
   );
 
-  if (!lastFixture) { // if there is no last fixture
-    return 0;
-  }
-
-  const opponentId =
-    lastFixture.awayTeam._id.toString() === teamId
-      ? lastFixture.homeTeam._id.toString()
-      : lastFixture.awayTeam._id.toString();
-
-  return distances[`${teamId}-${opponentId}`] || 0; // return the distance between the team and the opponent
+  return {
+    teamTravelDistances,
+    matchTravelDistances: matchTravelLog,
+  };
 }
 
-/**
- * Precompute and cache the distances between all pairs of teams.
- *
- * @param {Array} teams - List of team objects.
- * @returns {Object} - Object containing distances and messages.
- */
-async function precomputeDistances(teams) {
-  console.log('Precomputing distances between all stadiums...');
-  const distances = {}; // Key: 'teamAId-teamBId', Value: distance
-  const distanceMessages = []; // Messages for each distance calculation
-
-  // Get stadium locations
-  const teamStadiums = {};
-  for (let team of teams) {
-    const stadium = team.stadium;
-    if (!stadium) {
-      console.warn(
-        `Stadium not found for team ${team.teamName}. Assigning default coordinates (0,0).`
-      );
-      teamStadiums[team._id.toString()] = {
-        latitude: 0,
-        longitude: 0,
-      };
-    } else {
-      teamStadiums[team._id.toString()] = {
-        latitude: stadium.latitude,
-        longitude: stadium.longitude,
-      };
+function forceAllTeamsHome(
+  teams,
+  teamLocations,
+  teamTravelDistances,
+  matchTravelLog,
+  approxDate,
+  round,
+  distances,
+  endOfSeason = false
+) {
+  for (let tm of teams) {
+    const tid = tm._id.toString();
+    const cur = teamLocations[tid];
+    const home = {
+      lat: tm.stadium.latitude,
+      lon: tm.stadium.longitude,
+    };
+    if (Math.abs(cur.lat - home.lat) > 0.001 || Math.abs(cur.lon - home.lon) > 0.001) {
+      const dist = calculateDistanceBetweenCoordinates(cur, home);
+      teamTravelDistances[tid] += dist;
+      matchTravelLog.push({
+        round,
+        teamName: tm.teamName,
+        fromTeamName: findTeamNameByLocation(teams, cur),
+        from: { ...cur },
+        toTeamName: tm.teamName,
+        to: { ...home },
+        opponent: 'Home',
+        distance: dist,
+        date: approxDate || null,
+        note: endOfSeason
+          ? 'Return home end-of-season'
+          : 'Forced home due to rest week',
+      });
+      teamLocations[tid] = { ...home };
     }
   }
+}
 
-  // Compute distances between all pairs in parallel
-  const distancePromises = [];
-  for (let i = 0; i < teams.length; i++) {
-    for (let j = i + 1; j < teams.length; j++) {
-      const teamA = teams[i]; // get the first team
-      const teamB = teams[j]; // get the second team
-      const teamAId = teamA._id.toString(); 
-      const teamBId = teamB._id.toString();
-      const locationA = teamStadiums[teamAId]; // get the location of the first team
-      const locationB = teamStadiums[teamBId]; // get the location of the second team
+function findTeamNameByLocation(teams, loc) {
+  if (!loc) return 'Unknown';
+  const TOLERANCE = 0.01;
 
-      console.log(
-        `Queuing distance calculation between ${teamA.teamName} and ${teamB.teamName}...`
-      );
-      distancePromises.push(
-        getDistanceBetweenLocations(locationA, locationB).then((distance) => {
-          distances[`${teamAId}-${teamBId}`] = distance; // assign the distance
-          distances[`${teamBId}-${teamAId}`] = distance; // Symmetric
-          const message = `Distance between ${teamA.teamName} and ${teamB.teamName}: ${distance.toFixed(
-            2
-          )} km`; // create a message
-          distanceMessages.push(message);
-          console.log(message);
-        })
-      );
+  for (let tm of teams) {
+    if (tm.stadium) {
+      const latDiff = Math.abs(tm.stadium.latitude - loc.lat);
+      const lonDiff = Math.abs(tm.stadium.longitude - loc.lon);
+      if (latDiff < TOLERANCE && lonDiff < TOLERANCE) {
+        return tm.teamName;
+      }
     }
   }
-
-  await Promise.all(distancePromises); // wait for all the promises to resolve
-  console.log('All distances have been precomputed.');
-
-  return { distances, distanceMessages };
+  return 'Unknown';
 }
 
-/**
- * Get team name by ID.
- *
- * @param {Array} teams - List of team objects.
- * @param {String} teamId - Team ID.
- * @returns {String} - Team name.
- */
-function getTeamNameById(teams, teamId) {
-  const team = teams.find((t) => t._id.toString() === teamId.toString());
-  return team ? team.teamName : 'Unknown Team';
+function getTeamNameById(teams, id) {
+  const found = teams.find((t) => t._id.toString() === id.toString());
+  return found ? found.teamName : 'Unknown Team';
 }
 
-/**
- * Get the start date of the week for a given date.
- *
- * @param {Date} date - The date to find the week's start.
- * @returns {Date} - The start date (Sunday) of the week.
- */
-function getWeekStartDate(date) {
-  const copy = new Date(date);
-  copy.setDate(copy.getDate() - copy.getDay()); // Set to Sunday
-  copy.setHours(0, 0, 0, 0); // Set to midnight
-  return copy;
-}
-
-/**
- * Build summary for the fixtures.
- *
- * @param {Array} teams - List of teams.
- * @param {Array} fixtures - List of scheduled fixtures.
- * @param {Array} distanceMessages - Distance calculations messages.
- * @param {Object} teamTravelDistances - Total travel distances per team.
- * @param {Array} matchTravelDistances - Travel distances per match.
- * @param {Array} matchupChanges - Previous and current matchups.
- * @param {Number} totalTravelDistance - Total overall travel distance.
- * @returns {Array} - Summary lines.
- */
 function buildSummary(
   teams,
   fixtures,
@@ -1061,137 +818,169 @@ function buildSummary(
   teamTravelDistances,
   matchTravelDistances,
   matchupChanges,
-  totalTravelDistance
+  totalTravelDistance,
+  restWeeks
 ) {
   const summary = [];
-  summary.push('===== Fixture Scheduling Summary =====');
-  summary.push('- Total travel distance minimized for teams.');
-  summary.push('- Home and away games balanced for each team (at least 2 home and 2 away games).');
-  summary.push('- Alternating venue rule applied based on previous season.');
-  summary.push('- Each team plays once per week.');
-  summary.push('- Sequential away games scheduled when possible.');
-  summary.push('========================================\n');
+  summary.push('=== Travel-Optimized Scheduler ===');
+  summary.push('Minimizing total travel distance with rest-week forced returns home.');
+  summary.push(
+    `Using rest weeks: ${restWeeks.length > 0 ? restWeeks.join(', ') : '(none)'}`
+  );
+  summary.push(`Total Travel Distance: ${totalTravelDistance.toFixed(2)} km\n`);
 
-  summary.push(`Total Overall Travel Distance: ${totalTravelDistance.toFixed(2)} km`);
+  if (matchupChanges.length) {
+    summary.push('--- Home/Away Alternation Changes ---');
+    matchupChanges.forEach((mc) => {
+      const prev = mc.previousMatchup || 'Unknown vs Unknown';
+      const curr = mc.currentMatchup || 'Unknown vs Unknown';
+      summary.push(`  Prev: ${prev} => Now: ${curr} [${mc.note}]`);
+    });
+    summary.push('');
+  }
 
-  summary.push('\nPrevious and Current Season Matchups:');
-  matchupChanges.forEach((mc) => {
-    summary.push(
-      `  Previous: ${mc.previousMatchup}, Current: ${mc.currentMatchup}, Note: ${mc.note}`
+  summary.push('--- Distances Between Teams (Precomputed) ---');
+  summary.push(...distanceMessages);
+  summary.push('');
+
+  summary.push('--- Per-Match Travel Logs ---');
+  const groupedByRound = matchTravelDistances.reduce((acc, md) => {
+    if (!acc[md.round]) acc[md.round] = [];
+    acc[md.round].push(md);
+    return acc;
+  }, {});
+
+  Object.keys(groupedByRound).sort((a, b) => a - b).forEach((round) => {
+    groupedByRound[round].forEach((md) => {
+      const dateStr = md.date ? new Date(md.date).toLocaleString() : 'Unknown';
+      const note = md.note ? `(${md.note})` : '';
+      summary.push(
+        `R${md.round} | ${md.teamName} travels from ${md.fromTeamName} ` +
+          `[${md.from.lat.toFixed(2)},${md.from.lon.toFixed(2)}] ` +
+          `to ${md.toTeamName} [${md.to.lat.toFixed(2)},${md.to.lon.toFixed(2)}] => ` +
+          `${md.distance.toFixed(2)} km ${note} @ ${dateStr}`
+      );
+    });
+    summary.push('');
+  });
+  summary.push('');
+
+  summary.push('--- Total Travel Distances by Team ---');
+  teams.forEach((t) => {
+    const d = teamTravelDistances[t._id.toString()] || 0;
+    summary.push(`  ${t.teamName}: ${d.toFixed(2)} km`);
+  });
+  summary.push('');
+
+  summary.push('');
+  summary.push('--- Per-Team Fixture Summary ---');
+  const teamMap = {};
+  teams.forEach((t) => {
+    teamMap[t._id.toString()] = { name: t.teamName, matches: [] };
+  });
+  for (let fx of fixtures) {
+    const hId = fx.homeTeam._id.toString();
+    const aId = fx.awayTeam._id.toString();
+    teamMap[hId].matches.push({
+      round: fx.round % 5 + 1,
+      homeAway: 'Home',
+      opp: fx.awayTeam,
+      date: fx.date,
+    });
+    teamMap[aId].matches.push({
+      round: fx.round % 5 + 1,
+      homeAway: 'Away',
+      opp: fx.homeTeam,
+      date: fx.date,
+    });
+  }
+  Object.values(teamMap).forEach((tm) => {
+    tm.matches.sort((a, b) => a.round - b.round);
+  });
+
+  Object.keys(teamMap).forEach((k) => {
+    const t = teamMap[k];
+    summary.push(`${t.name}:`);
+    const lines = t.matches.map(
+      (m) =>
+        ` R${m.round} - ${m.homeAway} vs ${m.opp.teamName} (${m.date.toDateString()});`
     );
-  });
-
-  summary.push('\nDistance Calculations (via Google API):');
-  summary.push(...distanceMessages); // add the distance messages
-
-  summary.push('\nTravel Distance Breakdown per Match:');
-  // Create a mapping from coordinates to team names
-  const coordToTeamName = {}; // create a mapping from coordinates to team names
-  teams.forEach((team) => { // for each team
-    const stadium = team.stadium;
-    if (stadium) {
-      const key = `${stadium.latitude.toFixed(2)},${stadium.longitude.toFixed(2)}`; // create a key from the coordinates
-      coordToTeamName[key] = team.teamName;
-    }
-  });
-
-  matchTravelDistances.forEach((md) => { // for each match travel distance
-    const fromKey = md.from
-      ? `${md.from.latitude.toFixed(2)},${md.from.longitude.toFixed(2)}` // get the from key
-      : null;
-    const toKey = md.to
-      ? `${md.to.latitude.toFixed(2)},${md.to.longitude.toFixed(2)}` // get the to key
-      : null;
-
-    const fromTeamName = fromKey && coordToTeamName[fromKey] ? coordToTeamName[fromKey] : 'Unknown'; // get the from team name
-    const toTeamName = toKey && coordToTeamName[toKey] ? coordToTeamName[toKey] : 'Unknown'; // get the to team name
-
-    const note = md.note ? ` - ${md.note}` : ''; // get the note
-    if (md.note === 'Return home') {
-      // This is a return home trip after an away match
-      summary.push(
-        `  Round ${md.round}: ${md.teamName} travels from ${fromTeamName}[${md.from.latitude.toFixed(
-          2
-        )}, ${md.from.longitude.toFixed(2)}] to ${toTeamName}[${md.to.latitude.toFixed(
-          2
-        )}, ${md.to.longitude.toFixed(2)}] - ${md.distance.toFixed(
-          2
-        )} km${note}`
-      );
-    } else {
-      summary.push(
-        `  Round ${md.round}: ${md.teamName} travels from ${fromTeamName}[${md.from.latitude.toFixed(
-          2
-        )}, ${md.from.longitude.toFixed(2)}] to ${toTeamName}[${md.to.latitude.toFixed(
-          2
-        )}, ${md.to.longitude.toFixed(2)}] to play against ${md.opponent} - ${md.distance.toFixed(
-          2
-        )} km${note}`
-      );
-    }
-  });
-
-  summary.push('\nTotal Travel Distances for Each Team:');
-  teams.forEach((team) => {
-    const teamId = team._id.toString();
-    const totalDistance = teamTravelDistances[teamId] || 0;
-    summary.push(`  ${team.teamName}: ${totalDistance.toFixed(2)} km`);
+    summary.push(lines.join('\n'));
+    summary.push(''); 
   });
 
   return summary;
 }
 
-/**
- * Calculate the driving distance between two locations using Google Distance Matrix API with caching. IS THIS EVEN BEING USED.
- *
- * @param {Object} origin - Origin coordinates { latitude, longitude }.
- * @param {Object} destination - Destination coordinates { latitude, longitude }.
- * @returns {Number} - Distance in kilometers.
- */
-async function getDistanceBetweenLocations(origin, destination) {
-  const apiKey = process.env.GOOGLE_API_KEY; 
+async function precomputeDistances(teams) {
+  console.log('Precomputing distances via Haversine + caching...');
+  const distances = {};
+  const distanceMessages = [];
 
-  const cacheKey = `${origin.latitude},${origin.longitude}-${destination.latitude},${destination.longitude}`; // create a cache key
-  const cachedDistance = distanceCache.get(cacheKey); // get the cached distance
-  if (cachedDistance !== undefined) {
-    console.log(
-      `Cache hit for distance between ${cacheKey}: ${cachedDistance.toFixed(2)} km` // log the cache hit
-    );
-    return cachedDistance;
-  }
-
-  try {
-    console.log(
-      `Fetching distance from Google Distance Matrix API between ${cacheKey}...`
-    );
-    const response = await client.distancematrix({
-      params: {
-        origins: [`${origin.latitude},${origin.longitude}`], // get the origins
-        destinations: [`${destination.latitude},${destination.longitude}`], // get the destinations
-        key: apiKey,
-        mode: 'driving', 
-      },
-      timeout: 5000, // 5 seconds timeout
-    });
-
-    if (response.data.rows[0].elements[0].status === 'OK') { // if the status is OK
-      const distanceInMeters = response.data.rows[0].elements[0].distance.value; // get the distance in meters
-      const distanceInKilometers = distanceInMeters / 1000; // convert to kilometers
-      const message = `Google API: Calculated distance is ${distanceInKilometers.toFixed(2)} km.`; 
-      console.log(message);
-
-      // Cache the distance
-      distanceCache.set(cacheKey, distanceInKilometers);
-
-      return distanceInKilometers;
+  const teamCoords = {};
+  for (let t of teams) {
+    if (!t.stadium) {
+      teamCoords[t._id.toString()] = { lat: 0, lon: 0 };
     } else {
-      console.error('Google API: No routes found between the two locations.');
-      return 0;
+      teamCoords[t._id.toString()] = {
+        lat: t.stadium.latitude,
+        lon: t.stadium.longitude,
+      };
     }
-  } catch (error) {
-    console.error('Google API Error:', error.message);
-    return 0;
   }
+
+  const distPromises = [];
+  for (let i = 0; i < teams.length; i++) {
+    for (let j = i + 1; j < teams.length; j++) {
+      const tA = teams[i];
+      const tB = teams[j];
+      distPromises.push(
+        getDistanceBetweenLocations(
+          teamCoords[tA._id.toString()],
+          teamCoords[tB._id.toString()]
+        ).then((dist) => {
+          distances[`${tA._id}-${tB._id}`] = dist;
+          distances[`${tB._id}-${tA._id}`] = dist;
+          const msg = `Distance: ${tA.teamName} vs ${tB.teamName} => ${dist.toFixed(
+            2
+          )} km`;
+          distanceMessages.push(msg);
+          console.log(msg);
+        })
+      );
+    }
+  }
+
+  await Promise.all(distPromises);
+  console.log('All distances precomputed.');
+  return { distances, distanceMessages };
+}
+
+async function getDistanceBetweenLocations(origin, destination) {
+  const cacheKey = `${origin.lat},${origin.lon}-${destination.lat},${destination.lon}`;
+  const cached = distanceCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const dist = calculateDistanceBetweenCoordinates(origin, destination);
+  distanceCache.set(cacheKey, dist);
+  return dist;
+}
+
+function calculateDistanceBetweenCoordinates(coord1, coord2) {
+  const R = 6371; // km
+  const lat1 = coord1.lat * (Math.PI / 180);
+  const lon1 = coord1.lon * (Math.PI / 180);
+  const lat2 = coord2.lat * (Math.PI / 180);
+  const lon2 = coord2.lon * (Math.PI / 180);
+
+  const dLat = lat2 - lat1;
+  const dLon = lon2 - lon1;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 module.exports = {

@@ -1,4 +1,3 @@
-//backend/middleware/auth.js
 /**
  * @module backend/middleware/auth
  * @description This module is used for defining the authentication middleware.
@@ -25,7 +24,6 @@ exports.authenticate = async (req, res, next) => {
       return res.status(401).json({ message: 'Invalid API key' });
     }
 
-    // Rate limiting
     const currentTime = Date.now();
     if (currentTime > user.requestResetTime + 60 * 60 * 1000) {
       // Reset count every hour
@@ -33,7 +31,7 @@ exports.authenticate = async (req, res, next) => {
       user.requestResetTime = currentTime;
     }
 
-    if (user.requestCount >= 100) {
+    if (user.requestCount >= 1000) {
       logger.warn(`Rate limit exceeded for user: ${user.email}`);
       return res.status(429).json({ message: 'Rate limit exceeded' });
     }
@@ -41,14 +39,13 @@ exports.authenticate = async (req, res, next) => {
     user.requestCount += 1;
     await user.save();
 
-    req.user = user; // Attach user to request object
+    req.user = user;
     next();
   } catch (error) {
     logger.error(`Authentication error: ${error.message}`);
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 exports.authorize = (...allowedRoles) => {
     return (req, res, next) => {
@@ -59,4 +56,3 @@ exports.authorize = (...allowedRoles) => {
       next();
     };
   };
-  

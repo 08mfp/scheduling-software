@@ -1,5 +1,3 @@
-// frontend/src/App.tsx
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -23,24 +21,32 @@ import AdminPanel from './pages/AdminPanel';
 import PrivateRoute from './components/PrivateRoute';
 import Profile from './pages/Profile';
 import Unauthorized from './components/Unauthorized';
+import FixtureDetail from './components/FixtureDetail';
+import HomePage from './components/HomePage';
+import TeamsRanking from './components/TeamsRanking';
+import About from './components/About';
+import Contact from './components/Contact';
+import FAQ from './pages/FAQ';
+import NotFound from './pages/NotFound';
+import Footer from './components/Footer';
+import 'flowbite'; 
+import './App.css';
 
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <Router>
         <Navbar />
-        <div className="container">
+        <div>
           <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<FixturesList />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/fixtures" element={<FixturesList />} />
+            <Route path="/about" element={<About />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/signin" element={<SignIn />} />
-
-            {/* Unauthorized Page */}
+            <Route path='/fixtures/:id' element={< FixtureDetail/>} />
+            <Route path="/not-found" element={<NotFound />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
-
-            {/* Protected Routes: Accessible to authenticated users with appropriate roles */}
             <Route element={<PrivateRoute requiredRoles={['admin', 'manager', 'viewer']} />}>
               <Route path="/teams" element={<TeamsList />} />
               <Route path="/teams/:id" element={<TeamDetail />} />
@@ -48,16 +54,12 @@ const App: React.FC = () => {
               <Route path="/stadiums/:id" element={<StadiumDetail />} />
               <Route path="/profile" element={<Profile />} />
             </Route>
-
-            {/* Manager and Admin Routes */}
             <Route element={<PrivateRoute requiredRoles={['admin', 'manager']} />}>
               <Route path="/players" element={<PlayersList />} />
               <Route path="/players/:id" element={<PlayerDetail />} />
               <Route path="/players/add" element={<PlayerForm />} />
               <Route path="/players/edit/:id" element={<PlayerForm />} />
             </Route>
-
-            {/* Admin-Only Routes */}
             <Route element={<PrivateRoute requiredRoles={['admin']} />}>
               <Route path="/teams/add" element={<TeamForm />} />
               <Route path="/teams/edit/:id" element={<TeamForm />} />
@@ -67,12 +69,14 @@ const App: React.FC = () => {
               <Route path="/fixtures/edit/:id" element={<FixtureForm />} />
               <Route path="/generate-fixtures" element={<GenerateFixtures />} />
               <Route path="/manual-fixture-scheduler" element={<ManualFixtureScheduler />} />
+              <Route path="/teams-ranking" element={<TeamsRanking />} />
               <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/faq" element={<FAQ />} />
             </Route>
-
-            {/* Catch-All Route */}
-            <Route path="*" element={<Unauthorized />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
+          <Footer />
         </div>
       </Router>
     </AuthProvider>

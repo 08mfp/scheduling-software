@@ -71,7 +71,7 @@ FixtureSchema.pre('validate', function (next) {
 
   if (fixtureDate < now) {
     if (this.homeTeamScore == null || this.awayTeamScore == null) {
-      // Uncomment the lines below to enforce score requirement for past fixtures
+      // Uncomment lines below to enforce score requirement for past fixtures
       // const err = new Error('Scores are required for past fixtures');
       // next(err);
     }
@@ -244,7 +244,7 @@ stadium: {
   type: mongoose.Schema.Types.ObjectId,
   ref: 'Stadium',
   required: true,
-  // unique: true, // Uncomment if enforcing unique stadium assignment
+  // unique: true, // Uncomment if wanting unique stadium assignment
 },
 ```
 
