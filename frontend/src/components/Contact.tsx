@@ -19,6 +19,10 @@ import {
 import { Link } from 'react-router-dom';
 import emailjs from '@emailjs/browser';
 
+/*
+* I got this code from one of my older personal projects: https://github.com/08mfp/portfolio-website-V2, which was inspired by a yt video
+*/
+
 const Contact: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return typeof window !== 'undefined'

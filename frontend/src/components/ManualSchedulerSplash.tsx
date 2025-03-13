@@ -3,6 +3,10 @@ import { createPortal } from 'react-dom';
 import { FaTimes } from 'react-icons/fa';
 import FocusLock from 'react-focus-lock';
 
+/*
+* The descriptions and titles in the splash screen was generated with the assistance of AI
+*/
+
 interface ManualSchedulerSplashProps {
   show: boolean;
   onClose: () => void;

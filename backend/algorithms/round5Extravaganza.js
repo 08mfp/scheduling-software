@@ -55,7 +55,7 @@ function getRankDiff(m) {
  * - (6 - diff) because bigger is better (close rank => bigger).
  * - (12 - sum) because bigger is better (top-tier => smaller sum).
  * 
- * can adjust 6,12 for different number of teams or other offsets.
+ * can adjust 6,12 for different number of teams or other offsets. (explaimn in report)
  */
 function getMatchInterest(m) {
   const d = getRankDiff(m);

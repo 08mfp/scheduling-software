@@ -52,7 +52,6 @@ const FixturesList: React.FC = () => {
   const [loadingDelayComplete, setLoadingDelayComplete] = useState<boolean>(false);
   const { user } = useContext(AuthContext);
 
-  // **Utility Function: Get Team Color**
   const getTeamColor = (teamName: string): { backgroundColor: string; textColor: string } => {
     switch (teamName) {
       case 'England':

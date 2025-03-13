@@ -1,4 +1,3 @@
-// backend/server/seed.js
 /**
  * @module backend/server/seed
  * @description This module seeds the database with initial data.
